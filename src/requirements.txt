@@ -1,0 +1,6 @@
+chardet
+click
+cython
+pandas>=1.1
+pyranges
+pysam
