@@ -1,0 +1,3 @@
+vcf_alias,vcf_id_tag,vcf_path
+gnomad_v3,,reference_input_files/brca1_gnomad.vcf
+clinvar_20201107,ALLELEID,reference_input_files/brca1_clinvar.vcf
