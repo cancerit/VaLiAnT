@@ -35,9 +35,10 @@ from functools import lru_cache
 import os
 import pathlib
 import re
-from typing import List, Type, Tuple
+from typing import List, Type, Tuple, Set
 import numpy as np
 import pandas as pd
+from .enums import TargetonMutator
 
 dna_complement_tr_table = str.maketrans('ACGT', 'TGCA')
 dna_re = re.compile('^[ACGT]+$')
@@ -125,3 +126,15 @@ def get_var_types(var_types: pd.Series) -> List[int]:
         for k, v in dict(var_types.value_counts()).items()
         if v > 0
     ]
+
+
+@lru_cache(maxsize=16)
+def parse_mutator(s: str) -> TargetonMutator:
+    try:
+        return TargetonMutator(s)
+    except ValueError:
+        raise ValueError(f"Invalid mutator '{s}'!")
+
+
+def parse_mutators(s: str) -> Set[TargetonMutator]:
+    return set(map(parse_mutator, parse_list(s)))

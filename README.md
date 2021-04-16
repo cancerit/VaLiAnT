@@ -441,7 +441,6 @@ The chromosome name needs to match the naming in the GTF/GFF2 file and in the re
 
 |Field|Format|Description|
 |-|-|-|
-|`sgrna_id`|string|sgRNA identifier.|
 |`ref_chr`|string|Chromosome name.|
 |`ref_strand`|`+` or `-`|DNA strand.|
 |`ref_start`|integer|Start position of the reference sequence.|

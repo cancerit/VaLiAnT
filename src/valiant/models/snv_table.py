@@ -37,7 +37,7 @@ import logging
 from typing import Dict, Set, Optional
 import pandas as pd
 from ..snv import _build_base_snv_table, build_snv_table, get_fast_exon_snv, get_all_syn_codons, get_fast_snvre, get_top_syn_codons, build_aa_sub_table, get_fast_aa_subs
-from .base import GenomicRange
+from .base import StrandedPositionRange
 from .codon_table import CodonTable, STOP_CODE
 
 
@@ -53,7 +53,7 @@ class AllAminoAcidsTable:
             for strand in strands
         }
 
-    def get_subs(self, genomic_range: GenomicRange, frame: int, seq: str) -> pd.DataFrame:
+    def get_subs(self, genomic_range: StrandedPositionRange, frame: int, seq: str) -> pd.DataFrame:
         return get_fast_aa_subs(
             self._strand_table[genomic_range.strand], frame, seq)
 
@@ -86,7 +86,7 @@ class SnvTable:
         self,
         strand: str,
         cds_seq: str,
-        genomic_range: GenomicRange,
+        genomic_range: StrandedPositionRange,
         cds_prefix_length: int,
         cds_suffix_length: int,
         reset_index: bool = True
@@ -129,7 +129,7 @@ class SnvReTable:
             for strand, all_syn_table in strand_all_syn_tables.items()
         }
 
-    def get_snvres(self, genomic_range: GenomicRange, frame: int, seq: str, snvs: pd.DataFrame) -> pd.DataFrame:
+    def get_snvres(self, genomic_range: StrandedPositionRange, frame: int, seq: str, snvs: pd.DataFrame) -> pd.DataFrame:
         strand: str = genomic_range.strand
         return get_fast_snvre(
             self._strand_all_syn_table[strand],

@@ -39,12 +39,12 @@ from itertools import chain
 import logging
 import re
 from typing import Dict, Iterable, List, Optional, Set, Tuple
-import chardet
 import pandas as pd
 from pyranges import PyRanges
 from .base import GenomicRange
 from ..enums import TargetonMutator
-from ..utils import get_smallest_int_type, parse_list
+from ..loaders.tsv import load_tsv
+from ..utils import get_smallest_int_type, parse_list, parse_mutators
 
 
 CSV_HEADER = [
@@ -174,35 +174,15 @@ class ReferenceSequenceRanges:
         )
 
     @staticmethod
-    @lru_cache(maxsize=16)
-    def parse_mutator(s: str) -> TargetonMutator:
-        try:
-            return TargetonMutator(s)
-        except ValueError:
-            raise ValueError(f"Invalid mutator '{s}'!")
-
-    @staticmethod
-    def parse_tuples(s: str) -> List[Set[str]]:
+    def parse_mutator_tuples(s: str) -> List[Set[TargetonMutator]]:
         m: Optional[re.Match] = mutator_vector_re.match(s)
 
         if not m:
             raise ValueError("Invalid format for vector!")
 
         return [
-            set(
-                x for x in (
-                    mutator.strip()
-                    for mutator in mutator_group.split(',')
-                ) if x
-            ) if mutator_group else set()
+            parse_mutators(mutator_group) if mutator_group else set()
             for mutator_group in m.groups()
-        ]
-
-    @staticmethod
-    def parse_mutators(s: str) -> List[Set[TargetonMutator]]:
-        return [
-            set(map(ReferenceSequenceRanges.parse_mutator, symbols))
-            for symbols in ReferenceSequenceRanges.parse_tuples(s)
         ]
 
     @classmethod
@@ -214,7 +194,7 @@ class ReferenceSequenceRanges:
             raise ValueError("Invalid extension vector: two values expected!")
 
         # Action vector
-        mutators: List[Set[TargetonMutator]] = cls.parse_mutators(row[7])
+        mutators: List[Set[TargetonMutator]] = cls.parse_mutator_tuples(row[7])
 
         # sgRNA ID vector
         sgrna_ids: Set[str] = set(parse_list(row[8]))
@@ -288,20 +268,7 @@ class ReferenceSequenceRangeCollection:
 
     @classmethod
     def load(cls, fp: str) -> ReferenceSequenceRangeCollection:
-
-        # Detect encoding
-        with open(fp, 'rb') as rfh:
-            encoding: str = chardet.detect(rfh.read(10000))['encoding']
-
-        logging.debug("Oligonucleotide templates file encoding: %s." % encoding)
-
-        # Load oligonucleotide templates
-        with open(fp, encoding=encoding) as fh:
-            reader = csv.reader(fh, delimiter='\t')
-            if next(reader) != CSV_HEADER:
-                raise ValueError("Invalid header!")
-
-            return cls(map(ReferenceSequenceRanges.from_row, reader))
+        return cls(map(ReferenceSequenceRanges.from_row, load_tsv(fp, CSV_HEADER)))
 
     @property
     def sgrna_ids(self) -> Set[str]:

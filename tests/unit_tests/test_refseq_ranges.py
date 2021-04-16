@@ -110,7 +110,7 @@ def test_reference_sequence_ranges_init():
     ])
 ])
 def test_reference_sequence_ranges_parse_mutators(s, exp_mutators):
-    mutators = ReferenceSequenceRanges.parse_mutators(s)
+    mutators = ReferenceSequenceRanges.parse_mutator_tuples(s)
     assert mutators == exp_mutators
 
 

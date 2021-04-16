@@ -39,6 +39,61 @@ from ..utils import get_region, is_strand
 
 
 @dataclass(frozen=True)
+class PositionRange(Sized, Container):
+    __slots__ = {'start', 'end'}
+
+    start: int
+    end: int
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.start, int) or not isinstance(self.end, int):
+            raise TypeError("Invalid position range!")
+        if self.start < 1 or self.end < self.start:
+            raise ValueError("Invalid position range!")
+
+    def __len__(self) -> int:
+        return self.end - self.start + 1
+
+    def __contains__(self, other) -> bool:
+        return other.start >= self.start and other.end <= self.end
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, PositionRange):
+            raise TypeError("Unsupported operation!")
+
+        return self.start == other.start and self.end == other.end
+
+    # Required to allow multiprocessing to pickle the object
+    def __setstate__(self, state: Tuple) -> None:
+        for slot, value in state[1].items():
+            object.__setattr__(self, slot, value)
+
+
+@dataclass(frozen=True)
+class StrandedPositionRange(PositionRange):
+    __slots__ = {'start', 'end', 'strand'}
+
+    strand: str
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if not is_strand(self.strand):
+            raise ValueError("Invalid strand!")
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, StrandedPositionRange):
+            raise TypeError("Unsupported operation!")
+        return self.strand == other.strand and super().__eq__(other)
+
+    def __contains__(self, other) -> bool:
+        return other.strand == self.strand and super().__contains__(other)
+
+    @classmethod
+    def to_plus_strand(cls, pr: PositionRange) -> StrandedPositionRange:
+        return cls(pr.start, pr.end, '+')
+
+
+@dataclass(frozen=True)
 class GenomicPosition:
     __slots__ = {'chromosome', 'position'}
 
@@ -58,14 +113,15 @@ class GenomicPosition:
         return f"{self.chromosome}:{self.position}"
 
 
-@dataclass(frozen=True)
-class GenomicRange(Sized, Container):
+@dataclass(frozen=True, init=False)
+class GenomicRange(StrandedPositionRange):
     __slots__ = {'chromosome', 'start', 'end', 'strand'}
 
     chromosome: str
-    start: int
-    end: int
-    strand: str
+
+    def __init__(self, chromosome: str, start: int, end: int, strand: str) -> None:
+        object.__setattr__(self, 'chromosome', chromosome)
+        super().__init__(start, end, strand)
 
     def __post_init__(self) -> None:
         if not (
@@ -76,11 +132,6 @@ class GenomicRange(Sized, Container):
             and is_strand(self.strand)
         ):
             raise ValueError("Invalid genomic range!")
-
-    # Required to allow multiprocessing to pickle the object
-    def __setstate__(self, state: Tuple) -> None:
-        for slot, value in state[1].items():
-            object.__setattr__(self, slot, value)
 
     @property
     def region(self) -> str:
@@ -139,10 +190,7 @@ class GenomicRange(Sized, Container):
         )
 
     def __contains__(self, other) -> bool:
-        if other.chromosome != self.chromosome or other.strand != self.strand:
-            return False
-
-        return other.start >= self.start and other.end <= self.end
+        return other.chromosome == self.chromosome and super().__contains__(other)
 
     def contains_position(self, genomic_position: GenomicPosition) -> bool:
         return (
@@ -166,6 +214,10 @@ class GenomicRange(Sized, Container):
         start: int = child.start - self.start
         end: int = child.end - self.start + 1
         return start, end
+
+    @property
+    def pos_range(self) -> PositionRange:
+        return PositionRange(self.start, self.end)
 
 
 @dataclass
