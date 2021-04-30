@@ -165,7 +165,7 @@ def get_oligo_template(
         region_pam_seq: PamProtectedReferenceSequence,
         exg_gr_pair: GenomicRangePair
     ) -> CDSTargeton:
-        return CDSTargeton(
+        return CDSTargeton.from_pam_seq(
             region_pam_seq,
             get_cds_extension_sequence(exg_gr_pair[0]),
             get_cds_extension_sequence(exg_gr_pair[1]))
@@ -176,7 +176,7 @@ def get_oligo_template(
                 region_pam_seq.genomic_range)
             if exg_gr_pair is not None:
                 return get_cds_targeton(region_pam_seq, exg_gr_pair)
-        return Targeton(region_pam_seq)
+        return Targeton.from_pam_seq(region_pam_seq)
 
     def get_oligo_segment(trr: TargetReferenceRegion) -> OligoSegment:
         region_pam_seq = pam_ref_seq.get_subsequence(trr.genomic_range)

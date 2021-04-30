@@ -46,7 +46,7 @@ from ..loaders.vcf import get_vcf
 from ..utils import get_id_column
 
 
-@dataclass
+@dataclass(frozen=True)
 class PamProtectedReferenceSequence(ReferenceSequence):
     __slots__ = {'sequence', 'genomic_range', 'pam_protected_sequence'}
 
@@ -70,8 +70,8 @@ class PamProtectedReferenceSequence(ReferenceSequence):
     def apply_variant(self, variant: BaseVariant, ref_check: bool = False) -> str:
         if not self.genomic_range.contains_position(variant.genomic_position):
             raise ValueError("Variant not in genomic range!")
-        offset: int = variant.genomic_position.position - self.genomic_range.start
-        return variant.mutate(self.pam_protected_sequence, offset, ref_check=ref_check)
+        # offset: int = variant.genomic_position.position - self.genomic_range.start
+        return variant.mutate(self.pam_protected_sequence, self.genomic_range.start, ref_check=ref_check)
 
 
 @dataclass(frozen=True)
@@ -171,6 +171,6 @@ def compute_pam_protected_sequence(
             offset: int = variant.get_ref_offset(ref_seq)
 
             # Update PAM-protected sequence
-            pam_seq = variant.mutate(pam_seq, offset, ref_check=True)
+            pam_seq = variant.mutate_from(pam_seq, offset, ref_check=True)
 
     return PamProtectedReferenceSequence.from_reference_sequence(ref_seq, pam_seq)

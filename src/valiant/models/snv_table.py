@@ -34,7 +34,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import logging
-from typing import Dict, Set, Optional
+from typing import Dict, FrozenSet, Optional
 import pandas as pd
 from ..snv import _build_base_snv_table, build_snv_table, get_fast_exon_snv, get_all_syn_codons, get_fast_snvre, get_top_syn_codons, build_aa_sub_table, get_fast_aa_subs
 from .base import StrandedPositionRange
@@ -47,7 +47,7 @@ class AllAminoAcidsTable:
 
     _strand_table: Dict[str, pd.DataFrame]
 
-    def __init__(self, codon_table: CodonTable, strands: Set[str]) -> None:
+    def __init__(self, codon_table: CodonTable, strands: FrozenSet[str]) -> None:
         self._strand_table = {
             strand: build_aa_sub_table(codon_table, strand)
             for strand in strands
@@ -65,7 +65,7 @@ class SnvTable:
     _codon_table: CodonTable
     _strand_snv_table: Dict[str, pd.DataFrame]
 
-    def __init__(self, codon_table: CodonTable, strands: Set[str]) -> None:
+    def __init__(self, codon_table: CodonTable, strands: FrozenSet[str]) -> None:
         self._codon_table = codon_table
 
         base_snv_table: pd.DataFrame = _build_base_snv_table()
@@ -152,7 +152,7 @@ class AuxiliaryTables:
     def __init__(
         self,
         codon_table: CodonTable,
-        strands: Set[str],
+        strands: FrozenSet[str],
         snv: bool,
         snvre: bool,
         all_aa: bool

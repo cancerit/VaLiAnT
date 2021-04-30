@@ -32,47 +32,92 @@
 #############################
 
 from dataclasses import dataclass
-from typing import Optional, Sized
-from .base import PositionRange
+from typing import Optional, Sized, Tuple
+from .base import PositionRange, StrandedPositionRange
 from .codon_table import CodonTable, START_CODON
 from .sequences import Sequence
 
 
-# TODO: partial cDNA support?
 @dataclass(frozen=True)
 class CDNA(Sized):
-    __slots__ = {'seq', 'cds_range'}
+    __slots__ = {'seq'}
 
     seq: Sequence
-    cds_range: Optional[PositionRange]
 
     def __len__(self) -> int:
         return len(self.seq)
 
+    @property
+    def range(self) -> StrandedPositionRange:
+        return StrandedPositionRange(1, len(self), '+')
+
     def get_subsequence(self, pr: PositionRange) -> Sequence:
         return self.seq.get_rel_subsequence(pr)
+
+    def get_subsequence_string(self, pr: PositionRange) -> str:
+        return self.get_subsequence(pr).sequence
+
+    def get_subsequence_string_before(self, pos: int, length: Optional[int] = None) -> str:
+        r = self.range.get_subrange_before(pos, length=length)
+        return self.get_subsequence_string(r) if r is not None else ''
+
+    def get_subsequence_string_after(self, pos: int, length: Optional[int] = None) -> str:
+        r = self.range.get_subrange_after(pos, length=length)
+        return self.get_subsequence_string(r) if r is not None else ''
+
+
+@dataclass(frozen=True)
+class AnnotatedCDNA(CDNA):
+    __slots__ = {'seq', 'cds_range'}
+
+    cds_range: StrandedPositionRange
+
+    def _is_cds_overlap_valid(self, pr: PositionRange) -> bool:
+        cds_start: int = self.cds_range.start
+        if pr.start < cds_start:
+            if pr.end >= cds_start:
+                return False
+        elif pr.end > self.cds_range.end:
+            return False
+        return True
+
+    def get_extended_subsequence(self, pr: PositionRange) -> Tuple[Sequence, str, str]:
+        if not self._is_cds_overlap_valid(pr):
+            raise ValueError("Position range spans CDS and non-CDS regions!")
+
+        # Get subsequence
+        seq: Sequence = self.get_subsequence(pr)
+
+        # Get 5' CDS extension
+        delta_start: int = pr.start - self.cds_range.start
+        ext_5p_len: int = delta_start % 3
+        ext_5p: str = self.get_subsequence_string_before(
+            pr.start, ext_5p_len) if ext_5p_len != 0 else ''
+
+        # Get 3' CDS extension
+        ext_3p_len: int = (3 - (len(pr) + ext_5p_len) % 3) % 3
+        ext_3p: str = self.get_subsequence_string_after(
+            pr.end, ext_3p_len) if ext_3p_len != 0 else ''
+
+        return seq, ext_5p, ext_3p
 
     def get_triplet_at(self, pos: int) -> str:
         return self.get_subsequence(PositionRange(pos, pos + 2)).sequence
 
     def __post_init__(self) -> None:
-        if self.cds_range:
-            n: int = len(self)
-            if len(self.cds_range) % 3:
-                raise ValueError("Invalid CDS length!")
-            if self.cds_range.start > n or self.cds_range.end > n:
-                raise ValueError("CDS out of range!")
+        n: int = len(self)
+        if len(self.cds_range) % 3:
+            raise ValueError("Invalid CDS length!")
+        if self.cds_range.start > n or self.cds_range.end > n:
+            raise ValueError("CDS out of range!")
 
+    # TODO: support non-ATG start codons?
     def validate(self, codon_table: CodonTable) -> None:
-        if self.cds_range:
-            start_codon: str = self.get_triplet_at(self.cds_range.start)
-            if start_codon != START_CODON:
-                raise ValueError(f"Invalid start codon: {start_codon}!")
+        start_codon: str = self.get_triplet_at(self.cds_range.start)
+        if start_codon != START_CODON:
+            raise ValueError(f"Invalid start codon: {start_codon}!")
 
-            stop_codon: str = self.get_triplet_at(self.cds_range.end - 2)
-            if stop_codon not in codon_table.stop_codons:
-                raise ValueError(f"Invalid stop codon: {stop_codon}!")
+        stop_codon: str = self.get_triplet_at(self.cds_range.end - 2)
+        if stop_codon not in codon_table.stop_codons:
+            raise ValueError(f"Invalid stop codon: {stop_codon}!")
 
-    @property
-    def is_annotated(self) -> bool:
-        return self.cds_range is not None

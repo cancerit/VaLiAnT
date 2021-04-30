@@ -31,6 +31,8 @@
 # legal@sanger.ac.uk. Contact details are: legal@sanger.ac.uk quoting reference Valiant-software.
 #############################
 
+from .enums import TargetonMutator
+
 DNA_ALPHABET = 'ACGT'
 DNA_ALPHABET_SET = set(DNA_ALPHABET)
 
@@ -68,3 +70,18 @@ METADATA_FIELDS = [
 ]
 
 METADATA_FIELDS_SET = set(METADATA_FIELDS)
+
+GENERIC_MUTATORS = frozenset([
+    TargetonMutator.SNV,
+    TargetonMutator.DEL1,
+    TargetonMutator.DEL2_0,
+    TargetonMutator.DEL2_1
+])
+
+CDS_ONLY_MUTATORS = frozenset([
+    TargetonMutator.IN_FRAME,
+    TargetonMutator.SNV_RE,
+    TargetonMutator.STOP,
+    TargetonMutator.ALA,
+    TargetonMutator.AA
+])

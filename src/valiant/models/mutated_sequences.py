@@ -34,7 +34,7 @@
 from __future__ import annotations
 import abc
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, ClassVar, Set, Callable, Type
+from typing import List, Optional, Tuple, ClassVar, FrozenSet, Callable, Type
 import numpy as np
 import pandas as pd
 from ..constants import DNA_ALPHABET_SET
@@ -189,7 +189,7 @@ class BaseMutationCollection(abc.ABC):
 class MutationCollection(BaseMutationCollection):
     __slots__ = {'df', 'mutations'}
 
-    REQUIRED_FIELDS: ClassVar[Set[str]] = {
+    REQUIRED_FIELDS: ClassVar[FrozenSet[str]] = {
         'var_type',
         'mut_position',
         'ref',
@@ -205,9 +205,8 @@ class MutationCollection(BaseMutationCollection):
         self.mutations = mutations or []
 
     def __post_init__(self) -> None:
-        if self.df is not None:
-            if set(self.df.columns) != self.REQUIRED_FIELDS:
-                raise ValueError("Invalid mutation collection fields!")
+        if self.df is not None and frozenset(self.df.columns) != self.REQUIRED_FIELDS:
+            raise ValueError("Invalid mutation collection fields!")
 
     @classmethod
     def from_variants(cls, mutations: List) -> MutationCollection:

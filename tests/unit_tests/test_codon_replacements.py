@@ -60,7 +60,7 @@ def test_get_snvre_aa_mutations(aa, strand, seq, exp_mseq):
 
     # Generate target
     gr = GenomicRange('X', 10, 10 + len(seq) - 1, strand)
-    t = CDSTargeton(PamProtectedReferenceSequence(seq, gr, seq), '', '')
+    t = CDSTargeton.from_pam_seq(PamProtectedReferenceSequence(seq, gr, seq), '', '')
 
     # Generate codon substitution mutations
     mc = getattr(t, CONST_CODON_METHODS[aa])(aux_tables=aux)

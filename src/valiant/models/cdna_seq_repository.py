@@ -36,8 +36,8 @@ from dataclasses import dataclass
 from typing import Dict, Optional, Iterable, FrozenSet, List
 from ..loaders.fasta import load_from_multi_fasta
 from ..loaders.tsv import load_tsv
-from .base import PositionRange
-from .cdna import CDNA
+from .base import PositionRange, StrandedPositionRange
+from .cdna import CDNA, AnnotatedCDNA
 from .sequences import Sequence
 
 
@@ -48,15 +48,16 @@ def load_seqs(fp: str, ids: Iterable[str]) -> Dict[str, Sequence]:
     }
 
 
-def load_annot(fp: str, ids: Iterable[str]) -> Dict[str, PositionRange]:
+def load_annot(fp: str, ids: Iterable[str]) -> Dict[str, StrandedPositionRange]:
     return {
-        seq_id: PositionRange(int(cds_start), int(cds_end))
+        seq_id: StrandedPositionRange(int(cds_start), int(cds_end), '+')
         for seq_id, cds_start, cds_end in load_tsv(
             fp, ['seq_id', 'cds_start', 'cds_end'])
         if seq_id in ids
     }
 
 
+# TODO: currently supporting only all-or-none cDNA annotation...?
 @dataclass
 class CDNASequenceRepository:
     __slots__ = {'_sequences'}
@@ -67,16 +68,23 @@ class CDNASequenceRepository:
     def load(cls, ids: FrozenSet[str], fasta_fp: str, annot_fp: Optional[str] = None) -> CDNASequenceRepository:
         seq_id_seqs: Dict[str, Sequence] = load_seqs(fasta_fp, ids)
         if annot_fp:
-            seq_id_cds: Dict[str, PositionRange] = load_annot(annot_fp, ids)
+            seq_id_cds: Dict[str, StrandedPositionRange] = load_annot(annot_fp, ids)
             return cls({
-                seq_id: CDNA(seq_id_seqs[seq_id], seq_id_cds[seq_id])
+                seq_id: AnnotatedCDNA(seq_id_seqs[seq_id], seq_id_cds[seq_id])
                 for seq_id in ids
             })
         else:
             return cls({
-                seq_id: CDNA(seq_id_seqs[seq_id], None)
+                seq_id: CDNA(seq_id_seqs[seq_id])
                 for seq_id in ids
             })
 
     def get(self, seq_id: str) -> Optional[CDNA]:
         return self._sequences.get(seq_id, None)
+
+    def get_subsequence(self, seq_id: str, pr: PositionRange) -> Optional[Sequence]:
+        if seq_id not in self._sequences:
+            return None
+
+        cdna = self._sequences[seq_id]
+        return cdna.get_subsequence(pr)

@@ -80,6 +80,13 @@ class CDNATargetonConfigCollection:
     def __len__(self) -> int:
         return len(self.cts)
 
+    @property
+    def mutators(self) -> FrozenSet[TargetonMutator]:
+        return frozenset.union(*[
+            ctc.mutators
+            for ctc in self.cts
+        ])
+
     @classmethod
     def load(cls, fp: str) -> CDNATargetonConfigCollection:
         return cls(map(CDNATargetonConfig.from_row, load_tsv(fp, CSV_HEADER)))

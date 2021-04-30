@@ -68,7 +68,7 @@ def get_pam_protected_sequence(seq, pam_protection, chromosome='X', strand='+', 
 def get_targeton(seq, pam_protection, chromosome='X', strand='+', pos=1):
     pam_ref_seq = get_pam_protected_sequence(
         seq, pam_protection, chromosome=chromosome, strand=strand, pos=pos)
-    return Targeton(pam_ref_seq)
+    return Targeton.from_pam_seq(pam_ref_seq)
 
 
 def load_codon_table():

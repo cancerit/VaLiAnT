@@ -1,26 +1,26 @@
 ########## LICENCE ##########
 # VaLiAnT, (c) 2020, GRL (the "Software")
-# 
+#
 # The Software remains the property of Genome Research Ltd ("GRL").
-# 
+#
 # The Software is distributed "AS IS" under this Licence solely for non-commercial use in the hope that it will be useful,
 # but in order that GRL as a charitable foundation protects its assets for the benefit of its educational and research
 # purposes, GRL makes clear that no condition is made or to be implied, nor is any warranty given or to be implied, as to
 # the accuracy of the Software, or that it will be suitable for any particular purpose or for use under any specific
 # conditions. Furthermore, GRL disclaims all responsibility for the use which is made of the Software. It further
 # disclaims any liability for the outcomes arising from using  the Software.
-# 
+#
 # The Licensee agrees to indemnify GRL and hold GRL harmless from and against any and all claims, damages and liabilities
 # asserted by third parties (including claims for negligence) which arise directly or indirectly from the use of the
 # Software or the sale of any products based on the Software.
-# 
+#
 # No part of the Software may be reproduced, modified, transmitted or transferred in any form or by any means, electronic
 # or mechanical, without the express permission of GRL. The permission of GRL is not required if the said reproduction,
 # modification, transmission or transference is done without financial return, the conditions of this Licence are imposed
 # upon the receiver of the product, and all original and amended source code is included in any transmitted product. You
 # may be held legally responsible for any copyright infringement that is caused or encouraged by your failure to abide by
 # these terms and conditions.
-# 
+#
 # You are not permitted under this Licence to use this Software commercially. Use for which any financial return is
 # received shall be defined as commercial use, and includes (1) integration of all or part of the source code or the
 # Software into a product for sale or license by or on behalf of Licensee to third parties or (2) use of the Software
@@ -34,7 +34,7 @@
 from __future__ import annotations
 from collections.abc import Container, Sized
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Optional
 from ..utils import get_region, is_strand
 
 
@@ -68,6 +68,45 @@ class PositionRange(Sized, Container):
         for slot, value in state[1].items():
             object.__setattr__(self, slot, value)
 
+    def to_tuple(self) -> Tuple[int, int]:
+        return self.start, self.end
+
+    def get_subrange_before(self, pos: int, length: Optional[int] = None) -> Optional[PositionRange]:
+        if pos < 1:
+            raise ValueError("Invalid position!")
+        if length is None:
+            if pos == 1:
+                return None
+            s = 1
+        elif length == 0:
+            return None
+        else:
+            if length < 1:
+                raise ValueError("Invalid subsequence length!")
+            s = pos - length
+            if s < 1:
+                raise ValueError("Invalid subsequence length: out of range!")
+
+        return PositionRange(s, pos - 1)
+
+    def get_subrange_after(self, pos: int, length: Optional[int] = None) -> Optional[PositionRange]:
+        if pos < 1:
+            raise ValueError("Invalid position!")
+        if length is None:
+            e = len(self)
+            if pos == e:
+                return None
+        elif length == 0:
+            return None
+        else:
+            if length < 1:
+                raise ValueError("Invalid subsequence length!")
+            e = pos + length
+            if e > len(self):
+                raise ValueError("Invalid subsequence length: out of range!")
+
+        return PositionRange(pos + 1, e)
+
 
 @dataclass(frozen=True)
 class StrandedPositionRange(PositionRange):
@@ -86,7 +125,12 @@ class StrandedPositionRange(PositionRange):
         return self.strand == other.strand and super().__eq__(other)
 
     def __contains__(self, other) -> bool:
-        return other.strand == self.strand and super().__contains__(other)
+        if isinstance(other, StrandedPositionRange):
+            return other.strand == self.strand and super().__contains__(other)
+        elif isinstance(other, PositionRange):
+            return super().__contains__(other)
+        else:
+            raise TypeError("Unsupported operation!")
 
     @classmethod
     def to_plus_strand(cls, pr: PositionRange) -> StrandedPositionRange:
