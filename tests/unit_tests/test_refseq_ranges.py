@@ -37,8 +37,8 @@ from valiant.models.refseq_ranges import ReferenceSequenceRanges, ReferenceSeque
 
 
 def test_reference_sequence_ranges_init():
-    r2_mutators = {TargetonMutator.DEL1}
-    mutators = set(), r2_mutators, set()
+    r2_mutators = frozenset({TargetonMutator.DEL1})
+    mutators = frozenset(), r2_mutators, frozenset()
     chromosome = 'X'
     strand = '+'
     ref_start = 1
@@ -51,7 +51,7 @@ def test_reference_sequence_ranges_init():
     c2_end = 1000
     r3_start = 201
     r3_end = 220
-    sgrna_ids = {'ID1', 'ID2'}
+    sgrna_ids = frozenset({'ID1', 'ID2'})
 
     # Initialise object
     rsr = ReferenceSequenceRanges(
@@ -115,15 +115,15 @@ def test_reference_sequence_ranges_parse_mutators(s, exp_mutators):
 
 
 def test_reference_sequence_range_collection_init():
-    r2_mutators = {TargetonMutator.DEL1}
-    mutators = set(), r2_mutators, set()
+    r2_mutators = frozenset({TargetonMutator.DEL1})
+    mutators = frozenset(), r2_mutators, frozenset()
     chromosome = 'X'
     strand = '+'
     ref_start = 1
     ref_end = 1000
     r2_start = 100
     r2_end = 200
-    sgrna_ids = {'ID1', 'ID2'}
+    sgrna_ids = frozenset({'ID1', 'ID2'})
 
     rsr = ReferenceSequenceRanges(
         chromosome,

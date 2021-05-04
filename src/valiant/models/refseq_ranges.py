@@ -38,7 +38,7 @@ from functools import lru_cache
 from itertools import chain
 import logging
 import re
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, Optional, FrozenSet, Tuple
 import pandas as pd
 from pyranges import PyRanges
 from .base import GenomicRange
@@ -83,7 +83,7 @@ class TargetReferenceRegion:
     __slots__ = {'genomic_range', 'mutators'}
 
     genomic_range: GenomicRange
-    mutators: Set[TargetonMutator]
+    mutators: FrozenSet[TargetonMutator]
 
 
 @dataclass(init=False)
@@ -96,7 +96,7 @@ class ReferenceSequenceRanges:
     }
 
     ref_range: GenomicRange
-    sgrna_ids: Set[str]
+    sgrna_ids: FrozenSet[str]
     _const_regions: Tuple[Optional[GenomicRange], Optional[GenomicRange]]
     _target_regions: Tuple[
         Optional[TargetReferenceRegion],
@@ -113,8 +113,8 @@ class ReferenceSequenceRanges:
         target_region_2_start: int,
         target_region_2_end: int,
         target_region_2_extension: Tuple[int, int],
-        mutators: Tuple[Set[TargetonMutator], Set[TargetonMutator], Set[TargetonMutator]],
-        sgrna_ids: Set[str]
+        mutators: Tuple[FrozenSet[TargetonMutator], FrozenSet[TargetonMutator], FrozenSet[TargetonMutator]],
+        sgrna_ids: FrozenSet[str]
     ) -> None:
 
         def get_genomic_range(start: int, end: int) -> GenomicRange:
@@ -174,7 +174,7 @@ class ReferenceSequenceRanges:
         )
 
     @staticmethod
-    def parse_mutator_tuples(s: str) -> List[Set[TargetonMutator]]:
+    def parse_mutator_tuples(s: str) -> List[FrozenSet[TargetonMutator]]:
         m: Optional[re.Match] = mutator_vector_re.match(s)
 
         if not m:
@@ -194,10 +194,10 @@ class ReferenceSequenceRanges:
             raise ValueError("Invalid extension vector: two values expected!")
 
         # Action vector
-        mutators: List[Set[TargetonMutator]] = cls.parse_mutator_tuples(row[7])
+        mutators: List[FrozenSet[TargetonMutator]] = cls.parse_mutator_tuples(row[7])
 
         # sgRNA ID vector
-        sgrna_ids: Set[str] = set(parse_list(row[8]))
+        sgrna_ids: FrozenSet[str] = set(parse_list(row[8]))
 
         return cls(
             row[0],
@@ -211,8 +211,8 @@ class ReferenceSequenceRanges:
             sgrna_ids)
 
     @property
-    def mutators(self) -> Set[TargetonMutator]:
-        return set.union(*[trr.mutators for trr in self._target_regions if trr])
+    def mutators(self) -> FrozenSet[TargetonMutator]:
+        return frozenset.union(*[trr.mutators for trr in self._target_regions if trr])
 
     @property
     def target_regions(self) -> List[TargetReferenceRegion]:
@@ -271,21 +271,21 @@ class ReferenceSequenceRangeCollection:
         return cls(map(ReferenceSequenceRanges.from_row, load_tsv(fp, CSV_HEADER)))
 
     @property
-    def sgrna_ids(self) -> Set[str]:
-        return set.union(*[rsr.sgrna_ids for rsr in self._rsrs.values()])
+    def sgrna_ids(self) -> FrozenSet[str]:
+        return frozenset.union(*[rsr.sgrna_ids for rsr in self._rsrs.values()])
 
     @property
     def target_ranges(self) -> PyRanges:
         return self._region_ranges[~self._region_ranges.is_const]
 
     @property
-    def ref_ranges(self) -> Set[GenomicRange]:
-        return set(rsr.ref_range for rsr in self._rsrs.values())
+    def ref_ranges(self) -> FrozenSet[GenomicRange]:
+        return frozenset(rsr.ref_range for rsr in self._rsrs.values())
 
     @property
-    def strands(self) -> Set[str]:
-        return set(gr.strand for gr in self.ref_ranges)
+    def strands(self) -> FrozenSet[str]:
+        return frozenset(gr.strand for gr in self.ref_ranges)
 
     @property
-    def mutarors(self) -> Set[TargetonMutator]:
-        return set.union(*[rsr.mutators for rsr in self._rsrs.values()])
+    def mutarors(self) -> FrozenSet[TargetonMutator]:
+        return frozenset.union(*[rsr.mutators for rsr in self._rsrs.values()])
