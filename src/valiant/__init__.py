@@ -31,4 +31,4 @@
 # legal@sanger.ac.uk. Contact details are: legal@sanger.ac.uk quoting reference Valiant-software.
 #############################
 
-__version__ = '0.2.0'
+__version__ = '1.0.0'
