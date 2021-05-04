@@ -33,7 +33,8 @@
 
 from contextlib import nullcontext
 import pytest
-from valiant.cli import _load_codon_table, _load_gff_file, _load_pam_protection_vcf
+from valiant.cli_utils import load_codon_table
+from valiant.sge_cli import _load_gff_file, _load_pam_protection_vcf
 from valiant.models.codon_table import CodonTable
 from valiant.models.exon import AnnotationRepository
 from .constants import CODON_TABLE_FP, GTF_SINGLE, GTF_MULTI, PAM_VCF_FP
@@ -43,7 +44,7 @@ from .utils import get_data_file_path
 def test_load_codon_table_default():
 
     # Load default codon table
-    default_codon_table = _load_codon_table(None)
+    default_codon_table = load_codon_table(None)
     assert isinstance(default_codon_table, CodonTable)
     aas = set(default_codon_table.amino_acid_symbols)
     assert 'STOP' in aas
@@ -54,13 +55,13 @@ def test_load_codon_table_invalid():
 
     # Load invalid codon table
     with pytest.raises(SystemExit):
-        _load_codon_table(get_data_file_path(GTF_SINGLE))
+        load_codon_table(get_data_file_path(GTF_SINGLE))
 
 
 def test_load_codon_table_valid():
 
     # Load valid codon table
-    codon_table = _load_codon_table(get_data_file_path(CODON_TABLE_FP))
+    codon_table = load_codon_table(get_data_file_path(CODON_TABLE_FP))
 
     # Check codon table
     assert isinstance(codon_table, CodonTable)
@@ -92,7 +93,7 @@ def test_load_gff_file_valid():
 def test_load_pam_protection_vcf_none():
 
     # Load no PAM VCF file
-    vr = _load_pam_protection_vcf(set(), None)
+    vr = _load_pam_protection_vcf(frozenset(), None)
     assert vr.sgrna_ids == set()
 
 
@@ -100,7 +101,8 @@ def test_load_pam_protection_vcf_invalid():
 
     # Load invalid PAM VCF file
     with pytest.raises(SystemExit):
-        _load_codon_table(get_data_file_path(GTF_SINGLE))
+        _load_pam_protection_vcf(
+            frozenset(['sgRNA_1']), get_data_file_path(GTF_SINGLE))
 
 
 def test_load_pam_protection_vcf_valid():

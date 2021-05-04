@@ -50,7 +50,7 @@ CSV_HEADER = [
 ]
 
 
-@dataclass
+@dataclass(frozen=True)
 class CDNATargetonConfig:
     __slots__ = {'seq_id', 'targeton_range', 'r2_range', 'mutators'}
 

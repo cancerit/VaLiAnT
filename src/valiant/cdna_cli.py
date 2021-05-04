@@ -34,11 +34,15 @@
 from functools import partial
 import os
 import sys
+from typing import Callable, Union, Dict, Tuple, Optional
+import click
+import numpy as np
 import pandas as pd
-from typing import Callable, Union, Dict
 from .constants import CDS_ONLY_MUTATORS
+from .cli_utils import load_codon_table, validate_adaptor, set_logger
+from .common_cli import common_params, existing_file
 from .enums import TargetonMutator
-from .models.base import StrandedPositionRange
+from .models.base import StrandedPositionRange, PositionRange
 from .models.cdna import CDNA, AnnotatedCDNA
 from .models.cdna_seq_repository import CDNASequenceRepository
 from .models.cdna_targeton_configs import CDNATargetonConfig, CDNATargetonConfigCollection
@@ -47,7 +51,8 @@ from .models.mutated_sequences import MutationCollection
 from .models.sequences import Sequence
 from .models.snv_table import AuxiliaryTables
 from .models.targeton import Targeton, CDSTargeton
-from .cli import _load_codon_table
+from .utils import get_constant_category
+from .writers import write_oligo_metadata
 
 
 def get_cdna(
@@ -86,11 +91,11 @@ def get_annotated_cdna_mutations(
     aux: AuxiliaryTables,
     targeton_cfg: CDNATargetonConfig,
     cdna: AnnotatedCDNA
-) -> Dict[TargetonMutator, MutationCollection]:
+) -> Tuple[str, Dict[TargetonMutator, MutationCollection]]:
     sequence, cds_ext_5p, cds_ext_3p = cdna.get_extended_subsequence(
         targeton_cfg.r2_range)
     seq = sequence.sequence
-    return CDSTargeton(
+    return seq, CDSTargeton(
         seq, seq, StrandedPositionRange.to_plus_strand(
             targeton_cfg.r2_range), cds_ext_5p, cds_ext_3p).compute_mutations(
                 targeton_cfg.mutators, aux)
@@ -100,50 +105,122 @@ def get_cdna_mutations(
     aux: AuxiliaryTables,
     targeton_cfg: CDNATargetonConfig,
     cdna: AnnotatedCDNA
-) -> Dict[TargetonMutator, MutationCollection]:
+) -> Tuple[str, Dict[TargetonMutator, MutationCollection]]:
     seq = cdna.get_subsequence_string(targeton_cfg.r2_range)
-    return Targeton(
+    return seq, Targeton(
         seq, seq, StrandedPositionRange.to_plus_strand(
             targeton_cfg.r2_range)).compute_mutations(
                 targeton_cfg.mutators)
 
 
-def main(targeton_fp: str, fasta_fp: str, annot_fp: str) -> None:
+def process_targeton(
+    get_cdna_f: Callable,
+    aux: AuxiliaryTables,
+    adaptor_5: Optional[str],
+    adaptor_3: Optional[str],
+    targeton_cfg: CDNATargetonConfig
+) -> pd.DataFrame:
+    cdna = get_cdna_f(targeton_cfg)
+    t_start, t_end = targeton_cfg.targeton_range.to_tuple()
+    r2_start, r2_end = targeton_cfg.r2_range.to_tuple()
 
-   # Load targeton configurations
-    targetons = CDNATargetonConfigCollection.load(targeton_fp)
+    # Generate mutated sequences
+    get_mutations = (
+        get_annotated_cdna_mutations if isinstance(cdna, AnnotatedCDNA) else
+        get_cdna_mutations
+    )
+    r2, mut_collections = get_mutations(aux, targeton_cfg, cdna)  # type: ignore
+
+    # Get constant sequences (if any)
+    c1 = cdna.get_subsequence_string(
+        PositionRange(t_start, r2_start - 1)) if t_start != r2_start else ''
+    c2 = cdna.get_subsequence_string(
+        PositionRange(r2_end + 1, t_end)) if t_end != r2_end else ''
+
+    # Merge mutation collections
+    # TODO: add mutator
+    df = pd.concat([mc.df for mc in mut_collections.values()])
+
+    # Offset relative mutation position
+    df.mut_position += 1
+
+    df['ref_seq'] = get_constant_category(c1 + r2 + c2, df.shape[0])
+    df['ref_start'] = np.int32(t_start)
+    df['ref_end'] = np.int32(t_end)
+    df['revc'] = np.int8(0)
+
+    # Add constant sequences (if any)
+    prefix = (adaptor_5 or '') + c1
+    if prefix:
+        df.mseq = prefix + df.mseq
+    suffix = c2 + (adaptor_3 or '')
+    if suffix:
+        df.mseq = df.mseq + suffix
+
+    # TODO: apply maximum length mask
+    df['oligo_length'] = df.mseq.str.len().astype(np.int32)
+
+    return df
+
+
+@click.command()
+@common_params
+@click.option('--annot', type=existing_file)
+def cdna(
+
+    # Input files
+    oligo_info: str,
+    ref_fasta: str,
+    codon_table: Optional[str],
+    annot: Optional[str],
+
+    # Output directory
+    output: str,
+
+    # Metadata
+    species: str,
+    assembly: str,
+
+    # Adaptor sequences
+    adaptor_5: Optional[str],
+    adaptor_3: Optional[str],
+
+    # Actions
+    max_length: int,
+
+    # Extra
+    log: str
+
+):
+    # Set logging up
+    set_logger(log)
+
+    # Validate adaptor sequences
+    validate_adaptor(adaptor_5)
+    validate_adaptor(adaptor_3)
+
+    # Load targeton configurations
+    targetons = CDNATargetonConfigCollection.load(oligo_info)
 
     # Load cDNA sequences
     seq_repo = CDNASequenceRepository.load(
-        targetons.sequence_ids, fasta_fp, annot_fp=annot_fp)
+        targetons.sequence_ids, ref_fasta, annot_fp=annot)
 
     # Get auxiliary tables
-    codon_table = _load_codon_table(None)
-    aux: AuxiliaryTables = get_auxiliary_tables(targetons, codon_table)
+    aux: AuxiliaryTables = get_auxiliary_tables(
+        targetons, load_codon_table(codon_table))
 
-    f = partial(get_cdna, seq_repo, codon_table)
+    get_cdna_f = partial(get_cdna, seq_repo, aux.codon_table)
     for targeton_cfg in targetons.cts:
-        cdna = f(targeton_cfg)
 
-        # Get target sequence
-        r2 = cdna.get_subsequence_string(targeton_cfg.r2_range)
+        # Generate oligonucleotides
+        meta = process_targeton(
+            get_cdna_f, aux, adaptor_5, adaptor_3, targeton_cfg)
 
-        # Generate mutated sequences
-        get_mutations = (
-            get_annotated_cdna_mutations if isinstance(cdna, AnnotatedCDNA) else
-            get_cdna_mutations
-        )
-        mut_collections = get_mutations(aux, targeton_cfg, cdna)  # type: ignore
+        # Set metadata
+        meta['species'] = get_constant_category(species, meta.shape[0])
+        meta['assembly'] = get_constant_category(assembly, meta.shape[0])
 
-        # Get constant sequences
-        c1 = cdna.get_subsequence_string_before(targeton_cfg.r2_range.start)
-        c2 = cdna.get_subsequence_string_after(targeton_cfg.r2_range.end)
-
-        df = pd.concat([mc.df for mc in mut_collections.values()])
-        df.mut_position += 1
-        print(df)
-
-
-if __name__ == '__main__':
-    _, targeton_fp, fasta_fp, annot_fp = sys.argv
-    main(targeton_fp, fasta_fp, annot_fp)
+        # TODO: define file name format
+        fn = f"{targeton_cfg.seq_id}_{hex(hash(targeton_cfg))}.csv"
+        write_oligo_metadata(meta, os.path.join(output, fn))

@@ -35,7 +35,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from itertools import chain
 import logging
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, FrozenSet
 import pandas as pd
 from pyranges import PyRanges
 from pysam import VariantRecord
@@ -112,12 +112,12 @@ class PamProtectionVariantRepository:
     def count(self) -> int:
         return sum(map(len, self._variants.values()))
 
-    def get_sgrna_variants(self, sgrna_id: str) -> Set[PamVariant]:
-        return self._variants[sgrna_id]
+    def get_sgrna_variants(self, sgrna_id: str) -> FrozenSet[PamVariant]:
+        return frozenset(self._variants[sgrna_id])
 
-    def get_sgrna_variants_bulk(self, sgrna_ids: Set[str]) -> Set[PamVariant]:
+    def get_sgrna_variants_bulk(self, sgrna_ids: FrozenSet[str]) -> FrozenSet[PamVariant]:
         try:
-            return set(chain.from_iterable(
+            return frozenset(chain.from_iterable(
                 self.get_sgrna_variants(sgrna_id)
                 for sgrna_id in sgrna_ids
             ))
