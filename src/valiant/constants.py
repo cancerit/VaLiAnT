@@ -85,3 +85,5 @@ CDS_ONLY_MUTATORS = frozenset([
     TargetonMutator.ALA,
     TargetonMutator.AA
 ])
+
+MUTATOR_CATEGORIES = sorted([m.value for m in (GENERIC_MUTATORS | CDS_ONLY_MUTATORS)])
