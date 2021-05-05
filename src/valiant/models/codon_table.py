@@ -41,7 +41,7 @@ STOP_CODE = 'STOP'
 
 
 class CodonTable:
-    __slots__ = {'_codon2aa', '_aa2codons', '_codon2syn', '_codonrc2syn', '_stop_codons'}
+    __slots__ = {'_codon2aa', '_aa2codons', '_codon2syn', '_codonrc2syn', '_stop_codons', '_amino_acid_symbols'}
 
     def __init__(self, codon_table: List[Tuple[str, str, float, int]]) -> None:
 
@@ -74,10 +74,11 @@ class CodonTable:
         }
 
         self._stop_codons: FrozenSet[str] = frozenset(self._aa2codons[STOP_CODE])
+        self._amino_acid_symbols = sorted(self._aa2codons.keys())
 
     @property
     def amino_acid_symbols(self) -> List[str]:
-        return list(self._aa2codons.keys())
+        return self._amino_acid_symbols
 
     @property
     def stop_codons(self) -> FrozenSet[str]:
