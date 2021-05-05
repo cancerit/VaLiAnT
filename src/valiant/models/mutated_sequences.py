@@ -189,13 +189,13 @@ class BaseMutationCollection(abc.ABC):
 class MutationCollection(BaseMutationCollection):
     __slots__ = {'df', 'mutations'}
 
-    REQUIRED_FIELDS: ClassVar[FrozenSet[str]] = {
+    REQUIRED_FIELDS: ClassVar[FrozenSet[str]] = frozenset([
         'var_type',
         'mut_position',
         'ref',
         'new',
         'mseq'
-    }
+    ])
 
     # TODO: to remove when oligonucleotide names will be computed from the metadata table
     mutations: List[MutatedSequence]
