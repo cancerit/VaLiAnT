@@ -34,11 +34,11 @@
 from functools import partial
 import os
 import sys
-from typing import Callable, Union, Dict, Tuple, Optional
+from typing import Callable, Union, Dict, Tuple, Optional, List
 import click
 import numpy as np
 import pandas as pd
-from .constants import CDS_ONLY_MUTATORS
+from .constants import CDS_ONLY_MUTATORS, MUTATOR_CATEGORIES
 from .cli_utils import load_codon_table, validate_adaptor, set_logger
 from .common_cli import common_params, existing_file
 from .enums import TargetonMutator
@@ -48,10 +48,11 @@ from .models.cdna_seq_repository import CDNASequenceRepository
 from .models.cdna_targeton_configs import CDNATargetonConfig, CDNATargetonConfigCollection
 from .models.codon_table import CodonTable
 from .models.mutated_sequences import MutationCollection
+from .models.oligo_template import MUTATION_TYPE_CATEGORIES_T, decode_mut_types_cat
 from .models.sequences import Sequence
 from .models.snv_table import AuxiliaryTables
 from .models.targeton import Targeton, CDSTargeton
-from .utils import get_constant_category
+from .utils import get_constant_category, get_empty_category_column
 from .writers import write_oligo_metadata
 
 
@@ -113,6 +114,31 @@ def get_cdna_mutations(
                 targeton_cfg.mutators)
 
 
+def mut_coll_to_df(
+    get_empty_aa_column: Callable[[int], pd.Categorical],
+    mutator: TargetonMutator,
+    mc: MutationCollection
+) -> pd.DataFrame:
+    df = mc.df
+    if df is None:
+        raise ValueError("Missing dataframe!")
+    rown = df.shape[0]
+    df['mutator'] = get_constant_category(
+        mutator.value, rown, categories=MUTATOR_CATEGORIES)
+
+    # Avoid categorical to object conversion on concatenation
+    for aa_field in ['ref_aa', 'alt_aa']:
+        if aa_field not in df.columns:
+            df[aa_field] = get_empty_aa_column(rown)
+
+    df['mut_type'] = (
+        decode_mut_types_cat(df.mut_type) if 'mut_type' in df.columns else
+        get_empty_category_column(MUTATION_TYPE_CATEGORIES_T, rown)
+    )
+
+    return df
+
+
 def process_targeton(
     get_cdna_f: Callable,
     aux: AuxiliaryTables,
@@ -137,14 +163,27 @@ def process_targeton(
     c2 = cdna.get_subsequence_string(
         PositionRange(r2_end + 1, t_end)) if t_end != r2_end else ''
 
+    ref_seq = cdna.get_subsequence_string(targeton_cfg.targeton_range)
+
+    get_empty_aa_column = partial(
+        get_empty_category_column, tuple(aux.codon_table.amino_acid_symbols))
+
     # Merge mutation collections
-    # TODO: add mutator
-    df = pd.concat([mc.df for mc in mut_collections.values()])
+    df = pd.concat((
+        mut_coll_to_df(get_empty_aa_column, mutator, mc)
+        for mutator, mc in mut_collections.items()
+    ), ignore_index=True)
+    del mut_collections
 
     # Offset relative mutation position
     df.mut_position += 1
 
-    df['ref_seq'] = get_constant_category(c1 + r2 + c2, df.shape[0])
+    # Compress reference and alternative sequences
+    df.ref = df.ref.astype('category')
+    df.new = df.new.astype('category')
+
+    # Populate targeton attributes
+    df['ref_seq'] = get_constant_category(ref_seq, df.shape[0])
     df['ref_start'] = np.int32(t_start)
     df['ref_end'] = np.int32(t_end)
     df['revc'] = np.int8(0)
