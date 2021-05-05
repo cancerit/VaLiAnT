@@ -57,6 +57,23 @@ MUTATION_TYPE_LABELS: Dict[int, str] = {
     MutationType.NONSENSE.value: 'non'
 }
 
+MUTATION_TYPE_CATEGORIES = sorted(MUTATION_TYPE_LABELS.values())
+MUTATION_TYPE_CATEGORIES_T = tuple(MUTATION_TYPE_CATEGORIES)
+
+
+def _decode_mut_type(x) -> str:
+    return MUTATION_TYPE_LABELS[x] if not pd.isnull(x) else x
+
+
+def decode_mut_types(mut_type: pd.Series) -> pd.Series:
+    return mut_type.apply(_decode_mut_type)
+
+
+def decode_mut_types_cat(mut_type: pd.Series) -> pd.Categorical:
+    return pd.Categorical(
+        decode_mut_types(mut_type),
+        categories=MUTATION_TYPE_CATEGORIES)
+
 
 class OligoSegment(abc.ABC):
 
@@ -374,8 +391,7 @@ class OligoTemplate:
         # Decode mutation type
         if 'mut_type' in all_mutations.columns:
             # TODO: improve filter performance
-            all_mutations.mut_type = all_mutations.mut_type.apply(
-                lambda x: MUTATION_TYPE_LABELS[x] if not pd.isnull(x) else x)
+            all_mutations.mut_type = decode_mut_type(all_mutations.mut_type)
 
         # Compute oligonucleotide lengths
         all_mutations['oligo_length'] = all_mutations.mseq.str.len().astype(np.int32)
