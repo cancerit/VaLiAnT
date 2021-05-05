@@ -35,7 +35,7 @@ from functools import lru_cache
 import os
 import pathlib
 import re
-from typing import List, Type, Tuple, Set
+from typing import List, Type, Tuple, Set, Iterable
 import numpy as np
 import pandas as pd
 from .enums import TargetonMutator
@@ -103,6 +103,11 @@ def get_id_column(rown: int) -> np.ndarray:
 
 def get_constant_category(s: str, n: int, categories: List[str] = None) -> pd.Categorical:
     return pd.Categorical([s], categories=categories or [s]).repeat(n)
+
+
+@lru_cache()
+def get_empty_category_column(categories: Iterable[str], n: int) -> pd.Categorical:
+    return pd.Categorical(np.empty(n), categories=sorted(categories))
 
 
 @lru_cache(maxsize=4)
