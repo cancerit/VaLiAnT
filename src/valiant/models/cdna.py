@@ -120,4 +120,3 @@ class AnnotatedCDNA(CDNA):
         stop_codon: str = self.get_triplet_at(self.cds_range.end - 2)
         if stop_codon not in codon_table.stop_codons:
             raise ValueError(f"Invalid stop codon: {stop_codon}!")
-
