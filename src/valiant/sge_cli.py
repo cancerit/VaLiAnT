@@ -45,6 +45,7 @@ from .loaders.vcf import write_vcf
 from .models.base import GenomicRange
 from .models.codon_table import CodonTable
 from .models.exon import AnnotationRepository, CDSContextRepository, GenomicRangePair, TranscriptInfo
+from .models.metadata_table import MetadataTable
 from .models.oligo_generation_info import OligoGenerationInfo
 from .models.oligo_template import InvariantOligoSegment, OligoSegment, OligoTemplate, TargetonOligoSegment
 from .models.options import Options
@@ -54,7 +55,7 @@ from .models.refseq_repository import fetch_reference_sequences, ReferenceSequen
 from .models.sequences import ReferenceSequence
 from .models.snv_table import AuxiliaryTables
 from .models.targeton import BaseTargeton, CDSTargeton, Targeton
-from .models.variant import CustomVariant, get_records, VariantRepository
+from .models.variant import CustomVariant, VariantRepository
 from .common_cli import common_params, existing_file
 from .cli_utils import load_codon_table, validate_adaptor, set_logger
 from .utils import get_constant_category, get_data_file_path, is_dna
@@ -257,7 +258,7 @@ def get_oligo_templates(
             raise get_missing_sgrna_err(rsr.ref_range, rsr.sgrna_ids - matching_sgrna_ids)
 
         # Retrieve PAM protection variants
-        return pam.get_sgrna_variants_bulk(rsr.sgrna_ids)
+        return set(pam.get_sgrna_variants_bulk(rsr.sgrna_ids))
 
     def get_rsr_oligo_template(rsr: ReferenceSequenceRanges) -> OligoTemplate:
         try:
@@ -343,82 +344,37 @@ def get_oligo_template_qc_info(
 
 
 def generate_oligos(output: str, ref_repository: ReferenceSequenceRepository, aux: AuxiliaryTables, ot: OligoTemplate, species: str, assembly: str, options: Options) -> OligoGenerationInfo:
-    # Generate mutations
-    metadata: pd.DataFrame = ot.get_mutation_table(aux, options)
 
-    # Add global metadata
-    rown: int = metadata.shape[0]
-    metadata['species'] = get_constant_category(species, rown)
-    metadata['assembly'] = get_constant_category(assembly, rown)
+    # Generate metadata table
+    metadata = MetadataTable.from_partial(
+        species,
+        assembly,
+        ot.get_mutation_table(aux, options),
+        options.oligo_max_length)
 
-    # Add missing columns
-    for field in METADATA_FIELDS_SET - set(metadata.columns):
-        metadata[field] = None
-
-    fn_prefix: str = (
+    # Generate file name prefix
+    base_fn = (
         '_'.join([ot.name] + sorted(ot.sgrna_ids)) if ot.sgrna_ids else
         ot.name
     )
 
-    # Get number of oligonucleotides exceeding maximum length
-    oligo_length_mask: pd.Series = metadata.oligo_length <= options.oligo_max_length
-    short_oligo_n: int = oligo_length_mask.sum()
-    long_oligo_n: int = len(oligo_length_mask) - short_oligo_n
+    # Write to files
+    metadata.write_sge_files(output, base_fn, ref_repository)
 
-    if short_oligo_n > 0:
-
-        # Save metadata to file (filtered and reordered columns)
-        metadata_fn: str = fn_prefix + '_meta.csv'
-        write_oligo_metadata(
-            (
-                metadata.loc[oligo_length_mask, METADATA_FIELDS] if long_oligo_n > 0 else
-                metadata[METADATA_FIELDS]
-            ),
-            os.path.join(output, metadata_fn))
-
-        # Save variants to file (VCF format)
-        vcf_fn: str = fn_prefix + '.vcf'
-        contigs: List[str] = list(metadata.ref_chr.cat.categories.values)
-        write_vcf(os.path.join(output, vcf_fn), contigs, get_records(
-            ref_repository, (
-                metadata[oligo_length_mask] if long_oligo_n > 0 else
-                metadata
-            )
-        ))
-
-    else:
+    # Log
+    if metadata.short_oligo_n == 0:
         logging.warning(
             "Empty metadata table for targeton at %s (%s): no file generated!" % (
                 ot.ref_range.region,
                 ', '.join(ot.sgrna_ids) if ot.sgrna_ids else 'no PAM protection'
             ))
-
-    if long_oligo_n > 0:
-
-        # Save discarded metadata to file
-        excluded_metadata_fn: str = fn_prefix + '_meta_excluded.csv'
-        write_oligo_metadata(
-            metadata[~oligo_length_mask],
-            os.path.join(output, excluded_metadata_fn))
-
-    if short_oligo_n > 0:
-
-        # Save unique oligonucleotides to file (and filter by length)
-        unique_oligos_fn: str = fn_prefix + '_unique.csv'
-        unique_oligos: pd.DataFrame = metadata.loc[
-            oligo_length_mask,
-            ['oligo_name', 'mseq']
-        ].drop_duplicates(subset=['mseq'], keep='first')
-        write_oligo_unique(unique_oligos, os.path.join(output, unique_oligos_fn))
-
-    else:
         logging.warning(
             "Empty unique oligonucleotides table for targeton at %s (%s): no file generated!" % (
                 ot.ref_range.region,
                 ', '.join(ot.sgrna_ids) if ot.sgrna_ids else 'no PAM protection'
             ))
 
-    return OligoGenerationInfo(long_oligo_n)
+    return metadata.get_info()
 
 
 @click.command()
@@ -482,7 +438,7 @@ def sge(
     validate_adaptor(adaptor_3)
 
     # Load codon table
-    ct: CodonTable = _load_codon_table(codon_table)
+    ct: CodonTable = load_codon_table(codon_table)
 
     # Load CDS, stop codon, and UTR features from GTF/GFF2 file (if any)
     annotation: Optional[AnnotationRepository] = _load_gff_file(gff)

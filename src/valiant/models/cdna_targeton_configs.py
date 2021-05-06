@@ -59,6 +59,15 @@ class CDNATargetonConfig:
     r2_range: PositionRange
     mutators: FrozenSet[TargetonMutator]
 
+    def get_hash(self) -> str:
+        from hashlib import md5
+        return md5(':'.join([
+            self.seq_id,
+            repr(self.targeton_range.to_tuple()),
+            repr(self.r2_range.to_tuple()),
+            repr(sorted([m.value for m in self.mutators]))
+        ]).encode('utf-8')).hexdigest()
+
     @classmethod
     def from_row(cls, row: List[str]) -> CDNATargetonConfig:
         return cls(
