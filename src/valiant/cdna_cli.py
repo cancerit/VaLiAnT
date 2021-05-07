@@ -51,6 +51,7 @@ from .models.codon_table import CodonTable
 from .models.metadata_table import MetadataTable
 from .models.mutated_sequences import MutationCollection
 from .models.oligo_generation_info import OligoGenerationInfo
+from .models.oligo_renderer import get_oligo_name
 from .models.oligo_template import MUTATION_TYPE_CATEGORIES_T, decode_mut_types_cat
 from .models.sequences import Sequence
 from .models.snv_table import AuxiliaryTables
@@ -118,6 +119,7 @@ def get_cdna_mutations(
 
 
 def mut_coll_to_df(
+    oligo_name_prefix: str,
     get_empty_aa_column: Callable[[int], pd.Categorical],
     mutator: TargetonMutator,
     mc: MutationCollection
@@ -125,15 +127,37 @@ def mut_coll_to_df(
     df = mc.df
     if df is None:
         raise ValueError("Missing dataframe!")
+
     rown = df.shape[0]
+
+    # Offset relative mutation position
+    df.mut_position += 1
+
+    # Populate mutator field
     df['mutator'] = get_constant_category(
         mutator.value, rown, categories=MUTATOR_CATEGORIES)
+
+    # Generate oligonucleotide names
+    df['oligo_name'] = pd.Series(
+        df.apply(lambda r: get_oligo_name(
+            oligo_name_prefix,
+            r.var_type,
+            r.mutator,
+            r.mut_position,
+            r.ref if not pd.isnull(r.ref) else None,
+            r.new if not pd.isnull(r.new) else None), axis=1),
+        dtype='string')
+
+    # Drop field that would be discarded downstream
+    if 'var_type' in df:
+        df = df.drop('var_type', axis=1)
 
     # Avoid categorical to object conversion on concatenation
     for aa_field in ['ref_aa', 'alt_aa']:
         if aa_field not in df.columns:
             df[aa_field] = get_empty_aa_column(rown)
 
+    # Decode mutation type (if set)
     df['mut_type'] = (
         decode_mut_types_cat(df.mut_type) if 'mut_type' in df.columns else
         get_empty_category_column(MUTATION_TYPE_CATEGORIES_T, rown)
@@ -171,15 +195,15 @@ def process_targeton(
     get_empty_aa_column = partial(
         get_empty_category_column, tuple(aux.codon_table.amino_acid_symbols))
 
+    # TODO: add gene and transcript identifiers, if available
+    oligo_name_prefix = f"{targeton_cfg.seq_id}_"
+
     # Merge mutation collections
     df = pd.concat((
-        mut_coll_to_df(get_empty_aa_column, mutator, mc)
+        mut_coll_to_df(oligo_name_prefix, get_empty_aa_column, mutator, mc)
         for mutator, mc in mut_collections.items()
     ), ignore_index=True)
     del mut_collections
-
-    # Offset relative mutation position
-    df.mut_position += 1
 
     # Compress reference and alternative sequences
     df.ref = df.ref.astype('category')
@@ -268,7 +292,6 @@ def cdna(
                 process_targeton(
                     get_cdna_f, aux, adaptor_5, adaptor_3, targeton_cfg),
                 max_length)
-
 
             # TODO: define file name format
             base_fn = f"{targeton_cfg.seq_id}_{targeton_cfg.get_hash()}"

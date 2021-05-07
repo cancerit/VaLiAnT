@@ -47,6 +47,52 @@ var_type_del: int = VariantType.DELETION.value
 var_type_ins: int = VariantType.INSERTION.value
 
 
+def get_oligo_name(
+    oligo_name_prefix: str,
+    var_type: int,
+    source: str,
+    start: int,
+    ref: Optional[str],
+    alt: Optional[str]
+) -> str:
+
+    # Insertion
+    if var_type == var_type_ins:
+        if not alt:
+            raise ValueError("Invalid insertion: missing alternative!")
+        return f"{oligo_name_prefix}{start}_{alt}_{source}"
+
+    else:
+        if not ref:
+            if var_type == var_type_sub:
+                raise ValueError(f"Invalid substitution: missing reference!")
+            if var_type == var_type_del:
+                raise ValueError(f"Invalid deletion: missing reference!")
+            else:
+                raise ValueError("Invalid variant type!")
+
+        ref_len: int = len(ref)
+        end: int = (start + ref_len - 1) if ref_len > 1 else start
+
+        # Substitution
+        if var_type == var_type_sub:
+            if not alt:
+                raise ValueError("Invalid substitution: missing alternative!")
+            return (
+                f"{oligo_name_prefix}{start}_{ref}>{alt}_{source}" if end == start else
+                f"{oligo_name_prefix}{start}_{end}_{ref}>{alt}_{source}"
+            )
+
+        # Deletion
+        if var_type == var_type_del:
+            return (
+                f"{oligo_name_prefix}{start}_{source}" if end == start else
+                f"{oligo_name_prefix}{start}_{end}_{source}"
+            )
+
+        raise ValueError("Invalid variant type!")
+
+
 @dataclass(init=False)
 class BaseOligoRenderer:
     __slots__ = {
@@ -122,42 +168,7 @@ class BaseOligoRenderer:
             return self._render_mutated_sequence
 
     def _get_oligo_name(self, var_type: int, source: str, start: int, ref: Optional[str], alt: Optional[str]) -> str:
-
-        # Insertion
-        if var_type == var_type_ins:
-            if not alt:
-                raise ValueError("Invalid insertion: missing alternative!")
-            return f"{self._oligo_name_prefix}{start}_{alt}_{source}"
-
-        else:
-            if not ref:
-                if var_type == var_type_sub:
-                    raise ValueError(f"Invalid substitution: missing reference!")
-                if var_type == var_type_del:
-                    raise ValueError(f"Invalid deletion: missing reference!")
-                else:
-                    raise ValueError("Invalid variant type!")
-
-            ref_len: int = len(ref)
-            end: int = (start + ref_len - 1) if ref_len > 1 else start
-
-            # Substitution
-            if var_type == var_type_sub:
-                if not alt:
-                    raise ValueError("Invalid substitution: missing alternative!")
-                return (
-                    f"{self._oligo_name_prefix}{start}_{ref}>{alt}_{source}" if end == start else
-                    f"{self._oligo_name_prefix}{start}_{end}_{ref}>{alt}_{source}"
-                )
-
-            # Deletion
-            if var_type == var_type_del:
-                return (
-                    f"{self._oligo_name_prefix}{start}_{source}" if end == start else
-                    f"{self._oligo_name_prefix}{start}_{end}_{source}"
-                )
-
-            raise ValueError("Invalid variant type!")
+        return get_oligo_name(self._oligo_name_prefix, var_type, source, start, ref, alt)
 
     # TODO: add mutation type (missense &c.)
     def get_metadata_table(self, df: pd.DataFrame, options: Options) -> pd.DataFrame:
