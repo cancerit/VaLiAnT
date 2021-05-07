@@ -38,7 +38,7 @@
 mkdir -p brca1_nuc_output
 
 # Generate library
-valiant \
+valiant sge \
     parameter_input_files/brca1_nuc_targeton_input.txt \
     reference_input_files/chr17.fa \
     brca1_nuc_output \
