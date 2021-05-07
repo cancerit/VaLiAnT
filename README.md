@@ -6,34 +6,41 @@ Two BRCA1 libraries are included in the `examples` directory, including all nece
 
 Please also see the [VaLiAnT Wiki](https://github.com/cancerit/VaLiAnT/wiki) for more information on use cases.
 
-* [Usage](#usage)
-  * [Python package](#python-package)
-  * [Docker image](#docker-image)
-  * [Singularity image](#singularity-image)
-* [Command line interface](#command-line-interface)
-* [Mutation types](#mutation-types)
-  * [Single-nucleotide deletion](#single-nucleotide-deletion)
-  * [Two-nucleotide deletion](#two-nucleotide-deletion)
-  * [Single-nucleotide variant](#single-nucleotide-variant)
-  * [In-frame deletion](#in-frame-deletion)
-  * [Alanine codon substitution](#alanine-codon-substitution)
-  * [Stop codon substitution](#stop-codon-substitution)
-  * [All amino acid codon substitution](#all-amino-acid-codon-substitution)
-  * [SNVRE](#snvre)
-  * [Custom variants](#custom-variants)
-* [Installation](#installation)
-  * [Python virtual environment](#python-virtual-environment)
-  * [Docker image](#docker-image-1)
-* [File formats](#file-formats)
-  * [Targeton file](#targeton-file)
-  * [VCF manifest file](#vcf-manifest-file)
-  * [PAM protection VCF file](#pam-protection-vcf-file)
-  * [Oligonucleotide metadata file](#oligonucleotide-metadata-file)
-  * [Variant file](#variant-file)
-  * [Unique oligonucleotides file](#unique-oligonucleotides-file)
-  * [Reference sequence retrieval quality check file](#reference-sequence-retrieval-quality-check-file)
-* [Development](#development)
-* [LICENSE](#license)
+- [VaLiAnT](#valiant)
+  - [Usage](#usage)
+    - [Python package](#python-package)
+    - [Docker image](#docker-image)
+    - [Singularity image](#singularity-image)
+  - [Command line interface](#command-line-interface)
+    - [valiant](#valiant-1)
+    - [valiant (sge|cdna)](#valiant-sgecdna)
+    - [valiant sge](#valiant-sge)
+    - [valiant cdna](#valiant-cdna)
+  - [Mutation types](#mutation-types)
+    - [Single-nucleotide deletion](#single-nucleotide-deletion)
+    - [Two-nucleotide deletion](#two-nucleotide-deletion)
+    - [Single-nucleotide variant](#single-nucleotide-variant)
+    - [In-frame deletion](#in-frame-deletion)
+    - [Alanine codon substitution](#alanine-codon-substitution)
+    - [Stop codon substitution](#stop-codon-substitution)
+    - [All amino acid codon substitution](#all-amino-acid-codon-substitution)
+    - [SNVRE](#snvre)
+    - [Custom variants](#custom-variants)
+  - [Installation](#installation)
+    - [Python virtual environment](#python-virtual-environment)
+    - [Docker image](#docker-image-1)
+  - [File formats](#file-formats)
+    - [SGE targeton file](#sge-targeton-file)
+    - [cDNA targeton file](#cdna-targeton-file)
+    - [cDNA annotation file](#cdna-annotation-file)
+    - [VCF manifest file](#vcf-manifest-file)
+    - [PAM protection VCF file](#pam-protection-vcf-file)
+    - [Oligonucleotide metadata file](#oligonucleotide-metadata-file)
+    - [Variant file](#variant-file)
+    - [Unique oligonucleotides file](#unique-oligonucleotides-file)
+    - [Reference sequence retrieval quality check file](#reference-sequence-retrieval-quality-check-file)
+  - [Development](#development)
+  - [LICENSE](#license)
 
 ## Usage
 
@@ -46,9 +53,9 @@ Input parameters:
 - 5' adaptor (optional)
 - 3' adaptor (optional)
 
-Input files:
+SGE input files:
 
-- [targeton file](#targeton-file) (TSV)
+- [SGE targeton file](#sge-targeton-file) (TSV)
 - reference genome sequence (FASTA)
 - reference genome index (FAI)
 - [PAM protection file](#pam-protection-vcf-file) (VCF, optional)
@@ -57,16 +64,23 @@ Input files:
 - features file (GTF/GFF2, optional)
 - codon table with frequencies (CSV, optional)
 
+cDNA input files:
+
+- [cDNA targeton file](#cdna-targeton-file) (TSV)
+- cDNA sequences (single multi-FASTA)
+- [cDNA annotation file](#cdna-annotation-file) (TSV, optional)
+- codon table with frequencies (CSV, optional)
+
 Output files:
 
-- [reference sequence retrieval quality check file](#reference-sequence-retrieval-quality-check-file) (CSV)
+- [reference sequence retrieval quality check file](#reference-sequence-retrieval-quality-check-file) (CSV, SGE-only)
 - [oligonucleotide metadata file](#oligonucleotide-metadata-file) (CSV)
-- [variant file](#variant-file) (VCF)
+- [variant file](#variant-file) (VCF, SGE-only)
 - [unique oligonucleotides file](#unique-oligonucleotides-file) (CSV)
 
 The reference directory should contain both the FASTA file and its index; *e.g.*, if the FASTA file is named `genome.fa`, a `genome.fa.fai` file should also be present in the same directory. When running the tool in a container, the directory containing both files should therefore be mounted.
 
-The features file (`gff` option) is required to detect exonic regions in the targeton, and should therefore be provided in most circumstances. The files should only contain features for one transcript per gene (the `gene_id` and `transcript_id` attributes are required to perform this check). The features file should match the assembly of the target reference genome. Any features of type other than `CDS` and `UTR` are ignored.
+The features file (SGE-only `gff` option) is required to detect exonic regions in the targeton, and should therefore be provided in most circumstances. The files should only contain features for one transcript per gene (the `gene_id` and `transcript_id` attributes are required to perform this check). The features file should match the assembly of the target reference genome. Any features of type other than `CDS` and `UTR` are ignored.
 
 If the `codon-table` option is not set, [this table](src/valiant/data/default_codon_table.csv) will be used.
 
@@ -79,7 +93,7 @@ Oligonucleotides exceeding a given length (`max-length` option) will not be incl
 After [installing](#python-virtual-environment) the package in an appropriate virtual environment:
 
 ```sh
-valiant \
+valiant sge \
     ${TARGETONS_FILE} \
     ${REFERENCE_FILE} \
     ${OUTPUT_DIR} \
@@ -100,7 +114,7 @@ docker run \
     -v ${HOST_REF}:${REF_DIR}:ro \
     -v ${HOST_OUTPUT}:${OUTPUT_DIR} \
     valiant \
-        valiant \
+        valiant sge \
             ${INPUT_DIR}/${TARGETONS_FILE} \
             ${REF_DIR}/${REFERENCE_FILE} \
             ${OUTPUT_DIR} \
@@ -124,7 +138,7 @@ singularity exec \
     -B ${HOST_REF}:${REF_DIR}:ro \
     -B ${HOST_OUTPUT}:${OUTPUT_DIR} \
     ${SINGULARITY_IMAGE} \
-        valiant \
+        valiant sge \
             ${INPUT_DIR}/${TARGETONS_FILE} \
             ${REF_DIR}/${REFERENCE_FILE} \
             ${OUTPUT_DIR} \
@@ -137,10 +151,29 @@ singularity exec \
 
 ## Command line interface
 
+Separate subcommands are provided depending on the target sequence origin:
+
+- SGE (`sge`): sequences from reference, genomic coordinates, three target regions;
+- cDNA DMS (`cdna`): user-provided sequences, relative coordinates, single target region.
+
+The arguments and a few options are the same for both subcommands (see [here](#valiant-sgecdna)), but the file formats may vary.
+
+### valiant
+
+Main command.
+
+|Option|Format|Default|Description|
+|-|-|-|-|
+|`version`|flag|`false`|Show the version of the tool and quit.|
+
+### valiant (sge|cdna)
+
+Arguments and options required or supported by both subcommands. The format of the input files may be different for SGE and cDNA targets (see the argument descriptions).
+
 |Argument|Format|Description|
 |-|-|-|
-|`OLIGO_INFO`|file path|Path to the [targeton file](#targeton-file).|
-|`REF_FASTA`|file path|Path to the FASTA file of the target reference genome.|
+|`OLIGO_INFO`|file path|Path to the targeton file ([SGE](#sge-targeton-file) or [cDNA](#cdna-targeton-file) format).|
+|`REF_FASTA`|file path|Path to the FASTA file of the target reference genome (`sge`) or cDNA sequences (`cdna`).|
 |`OUTPUT`|file path|Output path (should exist already).|
 |`SPECIES`|species name|Target species, to be reported in the oligonucleotide metadata.|
 |`ASSEMBLY`|assembly name|Target assembly, to be reported in the oligonucleotide metadata.|
@@ -148,16 +181,34 @@ singularity exec \
 |Option|Format|Default|Description|
 |-|-|-|-|
 |`codon-table`|file path|-|Path to a codon table with frequencies.|
+|`max-length`|integer|300|Maximum oligonucleotide length.|
+|`adaptor-5`|DNA sequence|-|DNA sequence to be added at the 5' end of the oligonucleotide.|
+|`adaptor-3`|DNA sequence|-|DNA sequence to be added at the 3' end of the oligonucleotide.|
+|`log`|log level|`WARNING`|Name of the preferred log level (see the [official documentation](https://docs.python.org/3.7/library/logging.html#levels) of the `logging` module).|
+
+### valiant sge
+
+Options specific to SGE.
+
+The `REF_FASTA` path is expected to point to a reference genome in FASTA format.
+
+|Option|Format|Default|Description|
+|-|-|-|-|
 |`gff`|file path|-|Path to GTF/GFF2 file containing CDS and UTR features; one transcript per gene only.|
 |`pam`|file path|-|Path to a [PAM protection file](#pam-protection-vcf-file).|
 |`vcf`|file path|-|Path to a [VCF manifest file](#vcf-manifest-file).|
-|`adaptor-5`|DNA sequence|-|DNA sequence to be added at the 5' end of the oligonucleotide.|
-|`adaptor-3`|DNA sequence|-|DNA sequence to be added at the 3' end of the oligonucleotide.|
 |`revcomp-minus-strand`|flag|`false`|For minus strand targets, include the reverse complement of the mutated reference sequence in the oligonucleotide.|
-|`version`|flag|`false`|Show the version of the tool and quit.|
 |`sequences-only`|flag|`false`|Generate the [reference sequence retrieval quality check file](#reference-sequence-retrieval-quality-check-file) and quit.
-|`max-length`|integer|300|Maximum oligonucleotide length.|
-|`log`|log level|`WARNING`|Name of the preferred log level (see the [official documentation](https://docs.python.org/3.7/library/logging.html#levels) of the `logging` module).|
+
+### valiant cdna
+
+Options specific to cDNA DMS.
+
+The `REF_FASTA` path is expected to point to a multi-FASTA containing cDNA sequences.
+
+|Option|Format|Default|Description|
+|-|-|-|-|
+|`annot`|file path|-|Path to a [cDNA annotation file](#cdna-annotation-file).|
 
 ## Mutation types
 
@@ -429,7 +480,7 @@ docker build -t valiant .
 
 ## File formats
 
-### Targeton file
+### SGE targeton file
 
 Tab-separated values (TSV) file describing the reference sequence coordinates and the [types of mutation](#mutation-types) to be applied to the three target regions therein contained (collectively referred to as *targeton*). Multiple types of mutations can be applied to each target region. The coordinates of the target regions are derived from the genomic range of the second target region and an extension vector describing the lengths of the preceding and following regions.
 
@@ -457,6 +508,39 @@ Example:
 ref_chr	ref_strand	ref_start	ref_end	r2_start	r2_end	ext_vector	action_vector	sgrna_vector
 chrX	+	41334132	41334320	41334253	41334297	25, 15	(1del), (1del, snv), (1del)	sgrna_1, sgrna_2
 ```
+
+### cDNA targeton file
+
+Tab-separated values (TSV) file describing the target cDNA and the [types of mutation](#mutation-types) to be applied to the target region therein contained (expressed in relative coordinates). Multiple types of mutations can be applied the the target region.
+
+The cDNA identifier (`seq_id`) has to correspond to an entry in the multi-FASTA and (optionally) [annotation](#cdna-annotation-file) files.
+
+|Field|Format|Description|
+|-|-|-|
+|`seq_id`|string|cDNA identifier.|
+|`targeton_start`|integer|Targeton start position.|
+|`targeton_end`|integer|Targeton stop position.|
+|`r2_start`|integer|Target region start position.|
+|`r2_end`|integer|Target region stop position.|
+|`action_vector`|`<str>, ...`|[Type of mutation](#mutation-types) labels.|
+
+Example:
+
+```
+seq_id	targeton_start	targeton_end	r2_start	r2_end	action_vector
+ENST00000357654.9	114	121	114	121	snv,1del,snvre
+ENST00000357654.9	114	150	120	130	1del,2del0
+```
+
+### cDNA annotation file
+
+TSV file describing the CDS region of each cDNA in relative coordinates (one-based and end-inclusive).
+
+|Field|Format|Description|
+|-|-|-|
+|`seq_id`|string|cDNA identifier.|
+|`cds_start`|string|cDNA CDS relative start position.|
+|`cds_end`|string|cDNA CDS relative end position.|
 
 ### VCF manifest file
 
@@ -497,6 +581,8 @@ chrX	41341509	.	G	A	.	.	SGRNA=sgRNA_4
 ### Oligonucleotide metadata file
 
 Comma-separated values (CSV) file containing name, label, and all metadata of the oligonucleotides generated for any given targeton.
+
+For cDNA targets, the reference chromosome and strand will be missing and all positions will be relative to the cDNA sequence.
 
 |Field|Format|Description|
 |-|-|-|
@@ -568,7 +654,7 @@ ENST00000256474.3.ENSG00000134086.8_chr3:10146477_G_1del,GGATTACAGGTGTGGGCCACCGT
 
 ### Reference sequence retrieval quality check file
 
-Comma-separated values (CSV) file with no header reporting the reference sequences as retrieved based on the genomic coordinates and extension vector provided in the [targeton file](#targeton-file).
+Comma-separated values (CSV) file with no header reporting the reference sequences as retrieved based on the genomic coordinates and extension vector provided in the [SGE targeton file](#sge-targeton-file).
 
 The targeton name is derived from the genomic coordinates of the reference sequence.
 
