@@ -49,6 +49,7 @@ METADATA_FIELDS = [
     'assembly',
     'gene_id',
     'transcript_id',
+    'src_type',
     'ref_chr',
     'ref_strand',
     'ref_start',
@@ -70,6 +71,11 @@ METADATA_FIELDS = [
 ]
 
 METADATA_FIELDS_SET = set(METADATA_FIELDS)
+
+SRC_TYPES = [
+    'ref',
+    'cdna'
+]
 
 GENERIC_MUTATORS = frozenset([
     TargetonMutator.SNV,

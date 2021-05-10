@@ -56,7 +56,7 @@ from .models.oligo_template import MUTATION_TYPE_CATEGORIES_T, decode_mut_types_
 from .models.sequences import Sequence
 from .models.snv_table import AuxiliaryTables
 from .models.targeton import Targeton, CDSTargeton
-from .utils import get_constant_category, get_empty_category_column
+from .utils import get_constant_category, get_empty_category_column, get_source_type_column
 from .writers import write_oligo_metadata
 
 
@@ -232,6 +232,9 @@ def process_targeton(
 
     # Drop field that would be discarded downstream
     df = df.drop('var_type', axis=1)
+
+    # Set sequence source type
+    df['src_type'] = get_source_type_column('cdna', rown)
 
     return df
 

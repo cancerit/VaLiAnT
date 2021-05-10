@@ -593,6 +593,7 @@ For cDNA targets, the reference chromosome and strand will be missing and all po
 |`assembly`|assembly name|Assembly.|
 |`gene_id`|string|Gene ID.|
 |`transcript_id`|string|Transcript ID.|
+|`src_type`|`ref`\|`cdna`|Sequence source type (reference genome or cDNA).|
 |`ref_chr`|string|Chromosome name.|
 |`ref_strand`|`+`\|`-`|DNA strand.|
 |`ref_start`|integer|Start position of the reference sequence.|

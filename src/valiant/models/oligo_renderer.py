@@ -39,7 +39,7 @@ from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
 from ..constants import REVCOMP_OLIGO_NAME_SUFFIX
 from ..enums import VariantType
-from ..utils import get_constant_category, reverse_complement
+from ..utils import get_constant_category, reverse_complement, get_source_type_column
 
 
 var_type_sub: int = VariantType.SUBSTITUTION.value
@@ -195,5 +195,8 @@ class BaseOligoRenderer:
 
         # Render full oligonucleotide sequences
         df.mseq = df.mseq.apply(self._get_renderer(rc)).astype('string')
+
+        # Set sequence source type
+        df['src_type'] = get_source_type_column('ref', rown)
 
         return df

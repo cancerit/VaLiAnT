@@ -38,6 +38,7 @@ import re
 from typing import List, Type, Tuple, Set, Iterable
 import numpy as np
 import pandas as pd
+from .constants import SRC_TYPES
 from .enums import TargetonMutator
 
 dna_complement_tr_table = str.maketrans('ACGT', 'TGCA')
@@ -143,3 +144,9 @@ def parse_mutator(s: str) -> TargetonMutator:
 
 def parse_mutators(s: str) -> Set[TargetonMutator]:
     return set(map(parse_mutator, parse_list(s)))
+
+
+def get_source_type_column(src_type: str, n: int) -> pd.Series:
+    if src_type not in SRC_TYPES:
+        raise ValueError(f"Invalid source type '{src_type}'!")
+    return get_constant_category(src_type, n, categories=SRC_TYPES)
