@@ -39,7 +39,6 @@ from .cdna_cli import cdna
 
 @click.group()
 @click.version_option(__version__)
-# @click.pass_context
 def main():
     pass
 
