@@ -88,7 +88,7 @@ def _load_oligo_templates(fp: str) -> ReferenceSequenceRangeCollection:
 def _load_pam_protection_vcf(sgrna_ids: FrozenSet[str], pam: Optional[str]) -> PamProtectionVariantRepository:
     logging.debug("sgRNA ID's: %s" % ', '.join(sorted(sgrna_ids)) if sgrna_ids else "No sgRNA ID's.")
 
-    vr = PamProtectionVariantRepository(sgrna_ids=set(sgrna_ids))
+    vr = PamProtectionVariantRepository(sgrna_ids=sgrna_ids)
 
     if pam:
         if len(sgrna_ids) > 0:

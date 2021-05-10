@@ -181,7 +181,7 @@ class ReferenceSequenceRanges:
             raise ValueError("Invalid format for vector!")
 
         return [
-            parse_mutators(mutator_group) if mutator_group else set()
+            parse_mutators(mutator_group) if mutator_group else frozenset()
             for mutator_group in m.groups()
         ]
 
@@ -197,7 +197,7 @@ class ReferenceSequenceRanges:
         mutators: List[FrozenSet[TargetonMutator]] = cls.parse_mutator_tuples(row[7])
 
         # sgRNA ID vector
-        sgrna_ids: FrozenSet[str] = set(parse_list(row[8]))
+        sgrna_ids: FrozenSet[str] = frozenset(parse_list(row[8]))
 
         return cls(
             row[0],

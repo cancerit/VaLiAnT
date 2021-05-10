@@ -129,19 +129,15 @@ class TargetonOligoSegment(OligoSegment):
 
     @property
     def sequence(self) -> str:
-        return self.targeton.ref_sequence.sequence
+        return self.targeton.seq
 
     @property
     def pam_protected_sequence(self) -> str:
-        return self.targeton.ref_sequence.pam_protected_sequence
-
-    @property
-    def ref_seq(self) -> PamProtectedReferenceSequence:
-        return self.targeton.ref_sequence
+        return self.targeton.pam_seq
 
     @property
     def genomic_range(self) -> GenomicRange:
-        return self.targeton.ref_sequence.genomic_range
+        return self.targeton.pos_range
 
     def compute_mutations(self, aux: AuxiliaryTables) -> Dict[TargetonMutator, MutationCollection]:
         if isinstance(self.targeton, CDSTargeton):
@@ -152,7 +148,7 @@ class TargetonOligoSegment(OligoSegment):
 
     @property
     def start(self) -> int:
-        return self.targeton.ref_sequence.genomic_range.start
+        return self.targeton.pos_range.start
 
 
 @dataclass(init=False)
@@ -207,13 +203,13 @@ class OligoMutationCollection:
         'renderer',
         'mutator',
         'mutation_collection',
-        'target_region'
+        'target_region_start'
     }
 
     renderer: RegionOligoRenderer
     mutator: TargetonMutator
     mutation_collection: MutationCollection
-    target_region: PamProtectedReferenceSequence
+    target_region_start: int
 
     def get_metadata_table(self, options: Options) -> pd.DataFrame:
         if self.mutation_collection.is_empty:
@@ -223,14 +219,14 @@ class OligoMutationCollection:
         get_oligo_name: Callable[[MutatedSequence], str] = partial(
             self.renderer.get_oligo_name,
             self.mutator,
-            self.target_region.genomic_range.start)
+            self.target_region_start)
 
         df: pd.DataFrame = self.mutation_collection.df
         df['oligo_name'] = pd.Series(
             map(get_oligo_name, self.mutation_collection.mutations),
             dtype='string')
         df['mutator'] = get_constant_category(self.mutator.value, df.shape[0])
-        df.mut_position += self.target_region.genomic_range.start
+        df.mut_position += self.target_region_start
 
         return self.renderer.get_metadata_table(df, options)
 
@@ -330,7 +326,7 @@ class OligoTemplate:
             renderer,
             mutator,
             mutation_collection,
-            target_segment.ref_seq)
+            target_segment.start)
 
     def _get_custom_variant_collection(self, options: Options) -> pd.DataFrame:
         renderer: CustomVariantOligoRenderer = CustomVariantOligoRenderer(
@@ -391,7 +387,7 @@ class OligoTemplate:
         # Decode mutation type
         if 'mut_type' in all_mutations.columns:
             # TODO: improve filter performance
-            all_mutations.mut_type = decode_mut_type(all_mutations.mut_type)
+            all_mutations.mut_type = decode_mut_types(all_mutations.mut_type)
 
         # Compute oligonucleotide lengths
         all_mutations['oligo_length'] = all_mutations.mseq.str.len().astype(np.int32)

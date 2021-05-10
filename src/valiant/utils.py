@@ -35,7 +35,7 @@ from functools import lru_cache
 import os
 import pathlib
 import re
-from typing import List, Type, Tuple, Set, Iterable
+from typing import List, Type, Tuple, FrozenSet, Iterable
 import numpy as np
 import pandas as pd
 from .constants import SRC_TYPES
@@ -142,8 +142,8 @@ def parse_mutator(s: str) -> TargetonMutator:
         raise ValueError(f"Invalid mutator '{s}'!")
 
 
-def parse_mutators(s: str) -> Set[TargetonMutator]:
-    return set(map(parse_mutator, parse_list(s)))
+def parse_mutators(s: str) -> FrozenSet[TargetonMutator]:
+    return frozenset(map(parse_mutator, parse_list(s)))
 
 
 def get_source_type_column(src_type: str, n: int) -> pd.Series:
