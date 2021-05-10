@@ -44,6 +44,14 @@ config = {
     'author_email': 'cgphelp@sanger.ac.uk',
     'version': '1.0.0',
     'python_requires': '>= 3.7',
+    'install_requires': [
+        'chardet',
+        'click',
+        'cython',
+        'pandas>=1.1,<1.2',
+        'pyranges',
+        'pysam'
+    ],
     'tests_require': ['pytest'],
     'packages': find_packages(),
     'package_data': {

@@ -463,7 +463,7 @@ python3.7 -m venv .env
 source .env/bin/activate
 
 # Install the dependencies
-pip install cython
+pip install cython==0.29.22
 pip install -r src/requirements.txt
 
 # Install the valiant package
