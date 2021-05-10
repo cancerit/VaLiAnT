@@ -38,6 +38,7 @@ from valiant.models.base import PositionRange, StrandedPositionRange, GenomicRan
 from valiant.models.cdna import CDNA, AnnotatedCDNA
 from valiant.models.cdna_targeton_configs import CDNATargetonConfig, CDNATargetonConfigCollection
 from valiant.models.sequences import Sequence
+from valiant.models.sequence_info import SequenceInfo
 from .utils import get_data_file_path
 
 
@@ -47,7 +48,10 @@ SEQ = "ATGCCCTGA"
 
 @lru_cache(maxsize=4)
 def get_cdna_annot(seq, cds_range=None):
-    return AnnotatedCDNA(Sequence(seq), cds_range or StrandedPositionRange(1, len(seq), '+'))
+    return AnnotatedCDNA(
+        Sequence(seq),
+        SequenceInfo.empty(),
+        cds_range or StrandedPositionRange(1, len(seq), '+'))
 
 
 def test_cdna_targeton_collection_load():

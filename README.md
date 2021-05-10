@@ -534,11 +534,13 @@ ENST00000357654.9	114	150	120	130	1del,2del0
 
 ### cDNA annotation file
 
-TSV file describing the CDS region of each cDNA in relative coordinates (one-based and end-inclusive).
+TSV file describing the CDS region of each cDNA in relative coordinates (one-based and end-inclusive). Gene and transcript identifiers can also be provided.
 
 |Field|Format|Description|
 |-|-|-|
 |`seq_id`|string|cDNA identifier.|
+|`gene_id`|string|Gene ID.|
+|`transcript_id`|string|Transcript ID.|
 |`cds_start`|string|cDNA CDS relative start position.|
 |`cds_end`|string|cDNA CDS relative end position.|
 

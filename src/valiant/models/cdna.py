@@ -36,13 +36,15 @@ from typing import Optional, Sized, Tuple
 from .base import PositionRange, StrandedPositionRange
 from .codon_table import CodonTable, START_CODON
 from .sequences import Sequence
+from .sequence_info import SequenceInfo
 
 
 @dataclass(frozen=True)
 class CDNA(Sized):
-    __slots__ = {'seq'}
+    __slots__ = {'seq', 'seq_info'}
 
     seq: Sequence
+    seq_info: SequenceInfo
 
     def __len__(self) -> int:
         return len(self.seq)
@@ -68,7 +70,7 @@ class CDNA(Sized):
 
 @dataclass(frozen=True)
 class AnnotatedCDNA(CDNA):
-    __slots__ = {'seq', 'cds_range'}
+    __slots__ = {'seq', 'seq_info', 'cds_range'}
 
     cds_range: StrandedPositionRange
 

@@ -119,7 +119,6 @@ def get_cdna_mutations(
 
 
 def mut_coll_to_df(
-    oligo_name_prefix: str,
     get_empty_aa_column: Callable[[int], pd.Categorical],
     mutator: TargetonMutator,
     mc: MutationCollection
@@ -136,21 +135,6 @@ def mut_coll_to_df(
     # Populate mutator field
     df['mutator'] = get_constant_category(
         mutator.value, rown, categories=MUTATOR_CATEGORIES)
-
-    # Generate oligonucleotide names
-    df['oligo_name'] = pd.Series(
-        df.apply(lambda r: get_oligo_name(
-            oligo_name_prefix,
-            r.var_type,
-            r.mutator,
-            r.mut_position,
-            r.ref if not pd.isnull(r.ref) else None,
-            r.new if not pd.isnull(r.new) else None), axis=1),
-        dtype='string')
-
-    # Drop field that would be discarded downstream
-    if 'var_type' in df:
-        df = df.drop('var_type', axis=1)
 
     # Avoid categorical to object conversion on concatenation
     for aa_field in ['ref_aa', 'alt_aa']:
@@ -195,15 +179,14 @@ def process_targeton(
     get_empty_aa_column = partial(
         get_empty_category_column, tuple(aux.codon_table.amino_acid_symbols))
 
-    # TODO: add gene and transcript identifiers, if available
-    oligo_name_prefix = f"{targeton_cfg.seq_id}_"
-
     # Merge mutation collections
     df = pd.concat((
-        mut_coll_to_df(oligo_name_prefix, get_empty_aa_column, mutator, mc)
+        mut_coll_to_df(get_empty_aa_column, mutator, mc)
         for mutator, mc in mut_collections.items()
     ), ignore_index=True)
     del mut_collections
+
+    rown: int = df.shape[0]
 
     # Compress reference and alternative sequences
     df.ref = df.ref.astype('category')
@@ -223,15 +206,39 @@ def process_targeton(
     if suffix:
         df.mseq = df.mseq + suffix
 
-    # TODO: apply maximum length mask
+    # Add oligonucleotide lengths
     df['oligo_length'] = df.mseq.str.len().astype(np.int32)
+
+    # Add sequence info (if available)
+    if cdna.seq_info.gene_id:
+        df['gene_id'] = get_constant_category(cdna.seq_info.gene_id, rown)
+    if cdna.seq_info.transcript_id:
+        df['transcript_id'] = get_constant_category(cdna.seq_info.transcript_id, rown)
+
+    gene_label = cdna.seq_info.gene_id or 'NO_GENE'
+    transcript_label = cdna.seq_info.transcript_id or 'NO_TRANSCRIPT'
+    oligo_name_prefix = f"{targeton_cfg.seq_id}_{transcript_label}.{gene_label}_"
+
+    # Generate oligonucleotide names
+    df['oligo_name'] = pd.Series(
+        df.apply(lambda r: get_oligo_name(
+            oligo_name_prefix,
+            r.var_type,
+            r.mutator,
+            r.mut_position,
+            r.ref if not pd.isnull(r.ref) else None,
+            r.new if not pd.isnull(r.new) else None), axis=1),
+        dtype='string')
+
+    # Drop field that would be discarded downstream
+    df = df.drop('var_type', axis=1)
 
     return df
 
 
 @click.command()
 @common_params
-@click.option('--annot', type=existing_file)
+@click.option('--annot', type=existing_file, help="cDNA annotation file path")
 def cdna(
 
     # Input files
