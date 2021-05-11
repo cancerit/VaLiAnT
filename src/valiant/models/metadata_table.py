@@ -95,7 +95,8 @@ class MetadataTable:
         ), fp)
 
     def write_excluded_metadata_file(self, fp: str) -> None:
-        write_oligo_metadata(self.metadata[~self.oligo_length_mask], fp)
+        write_oligo_metadata(
+            self.metadata.loc[~self.oligo_length_mask, METADATA_FIELDS], fp)
 
     def write_unique_file(self, fp: str) -> None:
         write_oligo_unique(
