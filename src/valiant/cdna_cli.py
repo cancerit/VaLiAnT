@@ -121,6 +121,7 @@ def get_cdna_mutations(
 
 def mut_coll_to_df(
     get_empty_aa_column: Callable[[int], pd.Categorical],
+    r2_start: int,
     mutator: TargetonMutator,
     mc: MutationCollection
 ) -> pd.DataFrame:
@@ -131,7 +132,7 @@ def mut_coll_to_df(
     rown = df.shape[0]
 
     # Offset relative mutation position
-    df.mut_position += 1
+    df.mut_position += r2_start
 
     # Populate mutator field
     df['mutator'] = get_constant_category(
@@ -182,7 +183,7 @@ def process_targeton(
 
     # Merge mutation collections
     df = pd.concat((
-        mut_coll_to_df(get_empty_aa_column, mutator, mc)
+        mut_coll_to_df(get_empty_aa_column, r2_start, mutator, mc)
         for mutator, mc in mut_collections.items()
     ), ignore_index=True)
     del mut_collections
