@@ -43,6 +43,7 @@ from .constants import CDS_ONLY_MUTATORS, MUTATOR_CATEGORIES
 from .cli_utils import load_codon_table, validate_adaptor, set_logger
 from .common_cli import common_params, existing_file
 from .enums import TargetonMutator
+from .errors import SequenceNotFound
 from .models.base import StrandedPositionRange, PositionRange
 from .models.cdna import CDNA, AnnotatedCDNA
 from .models.cdna_seq_repository import CDNASequenceRepository
@@ -279,8 +280,11 @@ def cdna(
     targetons = CDNATargetonConfigCollection.load(oligo_info)
 
     # Load cDNA sequences
-    seq_repo = CDNASequenceRepository.load(
-        targetons.sequence_ids, ref_fasta, annot_fp=annot)
+    try:
+        seq_repo = CDNASequenceRepository.load(
+            targetons.sequence_ids, ref_fasta, annot_fp=annot)
+    except SequenceNotFound:
+        sys.exit(1)
 
     # Get auxiliary tables
     aux: AuxiliaryTables = get_auxiliary_tables(

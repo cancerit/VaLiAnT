@@ -31,30 +31,5 @@
 # legal@sanger.ac.uk. Contact details are: legal@sanger.ac.uk quoting reference Valiant-software.
 #############################
 
-import logging
-from typing import Dict, Iterable
-from pysam import FastaFile
-from ..errors import SequenceNotFound
-
-
-# TODO: use explicit index path instead?
-def get_fasta_file(fp: str) -> FastaFile:
-    try:
-        return FastaFile(fp)
-    except IOError as ex:
-        logging.critical("Failed to load reference file!")
-        raise ex
-
-
-def load_from_multi_fasta(fp: str, ids: Iterable[str]) -> Dict[str, str]:
-    ff: FastaFile = get_fasta_file(fp)
-    try:
-        return {
-            sid: ff.fetch(sid)
-            for sid in ids
-        }
-    except KeyError as ex:
-        logging.critical("Error while loading multi-FASTA file '%s': %s!" % (fp, ex.args[0]))
-        raise SequenceNotFound()
-    finally:
-        ff.close()
+class SequenceNotFound(Exception):
+    pass
