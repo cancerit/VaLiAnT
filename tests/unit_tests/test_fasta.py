@@ -33,6 +33,7 @@
 
 from contextlib import nullcontext
 import pytest
+from valiant.errors import SequenceNotFound
 from valiant.loaders.fasta import load_from_multi_fasta
 from .constants import MULTI_FASTA_FP
 from .utils import get_data_file_path
@@ -49,7 +50,7 @@ multi_fasta_fp = get_data_file_path(MULTI_FASTA_FP)
     ([SEQ_ID_1, 'missing-id'], False)
 ])
 def test_load_from_multi_fasta(seq_ids, all_exist):
-    with pytest.raises(KeyError) if not all_exist else nullcontext():
+    with pytest.raises(SequenceNotFound) if not all_exist else nullcontext():
         id_seqs = load_from_multi_fasta(multi_fasta_fp, seq_ids)
 
     if all_exist:
