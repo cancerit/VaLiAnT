@@ -33,9 +33,8 @@
 
 from functools import partial
 import logging
-import os
 import sys
-from typing import Callable, Union, Dict, Tuple, Optional, List
+from typing import Callable, Dict, Optional
 import click
 import numpy as np
 import pandas as pd
@@ -54,11 +53,9 @@ from .models.mutated_sequences import MutationCollection
 from .models.oligo_generation_info import OligoGenerationInfo
 from .models.oligo_renderer import get_oligo_name
 from .models.oligo_template import MUTATION_TYPE_CATEGORIES_T, decode_mut_types_cat
-from .models.sequences import Sequence
 from .models.snv_table import AuxiliaryTables
 from .models.targeton import Targeton, CDSTargeton
 from .utils import get_constant_category, get_empty_category_column, get_source_type_column
-from .writers import write_oligo_metadata
 
 
 def get_cdna(
@@ -97,11 +94,11 @@ def get_annotated_cdna_mutations(
     aux: AuxiliaryTables,
     targeton_cfg: CDNATargetonConfig,
     cdna: AnnotatedCDNA
-) -> Tuple[str, Dict[TargetonMutator, MutationCollection]]:
+) -> Dict[TargetonMutator, MutationCollection]:
     sequence, cds_ext_5p, cds_ext_3p = cdna.get_extended_subsequence(
         targeton_cfg.r2_range)
     seq = sequence.sequence
-    return seq, CDSTargeton(
+    return CDSTargeton(
         seq, seq, StrandedPositionRange.to_plus_strand(
             targeton_cfg.r2_range), cds_ext_5p, cds_ext_3p).compute_mutations(
                 targeton_cfg.mutators, aux)
@@ -111,9 +108,9 @@ def get_cdna_mutations(
     aux: AuxiliaryTables,
     targeton_cfg: CDNATargetonConfig,
     cdna: AnnotatedCDNA
-) -> Tuple[str, Dict[TargetonMutator, MutationCollection]]:
+) -> Dict[TargetonMutator, MutationCollection]:
     seq = cdna.get_subsequence_string(targeton_cfg.r2_range)
-    return seq, Targeton(
+    return Targeton(
         seq, seq, StrandedPositionRange.to_plus_strand(
             targeton_cfg.r2_range)).compute_mutations(
                 targeton_cfg.mutators)
@@ -152,7 +149,7 @@ def mut_coll_to_df(
     return df
 
 
-def process_targeton(
+def get_targeton_metadata_table(
     get_cdna_f: Callable,
     aux: AuxiliaryTables,
     adaptor_5: Optional[str],
@@ -168,7 +165,7 @@ def process_targeton(
         get_annotated_cdna_mutations if isinstance(cdna, AnnotatedCDNA) else
         get_cdna_mutations
     )
-    r2, mut_collections = get_mutations(aux, targeton_cfg, cdna)  # type: ignore
+    mut_collections = get_mutations(aux, targeton_cfg, cdna)  # type: ignore
 
     # Get constant sequences (if any)
     c1 = cdna.get_subsequence_string(
@@ -241,6 +238,48 @@ def process_targeton(
     return df
 
 
+def process_targeton(
+    species: str,
+    assembly: str,
+    aux: AuxiliaryTables,
+    adaptor_5: Optional[str],
+    adaptor_3: Optional[str],
+    get_cdna_f: Callable,
+    max_length: int,
+    output: str,
+    targeton_cfg: CDNATargetonConfig
+) -> OligoGenerationInfo:
+
+    # Generate oligonucleotides
+    metadata = MetadataTable.from_partial(
+        species,
+        assembly,
+        get_targeton_metadata_table(
+            get_cdna_f, aux, adaptor_5, adaptor_3, targeton_cfg),
+        max_length)
+
+    # TODO: define file name format
+    base_fn = f"{targeton_cfg.seq_id}_{targeton_cfg.get_hash()}"
+    metadata.write_common_files(output, base_fn)
+
+    # Log
+    if metadata.short_oligo_n == 0:
+        logging.warning(
+            "Empty metadata table for cDNA targeton %s (%d-%d, %d-%d): no file generated!" % (
+                targeton_cfg.seq_id,
+                *targeton_cfg.targeton_range.to_tuple(),
+                *targeton_cfg.r2_range.to_tuple()
+            ))
+        logging.warning(
+            "Empty unique oligonucleotides table for cDNA targeton %s (%d-%d, %d-%d): no file generated!" % (
+                targeton_cfg.seq_id,
+                *targeton_cfg.targeton_range.to_tuple(),
+                *targeton_cfg.r2_range.to_tuple()
+            ))
+
+    return metadata.get_info()
+
+
 @click.command()
 @common_params
 @click.option('--annot', type=existing_file, help="cDNA annotation file path")
@@ -291,49 +330,29 @@ def cdna(
     aux: AuxiliaryTables = get_auxiliary_tables(
         targetons, load_codon_table(codon_table))
 
-    get_cdna_f = partial(get_cdna, seq_repo, aux.codon_table)
-
     # Long oligonucleotides counter
     long_oligo_n: int = 0
 
+    get_cdna_f = partial(get_cdna, seq_repo, aux.codon_table)
+    process_targeton_f = partial(
+        process_targeton,
+        species,
+        assembly,
+        aux,
+        adaptor_5,
+        adaptor_3,
+        get_cdna_f,
+        max_length,
+        output)
+
     for targeton_cfg in targetons.cts:
-
         try:
-
-            # Generate oligonucleotides
-            metadata = MetadataTable.from_partial(
-                species,
-                assembly,
-                process_targeton(
-                    get_cdna_f, aux, adaptor_5, adaptor_3, targeton_cfg),
-                max_length)
-
-            # TODO: define file name format
-            base_fn = f"{targeton_cfg.seq_id}_{targeton_cfg.get_hash()}"
-            metadata.write_common_files(output, base_fn)
-
-            long_oligo_n += metadata.get_info().long_oligo_n
-
-            # Log
-            if metadata.short_oligo_n == 0:
-                logging.warning(
-                    "Empty metadata table for cDNA targeton %s (%d-%d, %d-%d): no file generated!" % (
-                        targeton_cfg.seq_id,
-                        *targeton_cfg.targeton_range.to_tuple(),
-                        *targeton_cfg.r2_range.to_tuple()
-                    ))
-                logging.warning(
-                    "Empty unique oligonucleotides table for cDNA targeton %s (%d-%d, %d-%d): no file generated!" % (
-                        targeton_cfg.seq_id,
-                        *targeton_cfg.targeton_range.to_tuple(),
-                        *targeton_cfg.r2_range.to_tuple()
-                    ))
+            long_oligo_n += process_targeton_f(targeton_cfg).long_oligo_n
 
         except ValueError as ex:
             logging.critical(ex.args[0])
             logging.critical("Failed to generate oligonucleotides!")
             sys.exit(1)
-
 
     # Log number of oligonucleotides discarded due to excessive length
     if long_oligo_n:
