@@ -33,15 +33,14 @@
 
 from __future__ import annotations
 from itertools import groupby
-from typing import Dict, List, Tuple, FrozenSet
+from typing import Dict, List, Tuple
 from ..globals import TRIPLET_RCS
 
-START_CODON = 'ATG'
 STOP_CODE = 'STOP'
 
 
 class CodonTable:
-    __slots__ = {'_codon2aa', '_aa2codons', '_codon2syn', '_codonrc2syn', '_stop_codons', '_amino_acid_symbols'}
+    __slots__ = {'_codon2aa', '_aa2codons', '_codon2syn', '_codonrc2syn', '_amino_acid_symbols'}
 
     def __init__(self, codon_table: List[Tuple[str, str, float, int]]) -> None:
 
@@ -73,16 +72,11 @@ class CodonTable:
             for codon in self._codon2aa.keys()
         }
 
-        self._stop_codons: FrozenSet[str] = frozenset(self._aa2codons[STOP_CODE])
         self._amino_acid_symbols = sorted(self._aa2codons.keys())
 
     @property
     def amino_acid_symbols(self) -> List[str]:
         return self._amino_acid_symbols
-
-    @property
-    def stop_codons(self) -> FrozenSet[str]:
-        return self._stop_codons
 
     def get_top_ranking_codon_table(self) -> List[Tuple[str, str]]:
         return [(aa, codons[0]) for aa, codons in self._aa2codons.items()]

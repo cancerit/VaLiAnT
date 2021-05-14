@@ -31,6 +31,7 @@
 # legal@sanger.ac.uk. Contact details are: legal@sanger.ac.uk quoting reference Valiant-software.
 #############################
 
+from enum import Enum
 from functools import lru_cache
 import os
 import pathlib
@@ -103,6 +104,8 @@ def get_id_column(rown: int) -> np.ndarray:
 
 
 def get_constant_category(s: str, n: int, categories: List[str] = None) -> pd.Categorical:
+    if categories and s not in categories:
+        raise ValueError(f"Invalid category '{s}'!")
     return pd.Categorical([s], categories=categories or [s]).repeat(n)
 
 
@@ -147,6 +150,8 @@ def parse_mutators(s: str) -> FrozenSet[TargetonMutator]:
 
 
 def get_source_type_column(src_type: str, n: int) -> pd.Series:
-    if src_type not in SRC_TYPES:
-        raise ValueError(f"Invalid source type '{src_type}'!")
     return get_constant_category(src_type, n, categories=SRC_TYPES)
+
+
+def repr_enum_list(enums: Iterable[Enum]) -> str:
+    return ', '.join(str(e.value) for e in enums)

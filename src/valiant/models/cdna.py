@@ -34,7 +34,6 @@
 from dataclasses import dataclass
 from typing import Optional, Sized, Tuple
 from .base import PositionRange, StrandedPositionRange
-from .codon_table import CodonTable, START_CODON
 from .sequences import Sequence
 from .sequence_info import SequenceInfo
 
@@ -103,22 +102,9 @@ class AnnotatedCDNA(CDNA):
 
         return seq, ext_5p, ext_3p
 
-    def get_triplet_at(self, pos: int) -> str:
-        return self.get_subsequence(PositionRange(pos, pos + 2)).sequence
-
     def __post_init__(self) -> None:
         n: int = len(self)
         if len(self.cds_range) % 3:
             raise ValueError("Invalid CDS length!")
         if self.cds_range.start > n or self.cds_range.end > n:
             raise ValueError("CDS out of range!")
-
-    # TODO: support non-ATG start codons?
-    def validate(self, codon_table: CodonTable) -> None:
-        start_codon: str = self.get_triplet_at(self.cds_range.start)
-        if start_codon != START_CODON:
-            raise ValueError(f"Invalid start codon: {start_codon}!")
-
-        stop_codon: str = self.get_triplet_at(self.cds_range.end - 2)
-        if stop_codon not in codon_table.stop_codons:
-            raise ValueError(f"Invalid stop codon: {stop_codon}!")

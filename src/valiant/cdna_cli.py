@@ -55,12 +55,11 @@ from .models.oligo_renderer import get_oligo_name
 from .models.oligo_template import MUTATION_TYPE_CATEGORIES_T, decode_mut_types_cat
 from .models.snv_table import AuxiliaryTables
 from .models.targeton import Targeton, CDSTargeton
-from .utils import get_constant_category, get_empty_category_column, get_source_type_column
+from .utils import get_constant_category, get_empty_category_column, get_source_type_column, repr_enum_list
 
 
 def get_cdna(
     seq_repo: CDNASequenceRepository,
-    codon_table: CodonTable,
     targeton_cfg: CDNATargetonConfig
 ) -> CDNA:
     cdna_id: str = targeton_cfg.seq_id
@@ -69,10 +68,12 @@ def get_cdna(
     if not cdna:
         raise KeyError(f"Sequence identifier '{cdna_id}' not found!")
 
-    if isinstance(cdna, AnnotatedCDNA):
-        cdna.validate(codon_table)
-    elif CDS_ONLY_MUTATORS & targeton_cfg.mutators:
-        raise ValueError("Invalid mutator for non-annotated cDNA targeton!")
+    if not isinstance(cdna, AnnotatedCDNA):
+        cds_only_mutators = CDS_ONLY_MUTATORS & targeton_cfg.mutators
+        if cds_only_mutators:
+            raise ValueError(
+                "Invalid mutators for non-annotated cDNA targeton: "
+                f"{repr_enum_list(cds_only_mutators)}!")
 
     return cdna
 
@@ -105,9 +106,8 @@ def get_annotated_cdna_mutations(
 
 
 def get_cdna_mutations(
-    aux: AuxiliaryTables,
     targeton_cfg: CDNATargetonConfig,
-    cdna: AnnotatedCDNA
+    cdna: CDNA
 ) -> Dict[TargetonMutator, MutationCollection]:
     seq = cdna.get_subsequence_string(targeton_cfg.r2_range)
     return Targeton(
@@ -161,11 +161,10 @@ def get_targeton_metadata_table(
     r2_start, r2_end = targeton_cfg.r2_range.to_tuple()
 
     # Generate mutated sequences
-    get_mutations = (
-        get_annotated_cdna_mutations if isinstance(cdna, AnnotatedCDNA) else
-        get_cdna_mutations
+    mut_collections = (
+        get_annotated_cdna_mutations(aux, targeton_cfg, cdna) if isinstance(cdna, AnnotatedCDNA) else
+        get_cdna_mutations(targeton_cfg, cdna)
     )
-    mut_collections = get_mutations(aux, targeton_cfg, cdna)  # type: ignore
 
     # Get constant sequences (if any)
     c1 = cdna.get_subsequence_string(
@@ -333,7 +332,7 @@ def cdna(
     # Long oligonucleotides counter
     long_oligo_n: int = 0
 
-    get_cdna_f = partial(get_cdna, seq_repo, aux.codon_table)
+    get_cdna_f = partial(get_cdna, seq_repo)
     process_targeton_f = partial(
         process_targeton,
         species,
