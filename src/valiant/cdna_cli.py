@@ -42,7 +42,7 @@ from .constants import CDS_ONLY_MUTATORS, MUTATOR_CATEGORIES
 from .cli_utils import load_codon_table, validate_adaptor, set_logger
 from .common_cli import common_params, existing_file
 from .enums import TargetonMutator
-from .errors import SequenceNotFound
+from .errors import SequenceNotFound, InvalidMutatorForTarget
 from .models.base import StrandedPositionRange, PositionRange
 from .models.cdna import CDNA, AnnotatedCDNA
 from .models.cdna_seq_repository import CDNASequenceRepository
@@ -68,10 +68,20 @@ def get_cdna(
     if not cdna:
         raise KeyError(f"Sequence identifier '{cdna_id}' not found!")
 
-    if not isinstance(cdna, AnnotatedCDNA):
-        cds_only_mutators = CDS_ONLY_MUTATORS & targeton_cfg.mutators
-        if cds_only_mutators:
-            raise ValueError(
+    cds_only_mutators = targeton_cfg.mutators & CDS_ONLY_MUTATORS
+    if cds_only_mutators:
+        if isinstance(cdna, AnnotatedCDNA):
+
+            # CDS-only mutators in non-CDS target
+            if targeton_cfg.r2_range not in cdna.cds_range:
+                raise InvalidMutatorForTarget(
+                    "Invalid mutators for non-CDS cDNA targeton: "
+                    f"{repr_enum_list(cds_only_mutators)}!")
+
+        else:
+
+            # CDS-only mutators when the annotation is not available
+            raise InvalidMutatorForTarget(
                 "Invalid mutators for non-annotated cDNA targeton: "
                 f"{repr_enum_list(cds_only_mutators)}!")
 

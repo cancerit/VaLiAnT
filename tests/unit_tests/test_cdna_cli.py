@@ -31,9 +31,40 @@
 # legal@sanger.ac.uk. Contact details are: legal@sanger.ac.uk quoting reference Valiant-software.
 #############################
 
-class SequenceNotFound(Exception):
-    pass
+from contextlib import nullcontext
+import pytest
+from valiant.cdna_cli import get_cdna
+from valiant.enums import TargetonMutator
+from valiant.models.base import PositionRange, StrandedPositionRange
+from valiant.models.cdna import CDNA, AnnotatedCDNA
+from valiant.models.cdna_seq_repository import CDNASequenceRepository
+from valiant.models.cdna_targeton_configs import CDNATargetonConfig
+from valiant.models.sequence_info import SequenceInfo
+from valiant.models.sequences import Sequence
 
 
-class InvalidMutatorForTarget(ValueError):
-    pass
+cdna_1_id = 'cdna_1'
+cdna_1 = CDNA(Sequence("ATGACCGGTTTATACTGAGGTGTGTGTA"), SequenceInfo.empty())
+cdna_1_annot = AnnotatedCDNA(cdna_1.seq, cdna_1.seq_info, StrandedPositionRange(1, 18, '+'))
+cdna_id_map = {
+    cdna_1_id: cdna_1
+}
+cdna_annot_id_map = {
+    cdna_1_id: cdna_1_annot
+}
+
+
+@pytest.mark.parametrize('is_annotated,pr,mutators,is_valid', [
+    (False, cdna_1.range, frozenset([TargetonMutator.SNV]), True),
+    (False, cdna_1.range, frozenset([TargetonMutator.SNV]), True),
+    (False, StrandedPositionRange(19, 21, '+'), frozenset([TargetonMutator.SNV_RE]), False),  # Invalid mutator
+    (True, StrandedPositionRange(19, 21, '+'), frozenset([TargetonMutator.SNV_RE]), False)  # Invalid mutator
+])
+def test_get_cdna(is_annotated, pr, mutators, is_valid):
+    targeton_cfg = CDNATargetonConfig(cdna_1_id, cdna_1.range, pr, mutators)
+    cdna_seq_repo = CDNASequenceRepository(
+        cdna_annot_id_map if is_annotated else cdna_id_map)
+    
+    with pytest.raises(ValueError) if not is_valid else nullcontext():
+        cdna = get_cdna(cdna_seq_repo, targeton_cfg)
+        assert cdna == (cdna_1 if not is_annotated else cdna_1_annot)
