@@ -591,7 +591,7 @@ chrX	41341509	.	G	A	.	.	SGRNA=sgRNA_4
 
 Comma-separated values (CSV) file containing name, label, and all metadata of the oligonucleotides generated for any given targeton.
 
-For cDNA targets, the reference chromosome and strand will be missing and all positions will be relative to the cDNA sequence.
+For cDNA targets, the reference chromosome (`ref_chr`) and strand (`ref_strand`) will be missing and all positions will be relative to the cDNA sequence. All fields related to PAM protection (`pam_seq`) and custom VCF variants (`vcf_alias` and `vcf_var_id`), features unavailable for this target type, will also be empty.
 
 |Field|Format|Description|
 |-|-|-|
