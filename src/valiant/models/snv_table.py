@@ -79,8 +79,8 @@ class SnvTable:
         return self._codon_table
 
     @property
-    def strands(self) -> Set[str]:
-        return set(self._strand_snv_table.keys())
+    def strands(self) -> FrozenSet[str]:
+        return frozenset(self._strand_snv_table.keys())
 
     def get_snvs(
         self,

@@ -43,4 +43,4 @@ GTF_SINGLE = 'ddx3x_ENST00000644876_cds.gtf'
 PAM_VCF_FP = 'pam.vcf'
 MULTI_FASTA_FP = 'multi.fa'
 
-STRANDS = {'+', '-'}
+STRANDS = frozenset(['+', '-'])
