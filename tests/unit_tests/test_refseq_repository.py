@@ -33,7 +33,20 @@
 
 import pytest
 from valiant.models.base import GenomicRange
-from valiant.models.refseq_repository import ReferenceSequenceRepository
+from valiant.models.refseq_repository import ReferenceSequenceRepository, _normalise_ref_seq
+
+
+@pytest.mark.parametrize('seq,norm_seq', [
+    ('AACGT', 'AACGT'),
+    ('aaCgT', 'AACGT'),  # soft-masked sequence
+    ('XXACGT', None)     # invalid symbols
+])
+def test_normalise_ref_seq(seq, norm_seq):
+    if norm_seq is not None:
+        assert _normalise_ref_seq(seq) == norm_seq
+    else:
+        with pytest.raises(ValueError):
+            _normalise_ref_seq(seq)
 
 
 def test_reference_sequence_repository_register_genomic_ranges():

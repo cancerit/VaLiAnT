@@ -31,11 +31,17 @@
 # legal@sanger.ac.uk. Contact details are: legal@sanger.ac.uk quoting reference Valiant-software.
 #############################
 
+import os
+from tempfile import TemporaryDirectory
 import numpy as np
 import pandas as pd
-import pytest
+from valiant.constants import METADATA_FIELDS
 from valiant.models.metadata_table import MetadataTable
+from valiant.models.oligo_generation_info import OligoGenerationInfo
 
+
+METADATA_HEADER = ','.join(METADATA_FIELDS)
+UNIQUE_HEADER = 'oligo_name,mseq'
 
 max_oligo_length = 7
 partial_meta = pd.DataFrame.from_records([
@@ -62,6 +68,15 @@ partial_meta = pd.DataFrame.from_records([
     'assembly'
 ])
 
+species = 'human'
+assembly = 'hg38'
+
+
+def _check_csv(out_dir, header, rown, fn):
+    with open(os.path.join(out_dir, fn)) as fh:
+        assert fh.readline().rstrip() == header
+        assert len(fh.readlines()) == rown
+
 
 def test_metadata_table_init():
     mt = MetadataTable(partial_meta.copy(), max_oligo_length)
@@ -71,11 +86,34 @@ def test_metadata_table_init():
 
 
 def test_metadata_table_from_partial():
-    species = 'human'
-    assembly = 'hg38'
     mt = MetadataTable.from_partial(
-        species, assembly, pd.DataFrame(), max_oligo_length)
+        species, assembly, partial_meta.copy(), max_oligo_length)
     assert 'species' in mt.metadata
     assert np.array_equal(mt.metadata.species.cat.categories, [species])
     assert 'assembly' in mt.metadata
     assert np.array_equal(mt.metadata.assembly.cat.categories, [assembly])
+
+
+def test_write_common_files():
+    base_fn = 'test_file'
+    mt = MetadataTable.from_partial(
+        species, assembly, partial_meta.copy(), max_oligo_length)
+
+    with TemporaryDirectory() as out_dir:
+
+        # Write files
+        mt.write_common_files(out_dir, base_fn)
+
+        # Check headers
+        _check_csv(out_dir, METADATA_HEADER, mt.short_oligo_n, base_fn + '_meta.csv')
+        _check_csv(out_dir, METADATA_HEADER, mt.long_oligo_n, base_fn + '_meta_excluded.csv')
+        _check_csv(out_dir, UNIQUE_HEADER, mt.short_oligo_n, base_fn + '_unique.csv')
+
+
+def test_get_info():
+    mt = MetadataTable.from_partial(
+        species, assembly, partial_meta.copy(), max_oligo_length)
+    info = mt.get_info()
+
+    assert isinstance(info, OligoGenerationInfo)
+    assert info.long_oligo_n == mt.long_oligo_n
