@@ -37,11 +37,8 @@ import os
 import sys
 from typing import Dict, Iterable, List, Optional, FrozenSet, Set, Tuple
 import click
-import pandas as pd
 from pyranges import PyRanges
-from .constants import DEFAULT_CODON_TABLE_FILE_NAME, DEFAULT_OLIGO_MAX_LENGTH, METADATA_FIELDS, METADATA_FIELDS_SET
 from .enums import TargetonMutator
-from .loaders.vcf import write_vcf
 from .models.base import GenomicRange
 from .models.codon_table import CodonTable
 from .models.exon import AnnotationRepository, CDSContextRepository, GenomicRangePair, TranscriptInfo
@@ -58,8 +55,7 @@ from .models.targeton import BaseTargeton, CDSTargeton, Targeton
 from .models.variant import CustomVariant, VariantRepository
 from .common_cli import common_params, existing_file
 from .cli_utils import load_codon_table, validate_adaptor, set_logger
-from .utils import get_constant_category, get_data_file_path, is_dna
-from .writers import write_oligo_metadata, write_oligo_unique, write_reference_sequences
+from .writers import write_reference_sequences
 
 
 def _load_gff_file(fp: Optional[str]) -> Optional[AnnotationRepository]:
