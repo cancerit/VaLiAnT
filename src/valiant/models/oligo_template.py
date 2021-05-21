@@ -35,7 +35,7 @@ from __future__ import annotations
 import abc
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, FrozenSet, Tuple
 import numpy as np
 import pandas as pd
 from .base import GenomicRange, TranscriptInfo
@@ -125,7 +125,7 @@ class TargetonOligoSegment(OligoSegment):
     __slots__ = {'targeton', 'mutator'}
 
     targeton: BaseTargeton
-    mutators: Set[TargetonMutator]
+    mutators: FrozenSet[TargetonMutator]
 
     @property
     def sequence(self) -> str:
@@ -245,7 +245,7 @@ class OligoTemplate:
 
     transcript_info: Optional[TranscriptInfo]
     ref_seq: PamProtectedReferenceSequence
-    sgrna_ids: Set[str]
+    sgrna_ids: FrozenSet[str]
     custom_variants: Set[CustomVariant]
     adaptor_5: Optional[str]
     adaptor_3: Optional[str]

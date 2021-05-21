@@ -100,8 +100,8 @@ class PamVariant(SubstitutionVariant):
 class PamProtectionVariantRepository:
     __slots__ = {'sgrna_ids', '_variants', '_ranges'}
 
-    def __init__(self, sgrna_ids: Set[str] = None) -> None:
-        self.sgrna_ids = sgrna_ids or set()
+    def __init__(self, sgrna_ids: FrozenSet[str] = None) -> None:
+        self.sgrna_ids = sgrna_ids or frozenset()
         self._variants: Dict[str, Set[PamVariant]] = {
             sgrna_id: set()
             for sgrna_id in sgrna_ids
