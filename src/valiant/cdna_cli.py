@@ -326,13 +326,22 @@ def cdna(
     validate_adaptor(adaptor_3)
 
     # Load targeton configurations
-    targetons = CDNATargetonConfigCollection.load(oligo_info)
+    try:
+        targetons = CDNATargetonConfigCollection.load(oligo_info)
+    except ValueError as ex:
+        logging.critical(ex.args[0])
+        logging.critical("Failed to load cDNA targeton file!")
+        sys.exit(1)
 
     # Load cDNA sequences
     try:
         seq_repo = CDNASequenceRepository.load(
             targetons.sequence_ids, ref_fasta, annot_fp=annot)
     except SequenceNotFound:
+        sys.exit(1)
+    except ValueError as ex:
+        logging.critical(ex.args[0])
+        logging.critical("Failed to load cDNA annotation file!")
         sys.exit(1)
 
     # Get auxiliary tables

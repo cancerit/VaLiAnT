@@ -49,5 +49,5 @@ def load_tsv(fp: str, columns: List[str]) -> List[List[str]]:
     with open(fp, encoding=encoding) as fh:
         reader = csv.reader(fh, delimiter='\t')
         if next(reader) != columns:
-            raise ValueError("Invalid header!")
+            raise ValueError("Invalid TSV header!")
         return [r for r in reader]
