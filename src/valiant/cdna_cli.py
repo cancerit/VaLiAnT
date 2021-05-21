@@ -34,7 +34,7 @@
 from functools import partial
 import logging
 import sys
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, NoReturn
 import click
 import numpy as np
 import pandas as pd
@@ -56,6 +56,12 @@ from .models.oligo_template import MUTATION_TYPE_CATEGORIES_T, decode_mut_types_
 from .models.snv_table import AuxiliaryTables
 from .models.targeton import Targeton, CDSTargeton
 from .utils import get_constant_category, get_empty_category_column, get_source_type_column, repr_enum_list
+
+
+def exit_on_critical_exception(ex: Exception, msg: str) -> NoReturn:
+    logging.critical(ex.args[0])
+    logging.critical(msg)
+    sys.exit(1)
 
 
 def get_cdna(
@@ -329,9 +335,7 @@ def cdna(
     try:
         targetons = CDNATargetonConfigCollection.load(oligo_info)
     except ValueError as ex:
-        logging.critical(ex.args[0])
-        logging.critical("Failed to load cDNA targeton file!")
-        sys.exit(1)
+        exit_on_critical_exception(ex, "Failed to load cDNA targeton file!")
 
     # Load cDNA sequences
     try:
@@ -340,9 +344,7 @@ def cdna(
     except SequenceNotFound:
         sys.exit(1)
     except ValueError as ex:
-        logging.critical(ex.args[0])
-        logging.critical("Failed to load cDNA annotation file!")
-        sys.exit(1)
+        exit_on_critical_exception(ex, "Failed to load cDNA annotation file!")
 
     # Get auxiliary tables
     aux: AuxiliaryTables = get_auxiliary_tables(
@@ -368,9 +370,7 @@ def cdna(
             long_oligo_n += process_targeton_f(targeton_cfg).long_oligo_n
 
         except ValueError as ex:
-            logging.critical(ex.args[0])
-            logging.critical("Failed to generate oligonucleotides!")
-            sys.exit(1)
+            exit_on_critical_exception(ex, "Failed to generate oligonucleotides!")
 
     # Log number of oligonucleotides discarded due to excessive length
     if long_oligo_n:
