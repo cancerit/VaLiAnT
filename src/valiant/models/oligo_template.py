@@ -137,7 +137,8 @@ class TargetonOligoSegment(OligoSegment):
 
     @property
     def genomic_range(self) -> GenomicRange:
-        return self.targeton.pos_range
+        # This property can only be used for SGE libraries
+        return self.targeton.pos_range  # type: ignore
 
     def compute_mutations(self, aux: AuxiliaryTables) -> Dict[TargetonMutator, MutationCollection]:
         if isinstance(self.targeton, CDSTargeton):

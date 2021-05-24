@@ -138,6 +138,8 @@ def mut_coll_to_df(
     mutator: TargetonMutator,
     mc: MutationCollection
 ) -> pd.DataFrame:
+
+    # Beware: the dataframe will be modified in place
     df = mc.df
     if df is None:
         raise ValueError("Missing dataframe!")
@@ -194,6 +196,7 @@ def get_targeton_metadata_table(
         get_empty_category_column, tuple(aux.codon_table.amino_acid_symbols))
 
     # Merge mutation collections
+    # Beware: the mutation collection dataframes will be modified
     df = pd.concat((
         mut_coll_to_df(get_empty_aa_column, r2_start, mutator, mc)
         for mutator, mc in mut_collections.items()
