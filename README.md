@@ -447,6 +447,14 @@ While in the VCF format insertion and deletion positions refer to the base prece
 
 ## Installation
 
+Some of the dependencies are unsupported on Windows, and the tool cannot therefore be installed natively on it. The following options are available:
+
+-  installing the [Windows Subsystem for Linux](https://docs.microsoft.com/en-us/windows/wsl/install-win10) (WSL) and creating a [Python virtual environment](#python-virtual-environment)
+-  installing [Docker](https://docs.docker.com/docker-for-windows/install/) (requires the WSL or Windows 10 Pro) and [building](#docker-image-1) or [pulling](#docker-image) the Docker image
+-  installing [Singularity](https://sylabs.io/guides/3.7/admin-guide/installation.html#installation-on-windows-or-mac) (requires a virtualisation solution) and [building a Singularity image](https://sylabs.io/guides/3.7/user-guide/singularity_and_docker.html) from the Docker image
+
+The instructions that follow apply to Linux and macOS.
+
 ### Python virtual environment
 
 Requirements:
