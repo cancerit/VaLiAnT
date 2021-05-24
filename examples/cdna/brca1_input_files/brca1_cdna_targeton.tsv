@@ -1,0 +1,3 @@
+seq_id	targeton_start	targeton_end	r2_start	r2_end	action_vector
+brca1_357654.9	114	121	114	121	snv,1del,snvre,2del0,2del1,inframe,stop,ala,aa
+brca1_357654.9	114	150	120	130	snv,1del,snvre,2del0,2del1,inframe,stop,ala,aa
