@@ -94,14 +94,14 @@ After [installing](#python-virtual-environment) the package in an appropriate vi
 
 ```sh
 valiant sge \
-    ${TARGETONS_FILE} \
-    ${REFERENCE_FILE} \
-    ${OUTPUT_DIR} \
-    ${SPECIES} \
-    ${ASSEMBLY} \
-    --gff ${GTF_FILE} \
-    --adaptor-5 ${ADAPTOR_5} \
-    --adaptor-3 ${ADAPTOR_3}
+    "${TARGETONS_FILE}" \
+    "${REFERENCE_FILE}" \
+    "${OUTPUT_DIR}" \
+    "${SPECIES}" \
+    "${ASSEMBLY}" \
+    --gff "${GTF_FILE}" \
+    --adaptor-5 "${ADAPTOR_5}" \
+    --adaptor-3 "${ADAPTOR_3}"
 ```
 
 ### Docker image
@@ -110,19 +110,19 @@ After [building](#docker-image-1) or pulling the Docker image (`quay.io/wtsicgp/
 
 ```sh
 docker run \
-    -v ${HOST_INPUTS}:${INPUT_DIR}:ro \
-    -v ${HOST_REF}:${REF_DIR}:ro \
-    -v ${HOST_OUTPUT}:${OUTPUT_DIR} \
+    -v "${HOST_INPUTS}":"${INPUT_DIR}":ro \
+    -v "${HOST_REF}":"${REF_DIR}":ro \
+    -v "${HOST_OUTPUT}":"${OUTPUT_DIR}" \
     valiant \
         valiant sge \
-            ${INPUT_DIR}/${TARGETONS_FILE} \
-            ${REF_DIR}/${REFERENCE_FILE} \
-            ${OUTPUT_DIR} \
-            ${SPECIES} \
-            ${ASSEMBLY} \
-            --gff ${INPUT_DIR}/${GTF_FILE} \
-            --adaptor-5 ${ADAPTOR_5} \
-            --adaptor-3 ${ADAPTOR_3}
+            "${INPUT_DIR}/${TARGETONS_FILE}" \
+            "${REF_DIR}/${REFERENCE_FILE}" \
+            "${OUTPUT_DIR}" \
+            "${SPECIES}" \
+            "${ASSEMBLY}" \
+            --gff "${INPUT_DIR}/${GTF_FILE}" \
+            --adaptor-5 "${ADAPTOR_5}" \
+            --adaptor-3 "${ADAPTOR_3}"
 ```
 
 The `HOST_*` environment variables represent local paths to be mounted by the Docker container.
@@ -134,19 +134,19 @@ After pulling the Docker image with Singularity:
 ```sh
 singularity exec \
     --cleanenv \
-    -B ${HOST_INPUTS}:${INPUT_DIR}:ro \
-    -B ${HOST_REF}:${REF_DIR}:ro \
-    -B ${HOST_OUTPUT}:${OUTPUT_DIR} \
+    -B "${HOST_INPUTS}":"${INPUT_DIR}":ro \
+    -B "${HOST_REF}":"${REF_DIR}":ro \
+    -B "${HOST_OUTPUT}":"${OUTPUT_DIR}" \
     ${SINGULARITY_IMAGE} \
         valiant sge \
-            ${INPUT_DIR}/${TARGETONS_FILE} \
-            ${REF_DIR}/${REFERENCE_FILE} \
-            ${OUTPUT_DIR} \
-            ${SPECIES} \
-            ${ASSEMBLY} \
-            --gff ${INPUT_DIR}/${GTF_FILE} \
-            --adaptor-5 ${ADAPTOR_5} \
-            --adaptor-3 ${ADAPTOR_3}
+            "${INPUT_DIR}/${TARGETONS_FILE}" \
+            "${REF_DIR}/${REFERENCE_FILE}" \
+            "${OUTPUT_DIR}" \
+            "${SPECIES}" \
+            "${ASSEMBLY}" \
+            --gff "${INPUT_DIR}/${GTF_FILE}" \
+            --adaptor-5 "${ADAPTOR_5}" \
+            --adaptor-3 "${ADAPTOR_3}"
 ```
 
 ## Command line interface
