@@ -18,7 +18,7 @@ To generate the example BRCA1 libraries (the corresponding output directories wi
 ./run_brca1_pep.sh  # -> brca1_pep_output/
 ```
 
-The expected outputs (the order of the oligonucleotides may differ) are in the `brca1_pep_output_exp` and `brca1_pep_output_exp` directories.
+The expected outputs (the order of the oligonucleotides may differ) are in the `brca1_nuc_output_exp` and `brca1_pep_output_exp` directories.
 
 ### cDNA DMS
 
