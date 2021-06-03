@@ -170,7 +170,6 @@ class BaseOligoRenderer:
     def _get_oligo_name(self, var_type: int, source: str, start: int, ref: Optional[str], alt: Optional[str]) -> str:
         return get_oligo_name(self._oligo_name_prefix, var_type, source, start, ref, alt)
 
-    # TODO: add mutation type (missense &c.)
     def get_metadata_table(self, df: pd.DataFrame, options: Options) -> pd.DataFrame:
         if set(df.columns.array) < {'oligo_name', 'mut_position', 'ref', 'new', 'mutator', 'mseq'}:
             raise ValueError("Invalid mutation metadata data frame!")

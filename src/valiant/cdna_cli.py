@@ -276,7 +276,6 @@ def process_targeton(
             get_cdna_f, aux, adaptor_5, adaptor_3, targeton_cfg),
         max_length)
 
-    # TODO: define file name format
     base_fn = f"{targeton_cfg.seq_id}_{targeton_cfg.get_hash()}"
     metadata.write_common_files(output, base_fn)
 
