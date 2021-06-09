@@ -103,7 +103,10 @@ class MetadataTable:
             self.metadata.loc[
                 self.oligo_length_mask,
                 ['oligo_name', 'mseq']
-            ].drop_duplicates(subset=['mseq'], keep='first'),
+            ].sort_values(
+                'oligo_name',
+                kind='mergesort'
+            ).drop_duplicates(subset=['mseq'], keep='first'),
             fp)
 
     def write_vcf_file(self, fp: str, ref_repository: ReferenceSequenceRepository) -> None:
