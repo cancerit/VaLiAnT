@@ -654,7 +654,7 @@ The variants can be linked to the corresponding oligonucleotides via the `SGE_OL
 
 ### Unique oligonucleotides file
 
-Comma-separated values (CSV) file containing only the label and the sequence of the oligonucleotides generated for any given targeton, where the sequences are unique. This is a subset of the [oligonucleotide metadata file](#oligonucleotide-metadata-file) fields (`oligo_name` and `mseq`) and rows.
+Comma-separated values (CSV) file containing only the label and the sequence of the oligonucleotides generated for any given targeton, where the sequences are unique. This is a subset of the [oligonucleotide metadata file](#oligonucleotide-metadata-file) fields (`oligo_name` and `mseq`) and rows. When multiple oligonucleotides have the same sequence, the first name in lexicographic order is chosen.
 
 Example:
 
