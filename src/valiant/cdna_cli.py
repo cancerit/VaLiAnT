@@ -326,6 +326,17 @@ def cdna(
     log: str
 
 ):
+    """
+    cDNA DMS oligonucleotide generation tool
+
+    \b
+    OLIGO_INFO is the BED-like input file path
+    REF_FASTA is the cDNA multi-FASTA file path
+    OUTPUT is the output directory path
+    SPECIES will be included in the metadata
+    ASSEMBLY will be included in the metadata
+    """
+
     # Set logging up
     set_logger(log)
 

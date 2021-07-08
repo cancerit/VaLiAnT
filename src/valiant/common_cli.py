@@ -47,7 +47,7 @@ def common_params(f):
     @click.argument('output', type=writable_dir)
     @click.argument('species')
     @click.argument('assembly')
-    @click.option('--codon-table', type=existing_file)
+    @click.option('--codon-table', type=existing_file, help="Codon table file path")
     @click.option('--adaptor-5', help="5' adaptor sequence")
     @click.option('--adaptor-3', help="3' adaptor sequence")
     @click.option('--log', default='WARNING', help="Logging level")

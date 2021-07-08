@@ -375,9 +375,9 @@ def generate_oligos(output: str, ref_repository: ReferenceSequenceRepository, au
 
 @click.command()
 @common_params
-@click.option('--gff', type=existing_file)
-@click.option('--pam', type=existing_file)
-@click.option('--vcf', type=existing_file)
+@click.option('--gff', type=existing_file, help="Annotation GFF file path")
+@click.option('--pam', type=existing_file, help="PAM protection VCF file path")
+@click.option('--vcf', type=existing_file, help="Custom variant VCF file path")
 @click.option(
     '--sequences-only',
     is_flag=True,
@@ -419,9 +419,12 @@ def sge(
     """
     SGE oligonucleotide generation tool
 
+    \b
     OLIGO_INFO is the BED-like input file path
     REF_FASTA is the reference genome FASTA file path
     OUTPUT is the output directory path
+    SPECIES will be included in the metadata
+    ASSEMBLY will be included in the metadata
     """
 
     options: Options = Options(revcomp_minus_strand, max_length)
