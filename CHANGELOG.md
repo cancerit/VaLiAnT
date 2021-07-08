@@ -10,6 +10,7 @@
 
 - Move SGE library design to `sge` subcommand
 - Lock dependency versions
+- Make unique oligonucleotide name selection order-invariant
 
 ### Fixed
 
