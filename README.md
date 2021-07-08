@@ -457,6 +457,8 @@ The instructions that follow apply to Linux and macOS.
 
 ### Python virtual environment
 
+Please take care to read errors during the dependency installation step carefully. HTSlib (pysam) has system dependencies and will highlight the packages that need to be installed.
+
 Requirements:
 
 - Python 3.7+
