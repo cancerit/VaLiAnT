@@ -3,16 +3,26 @@
 EXP_OUT_DIR=$1
 OUT_DIR=$2
 
+
+if command -v md5sum; then
+    MD5_CMD='md5sum'
+elif command -v md5; then
+    MD5_CMD='md5 -r'
+else
+    echo "Neither md5sum or md5 command found!"
+    exit 1
+fi
+
 function get_vcfs_md5 () {
-    grep -vh '^#' ${1}/*.vcf | sort -s | md5sum
+    grep -vh '^#' ${1}/*.vcf | sort -s | ${MD5_CMD}
 }
 
 function get_csvs_md5 () {
-    cat ${1} | sort -s | md5sum
+    cat ${1} | sort -s | ${MD5_CMD}
 }
 
 function get_unique_csvs_md5 () {
-    for f in ${1}/*_unique.csv; do tail -n +2 "$f"; done | sort -s | md5sum
+    for f in ${1}/*_unique.csv; do tail -n +2 "$f"; done | sort -s | ${MD5_CMD}
 }
 
 function get_meta_csvs_md5 () {

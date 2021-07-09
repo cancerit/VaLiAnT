@@ -2,7 +2,9 @@
 
 These instructions assume you have installed the Valiant package in your local environment. The scripts can be easily adapted to use the Docker or Singularity image by mounting the necessary paths as described in the [main documentation](../README.md).
 
-Once the examples are run, their outputs can be compared with the expected results via the corresponding `check_*.sh` scripts. The presence or absence of certain types of output file will depend on the execution parameters. The validation scripts depend on the `md5sum` utility; on macOS it may need to be installed, *e.g.* via [Homebrew](https://brew.sh/):
+Once the examples are run, their outputs can be compared with the expected results via the corresponding `check_*.sh` scripts. The presence or absence of certain types of output file will depend on the execution parameters. The validation scripts depend on the `md5sum` utility (with `md5` as a fallback).
+
+On macOS, the `md5sum` tool can be installed, *e.g.*, via [Homebrew](https://brew.sh/):
 
 ```sh
 brew install coreutils
