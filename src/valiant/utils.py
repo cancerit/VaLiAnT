@@ -31,13 +31,16 @@
 # legal@sanger.ac.uk. Contact details are: legal@sanger.ac.uk quoting reference Valiant-software.
 #############################
 
+from enum import Enum
 from functools import lru_cache
 import os
 import pathlib
 import re
-from typing import List, Type, Tuple
+from typing import List, Type, Tuple, FrozenSet, Iterable
 import numpy as np
 import pandas as pd
+from .constants import SRC_TYPES
+from .enums import TargetonMutator
 
 dna_complement_tr_table = str.maketrans('ACGT', 'TGCA')
 dna_re = re.compile('^[ACGT]+$')
@@ -101,7 +104,14 @@ def get_id_column(rown: int) -> np.ndarray:
 
 
 def get_constant_category(s: str, n: int, categories: List[str] = None) -> pd.Categorical:
+    if categories and s not in categories:
+        raise ValueError(f"Invalid category '{s}'!")
     return pd.Categorical([s], categories=categories or [s]).repeat(n)
+
+
+@lru_cache()
+def get_empty_category_column(categories: Iterable[str], n: int) -> pd.Categorical:
+    return pd.Categorical(np.empty(n), categories=sorted(categories))
 
 
 @lru_cache(maxsize=4)
@@ -125,3 +135,23 @@ def get_var_types(var_types: pd.Series) -> List[int]:
         for k, v in dict(var_types.value_counts()).items()
         if v > 0
     ]
+
+
+@lru_cache(maxsize=16)
+def parse_mutator(s: str) -> TargetonMutator:
+    try:
+        return TargetonMutator(s)
+    except ValueError:
+        raise ValueError(f"Invalid mutator '{s}'!")
+
+
+def parse_mutators(s: str) -> FrozenSet[TargetonMutator]:
+    return frozenset(map(parse_mutator, parse_list(s)))
+
+
+def get_source_type_column(src_type: str, n: int) -> pd.Series:
+    return get_constant_category(src_type, n, categories=SRC_TYPES)
+
+
+def repr_enum_list(enums: Iterable[Enum]) -> str:
+    return ', '.join(str(e.value) for e in enums)

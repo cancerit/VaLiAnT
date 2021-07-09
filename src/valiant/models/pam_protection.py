@@ -35,7 +35,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from itertools import chain
 import logging
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, FrozenSet
 import pandas as pd
 from pyranges import PyRanges
 from pysam import VariantRecord
@@ -46,7 +46,7 @@ from ..loaders.vcf import get_vcf
 from ..utils import get_id_column
 
 
-@dataclass
+@dataclass(frozen=True)
 class PamProtectedReferenceSequence(ReferenceSequence):
     __slots__ = {'sequence', 'genomic_range', 'pam_protected_sequence'}
 
@@ -70,8 +70,8 @@ class PamProtectedReferenceSequence(ReferenceSequence):
     def apply_variant(self, variant: BaseVariant, ref_check: bool = False) -> str:
         if not self.genomic_range.contains_position(variant.genomic_position):
             raise ValueError("Variant not in genomic range!")
-        offset: int = variant.genomic_position.position - self.genomic_range.start
-        return variant.mutate(self.pam_protected_sequence, offset, ref_check=ref_check)
+        # offset: int = variant.genomic_position.position - self.genomic_range.start
+        return variant.mutate(self.pam_protected_sequence, self.genomic_range.start, ref_check=ref_check)
 
 
 @dataclass(frozen=True)
@@ -100,8 +100,8 @@ class PamVariant(SubstitutionVariant):
 class PamProtectionVariantRepository:
     __slots__ = {'sgrna_ids', '_variants', '_ranges'}
 
-    def __init__(self, sgrna_ids: Set[str] = None) -> None:
-        self.sgrna_ids = sgrna_ids or set()
+    def __init__(self, sgrna_ids: FrozenSet[str] = None) -> None:
+        self.sgrna_ids = sgrna_ids or frozenset()
         self._variants: Dict[str, Set[PamVariant]] = {
             sgrna_id: set()
             for sgrna_id in sgrna_ids
@@ -112,12 +112,12 @@ class PamProtectionVariantRepository:
     def count(self) -> int:
         return sum(map(len, self._variants.values()))
 
-    def get_sgrna_variants(self, sgrna_id: str) -> Set[PamVariant]:
-        return self._variants[sgrna_id]
+    def get_sgrna_variants(self, sgrna_id: str) -> FrozenSet[PamVariant]:
+        return frozenset(self._variants[sgrna_id])
 
-    def get_sgrna_variants_bulk(self, sgrna_ids: Set[str]) -> Set[PamVariant]:
+    def get_sgrna_variants_bulk(self, sgrna_ids: FrozenSet[str]) -> FrozenSet[PamVariant]:
         try:
-            return set(chain.from_iterable(
+            return frozenset(chain.from_iterable(
                 self.get_sgrna_variants(sgrna_id)
                 for sgrna_id in sgrna_ids
             ))
@@ -171,6 +171,6 @@ def compute_pam_protected_sequence(
             offset: int = variant.get_ref_offset(ref_seq)
 
             # Update PAM-protected sequence
-            pam_seq = variant.mutate(pam_seq, offset, ref_check=True)
+            pam_seq = variant.mutate_from(pam_seq, offset, ref_check=True)
 
     return PamProtectedReferenceSequence.from_reference_sequence(ref_seq, pam_seq)

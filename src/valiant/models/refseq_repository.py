@@ -40,15 +40,7 @@ from pysam import FastaFile
 from .base import GenomicRange
 from ..constants import DNA_ALPHABET_SET
 from ..utils import is_dna
-
-
-# TODO: use explicit index path instead?
-def get_fasta_file(fp: str) -> FastaFile:
-    try:
-        return FastaFile(fp)
-    except IOError as ex:
-        logging.critical("Failed to load reference file!")
-        raise ex
+from ..loaders.fasta import get_fasta_file
 
 
 def _normalise_ref_seq(sequence: str) -> str:

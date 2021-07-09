@@ -38,13 +38,13 @@ from functools import lru_cache
 from itertools import chain
 import logging
 import re
-from typing import Dict, Iterable, List, Optional, Set, Tuple
-import chardet
+from typing import Dict, Iterable, List, Optional, FrozenSet, Tuple
 import pandas as pd
 from pyranges import PyRanges
 from .base import GenomicRange
 from ..enums import TargetonMutator
-from ..utils import get_smallest_int_type, parse_list
+from ..loaders.tsv import load_tsv
+from ..utils import get_smallest_int_type, parse_list, parse_mutators
 
 
 CSV_HEADER = [
@@ -83,7 +83,7 @@ class TargetReferenceRegion:
     __slots__ = {'genomic_range', 'mutators'}
 
     genomic_range: GenomicRange
-    mutators: Set[TargetonMutator]
+    mutators: FrozenSet[TargetonMutator]
 
 
 @dataclass(init=False)
@@ -96,7 +96,7 @@ class ReferenceSequenceRanges:
     }
 
     ref_range: GenomicRange
-    sgrna_ids: Set[str]
+    sgrna_ids: FrozenSet[str]
     _const_regions: Tuple[Optional[GenomicRange], Optional[GenomicRange]]
     _target_regions: Tuple[
         Optional[TargetReferenceRegion],
@@ -113,8 +113,8 @@ class ReferenceSequenceRanges:
         target_region_2_start: int,
         target_region_2_end: int,
         target_region_2_extension: Tuple[int, int],
-        mutators: Tuple[Set[TargetonMutator], Set[TargetonMutator], Set[TargetonMutator]],
-        sgrna_ids: Set[str]
+        mutators: Tuple[FrozenSet[TargetonMutator], FrozenSet[TargetonMutator], FrozenSet[TargetonMutator]],
+        sgrna_ids: FrozenSet[str]
     ) -> None:
 
         def get_genomic_range(start: int, end: int) -> GenomicRange:
@@ -174,35 +174,15 @@ class ReferenceSequenceRanges:
         )
 
     @staticmethod
-    @lru_cache(maxsize=16)
-    def parse_mutator(s: str) -> TargetonMutator:
-        try:
-            return TargetonMutator(s)
-        except ValueError:
-            raise ValueError(f"Invalid mutator '{s}'!")
-
-    @staticmethod
-    def parse_tuples(s: str) -> List[Set[str]]:
+    def parse_mutator_tuples(s: str) -> List[FrozenSet[TargetonMutator]]:
         m: Optional[re.Match] = mutator_vector_re.match(s)
 
         if not m:
             raise ValueError("Invalid format for vector!")
 
         return [
-            set(
-                x for x in (
-                    mutator.strip()
-                    for mutator in mutator_group.split(',')
-                ) if x
-            ) if mutator_group else set()
+            parse_mutators(mutator_group) if mutator_group else frozenset()
             for mutator_group in m.groups()
-        ]
-
-    @staticmethod
-    def parse_mutators(s: str) -> List[Set[TargetonMutator]]:
-        return [
-            set(map(ReferenceSequenceRanges.parse_mutator, symbols))
-            for symbols in ReferenceSequenceRanges.parse_tuples(s)
         ]
 
     @classmethod
@@ -214,10 +194,10 @@ class ReferenceSequenceRanges:
             raise ValueError("Invalid extension vector: two values expected!")
 
         # Action vector
-        mutators: List[Set[TargetonMutator]] = cls.parse_mutators(row[7])
+        mutators: List[FrozenSet[TargetonMutator]] = cls.parse_mutator_tuples(row[7])
 
         # sgRNA ID vector
-        sgrna_ids: Set[str] = set(parse_list(row[8]))
+        sgrna_ids: FrozenSet[str] = frozenset(parse_list(row[8]))
 
         return cls(
             row[0],
@@ -231,8 +211,8 @@ class ReferenceSequenceRanges:
             sgrna_ids)
 
     @property
-    def mutators(self) -> Set[TargetonMutator]:
-        return set.union(*[trr.mutators for trr in self._target_regions if trr])
+    def mutators(self) -> FrozenSet[TargetonMutator]:
+        return frozenset.union(*[trr.mutators for trr in self._target_regions if trr])
 
     @property
     def target_regions(self) -> List[TargetReferenceRegion]:
@@ -288,37 +268,24 @@ class ReferenceSequenceRangeCollection:
 
     @classmethod
     def load(cls, fp: str) -> ReferenceSequenceRangeCollection:
-
-        # Detect encoding
-        with open(fp, 'rb') as rfh:
-            encoding: str = chardet.detect(rfh.read(10000))['encoding']
-
-        logging.debug("Oligonucleotide templates file encoding: %s." % encoding)
-
-        # Load oligonucleotide templates
-        with open(fp, encoding=encoding) as fh:
-            reader = csv.reader(fh, delimiter='\t')
-            if next(reader) != CSV_HEADER:
-                raise ValueError("Invalid header!")
-
-            return cls(map(ReferenceSequenceRanges.from_row, reader))
+        return cls(map(ReferenceSequenceRanges.from_row, load_tsv(fp, CSV_HEADER)))
 
     @property
-    def sgrna_ids(self) -> Set[str]:
-        return set.union(*[rsr.sgrna_ids for rsr in self._rsrs.values()])
+    def sgrna_ids(self) -> FrozenSet[str]:
+        return frozenset.union(*[rsr.sgrna_ids for rsr in self._rsrs.values()])
 
     @property
     def target_ranges(self) -> PyRanges:
         return self._region_ranges[~self._region_ranges.is_const]
 
     @property
-    def ref_ranges(self) -> Set[GenomicRange]:
-        return set(rsr.ref_range for rsr in self._rsrs.values())
+    def ref_ranges(self) -> FrozenSet[GenomicRange]:
+        return frozenset(rsr.ref_range for rsr in self._rsrs.values())
 
     @property
-    def strands(self) -> Set[str]:
-        return set(gr.strand for gr in self.ref_ranges)
+    def strands(self) -> FrozenSet[str]:
+        return frozenset(gr.strand for gr in self.ref_ranges)
 
     @property
-    def mutarors(self) -> Set[TargetonMutator]:
-        return set.union(*[rsr.mutators for rsr in self._rsrs.values()])
+    def mutarors(self) -> FrozenSet[TargetonMutator]:
+        return frozenset.union(*[rsr.mutators for rsr in self._rsrs.values()])

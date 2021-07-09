@@ -100,8 +100,14 @@ class BaseVariant:
 
         return self.genomic_position.position - ref_seq.genomic_range.start
 
-    def mutate(self, seq: str, offset: int, ref_check: bool = False) -> str:
+    def mutate_from(self, seq: str, offset: int, ref_check: bool = False) -> str:
         raise NotImplementedError()
+
+    def mutate(self, seq: str, seq_start: int, ref_check: bool = False) -> str:
+        if seq_start < 1:
+            raise ValueError("Invalid sequence start position!")
+        return self.mutate_from(
+            seq, self.genomic_position.position - seq_start, ref_check=ref_check)
 
 
 @dataclass(frozen=True)
@@ -127,7 +133,7 @@ class SubstitutionVariant(BaseVariant):
         position: int = self.genomic_position.position - 1
         return self.genomic_position.chromosome, position, position
 
-    def mutate(self, seq: str, offset: int, ref_check: bool = False) -> str:
+    def mutate_from(self, seq: str, offset: int, ref_check: bool = False) -> str:
         if ref_check:
             _validate_ref_in_target(seq, offset, self.ref)
         return replace_nucleotides(seq, offset, self.ref, self.alt)
@@ -144,7 +150,7 @@ class InsertionVariant(BaseVariant):
     def __post_init__(self) -> None:
         _validate_alt(self.alt)
 
-    def mutate(self, seq: str, offset: int, ref_check: bool = False) -> str:
+    def mutate_from(self, seq: str, offset: int, ref_check: bool = False) -> str:
         return insert_nucleotides(seq, offset, self.alt)
 
 
@@ -159,7 +165,7 @@ class DeletionVariant(BaseVariant):
     def __post_init__(self) -> None:
         _validate_ref(self.ref)
 
-    def mutate(self, seq: str, offset: int, ref_check: bool = False) -> str:
+    def mutate_from(self, seq: str, offset: int, ref_check: bool = False) -> str:
         if ref_check:
             _validate_ref_in_target(seq, offset, self.ref)
         return delete_nucleotides(seq, offset, self.ref)

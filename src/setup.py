@@ -36,14 +36,23 @@
 from setuptools import setup, find_packages
 
 PACKAGE_NAME = 'valiant'
+VERSION = '1.0.0'
 
 config = {
     'name': PACKAGE_NAME,
     'description': 'Variant Library Annotation Tool',
     'author': 'Luca Barbon',
     'author_email': 'cgphelp@sanger.ac.uk',
-    'version': '1.0.0',
+    'version': VERSION,
     'python_requires': '>= 3.7',
+    'install_requires': [
+        'chardet',
+        'click',
+        'cython',
+        'pandas>=1.1,<1.2',
+        'pyranges',
+        'pysam'
+    ],
     'tests_require': ['pytest'],
     'packages': find_packages(),
     'package_data': {

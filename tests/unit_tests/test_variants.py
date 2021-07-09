@@ -61,7 +61,7 @@ def test_get_variant_from_tuple(pos, ref, alt, variant_type):
 ])
 def test_substitution_variant_mutate(seq, offset, ref, alt, mseq):
     var = SubstitutionVariant(POSITION, ref, alt)
-    assert var.mutate(seq, offset) == mseq
+    assert var.mutate_from(seq, offset) == mseq
 
 
 @pytest.mark.parametrize('seq,offset,ref,mseq', [
@@ -69,7 +69,7 @@ def test_substitution_variant_mutate(seq, offset, ref, alt, mseq):
 ])
 def test_deletion_variant_mutate(seq, offset, ref, mseq):
     var = DeletionVariant(POSITION, ref)
-    assert var.mutate(seq, offset) == mseq
+    assert var.mutate_from(seq, offset) == mseq
 
 
 @pytest.mark.parametrize('seq,offset,alt,mseq', [
@@ -77,4 +77,4 @@ def test_deletion_variant_mutate(seq, offset, ref, mseq):
 ])
 def test_insertion_variant_mutate(seq, offset, alt, mseq):
     var = InsertionVariant(POSITION, alt)
-    assert var.mutate(seq, offset) == mseq
+    assert var.mutate_from(seq, offset) == mseq

@@ -39,12 +39,58 @@ from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
 from ..constants import REVCOMP_OLIGO_NAME_SUFFIX
 from ..enums import VariantType
-from ..utils import get_constant_category, reverse_complement
+from ..utils import get_constant_category, reverse_complement, get_source_type_column
 
 
 var_type_sub: int = VariantType.SUBSTITUTION.value
 var_type_del: int = VariantType.DELETION.value
 var_type_ins: int = VariantType.INSERTION.value
+
+
+def get_oligo_name(
+    oligo_name_prefix: str,
+    var_type: int,
+    source: str,
+    start: int,
+    ref: Optional[str],
+    alt: Optional[str]
+) -> str:
+
+    # Insertion
+    if var_type == var_type_ins:
+        if not alt:
+            raise ValueError("Invalid insertion: missing alternative!")
+        return f"{oligo_name_prefix}{start}_{alt}_{source}"
+
+    else:
+        if not ref:
+            if var_type == var_type_sub:
+                raise ValueError(f"Invalid substitution: missing reference!")
+            if var_type == var_type_del:
+                raise ValueError(f"Invalid deletion: missing reference!")
+            else:
+                raise ValueError("Invalid variant type!")
+
+        ref_len: int = len(ref)
+        end: int = (start + ref_len - 1) if ref_len > 1 else start
+
+        # Substitution
+        if var_type == var_type_sub:
+            if not alt:
+                raise ValueError("Invalid substitution: missing alternative!")
+            return (
+                f"{oligo_name_prefix}{start}_{ref}>{alt}_{source}" if end == start else
+                f"{oligo_name_prefix}{start}_{end}_{ref}>{alt}_{source}"
+            )
+
+        # Deletion
+        if var_type == var_type_del:
+            return (
+                f"{oligo_name_prefix}{start}_{source}" if end == start else
+                f"{oligo_name_prefix}{start}_{end}_{source}"
+            )
+
+        raise ValueError("Invalid variant type!")
 
 
 @dataclass(init=False)
@@ -122,44 +168,8 @@ class BaseOligoRenderer:
             return self._render_mutated_sequence
 
     def _get_oligo_name(self, var_type: int, source: str, start: int, ref: Optional[str], alt: Optional[str]) -> str:
+        return get_oligo_name(self._oligo_name_prefix, var_type, source, start, ref, alt)
 
-        # Insertion
-        if var_type == var_type_ins:
-            if not alt:
-                raise ValueError("Invalid insertion: missing alternative!")
-            return f"{self._oligo_name_prefix}{start}_{alt}_{source}"
-
-        else:
-            if not ref:
-                if var_type == var_type_sub:
-                    raise ValueError(f"Invalid substitution: missing reference!")
-                if var_type == var_type_del:
-                    raise ValueError(f"Invalid deletion: missing reference!")
-                else:
-                    raise ValueError("Invalid variant type!")
-
-            ref_len: int = len(ref)
-            end: int = (start + ref_len - 1) if ref_len > 1 else start
-
-            # Substitution
-            if var_type == var_type_sub:
-                if not alt:
-                    raise ValueError("Invalid substitution: missing alternative!")
-                return (
-                    f"{self._oligo_name_prefix}{start}_{ref}>{alt}_{source}" if end == start else
-                    f"{self._oligo_name_prefix}{start}_{end}_{ref}>{alt}_{source}"
-                )
-
-            # Deletion
-            if var_type == var_type_del:
-                return (
-                    f"{self._oligo_name_prefix}{start}_{source}" if end == start else
-                    f"{self._oligo_name_prefix}{start}_{end}_{source}"
-                )
-
-            raise ValueError("Invalid variant type!")
-
-    # TODO: add mutation type (missense &c.)
     def get_metadata_table(self, df: pd.DataFrame, options: Options) -> pd.DataFrame:
         if set(df.columns.array) < {'oligo_name', 'mut_position', 'ref', 'new', 'mutator', 'mseq'}:
             raise ValueError("Invalid mutation metadata data frame!")
@@ -184,5 +194,8 @@ class BaseOligoRenderer:
 
         # Render full oligonucleotide sequences
         df.mseq = df.mseq.apply(self._get_renderer(rc)).astype('string')
+
+        # Set sequence source type
+        df['src_type'] = get_source_type_column('ref', rown)
 
         return df

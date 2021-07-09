@@ -1,9 +1,11 @@
 FROM python:3.8-slim as builder
 
+ENV CYTHON_VERSION 0.29.22
+
 # Install build dependencies
 RUN apt-get update && \
     apt-get install -yq --no-install-recommends build-essential && \
-    pip install --no-cache-dir cython
+    pip install --no-cache-dir cython==${CYTHON_VERSION}
 
 WORKDIR /tmp
 

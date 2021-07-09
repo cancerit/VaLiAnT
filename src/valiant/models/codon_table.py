@@ -40,7 +40,7 @@ STOP_CODE = 'STOP'
 
 
 class CodonTable:
-    __slots__ = {'_codon2aa', '_aa2codons', '_codon2syn', '_codonrc2syn'}
+    __slots__ = {'_codon2aa', '_aa2codons', '_codon2syn', '_codonrc2syn', '_amino_acid_symbols'}
 
     def __init__(self, codon_table: List[Tuple[str, str, float, int]]) -> None:
 
@@ -72,9 +72,11 @@ class CodonTable:
             for codon in self._codon2aa.keys()
         }
 
+        self._amino_acid_symbols = sorted(self._aa2codons.keys())
+
     @property
     def amino_acid_symbols(self) -> List[str]:
-        return list(self._aa2codons.keys())
+        return self._amino_acid_symbols
 
     def get_top_ranking_codon_table(self) -> List[Tuple[str, str]]:
         return [(aa, codons[0]) for aa, codons in self._aa2codons.items()]

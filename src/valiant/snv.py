@@ -37,7 +37,7 @@ import pandas as pd
 from .constants import DNA_ALPHABET_SET
 from .enums import MutationType, VariantType
 from .globals import NUCLEOTIDES, TRIPLET_RCS, TRIPLETS
-from .models.base import GenomicRange
+from .models.base import PositionRange
 from .models.codon_table import CodonTable, STOP_CODE
 from .string_mutators import replace_single_nucleotides
 from .utils import get_inner_cds_relative_boundaries, validate_strand
@@ -202,7 +202,7 @@ def build_snv_table(base_snv_table: pd.DataFrame, codon_table: CodonTable, stran
 def get_fast_exon_snv(
     snv_table: pd.DataFrame,
     cds_seq: str,
-    genomic_range: GenomicRange,
+    genomic_range: PositionRange,
     cds_prefix_length: int,
     cds_suffix_length: int,
     reset_index: bool = True
@@ -342,7 +342,7 @@ def _get_snvre_mseq(seq: str, snvre_meta: pd.DataFrame) -> pd.Series:
 def get_fast_snvre(
     syn_df: pd.DataFrame,
     syn_top_df: pd.DataFrame,
-    genomic_range: GenomicRange,
+    genomic_range: PositionRange,
     frame: int,
     seq: str,
     snvs: pd.DataFrame

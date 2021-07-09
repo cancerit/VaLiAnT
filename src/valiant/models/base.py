@@ -1,26 +1,26 @@
 ########## LICENCE ##########
 # VaLiAnT, (c) 2020, GRL (the "Software")
-# 
+#
 # The Software remains the property of Genome Research Ltd ("GRL").
-# 
+#
 # The Software is distributed "AS IS" under this Licence solely for non-commercial use in the hope that it will be useful,
 # but in order that GRL as a charitable foundation protects its assets for the benefit of its educational and research
 # purposes, GRL makes clear that no condition is made or to be implied, nor is any warranty given or to be implied, as to
 # the accuracy of the Software, or that it will be suitable for any particular purpose or for use under any specific
 # conditions. Furthermore, GRL disclaims all responsibility for the use which is made of the Software. It further
 # disclaims any liability for the outcomes arising from using  the Software.
-# 
+#
 # The Licensee agrees to indemnify GRL and hold GRL harmless from and against any and all claims, damages and liabilities
 # asserted by third parties (including claims for negligence) which arise directly or indirectly from the use of the
 # Software or the sale of any products based on the Software.
-# 
+#
 # No part of the Software may be reproduced, modified, transmitted or transferred in any form or by any means, electronic
 # or mechanical, without the express permission of GRL. The permission of GRL is not required if the said reproduction,
 # modification, transmission or transference is done without financial return, the conditions of this Licence are imposed
 # upon the receiver of the product, and all original and amended source code is included in any transmitted product. You
 # may be held legally responsible for any copyright infringement that is caused or encouraged by your failure to abide by
 # these terms and conditions.
-# 
+#
 # You are not permitted under this Licence to use this Software commercially. Use for which any financial return is
 # received shall be defined as commercial use, and includes (1) integration of all or part of the source code or the
 # Software into a product for sale or license by or on behalf of Licensee to third parties or (2) use of the Software
@@ -34,8 +34,107 @@
 from __future__ import annotations
 from collections.abc import Container, Sized
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Optional
 from ..utils import get_region, is_strand
+
+
+@dataclass(frozen=True)
+class PositionRange(Sized, Container):
+    __slots__ = {'start', 'end'}
+
+    start: int
+    end: int
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.start, int) or not isinstance(self.end, int):
+            raise TypeError("Invalid position range!")
+        if self.start < 1 or self.end < self.start:
+            raise ValueError("Invalid position range!")
+
+    def __len__(self) -> int:
+        return self.end - self.start + 1
+
+    def __contains__(self, other) -> bool:
+        return other.start >= self.start and other.end <= self.end
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, PositionRange):
+            raise TypeError("Unsupported operation!")
+
+        return self.start == other.start and self.end == other.end
+
+    # Required to allow multiprocessing to pickle the object
+    def __setstate__(self, state: Tuple) -> None:
+        for slot, value in state[1].items():
+            object.__setattr__(self, slot, value)
+
+    def to_tuple(self) -> Tuple[int, int]:
+        return self.start, self.end
+
+    def get_subrange_before(self, pos: int, length: Optional[int] = None) -> Optional[PositionRange]:
+        if pos < 1:
+            raise ValueError("Invalid position!")
+        if length is None:
+            if pos == 1:
+                return None
+            s = 1
+        elif length == 0:
+            return None
+        else:
+            if length < 1:
+                raise ValueError("Invalid subsequence length!")
+            s = pos - length
+            if s < 1:
+                raise ValueError("Invalid subsequence length: out of range!")
+
+        return PositionRange(s, pos - 1)
+
+    def get_subrange_after(self, pos: int, length: Optional[int] = None) -> Optional[PositionRange]:
+        if pos < 1:
+            raise ValueError("Invalid position!")
+        if length is None:
+            e = len(self)
+            if pos == e:
+                return None
+        elif length == 0:
+            return None
+        else:
+            if length < 1:
+                raise ValueError("Invalid subsequence length!")
+            e = pos + length
+            if e > len(self):
+                raise ValueError("Invalid subsequence length: out of range!")
+
+        return PositionRange(pos + 1, e)
+
+
+@dataclass(frozen=True)
+class StrandedPositionRange(PositionRange):
+    __slots__ = {'start', 'end', 'strand'}
+
+    strand: str
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if not is_strand(self.strand):
+            raise ValueError("Invalid strand!")
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, StrandedPositionRange):
+            raise TypeError("Unsupported operation!")
+        return self.strand == other.strand and super().__eq__(other)
+
+    def __contains__(self, other) -> bool:
+        if isinstance(other, StrandedPositionRange):
+            return other.strand == self.strand and super().__contains__(other)
+        elif isinstance(other, PositionRange):
+            return super().__contains__(other)
+        else:
+            raise TypeError("Unsupported operation!")
+
+    @classmethod
+    def to_plus_strand(cls, pr: PositionRange) -> StrandedPositionRange:
+        return cls(pr.start, pr.end, '+')
 
 
 @dataclass(frozen=True)
@@ -58,14 +157,15 @@ class GenomicPosition:
         return f"{self.chromosome}:{self.position}"
 
 
-@dataclass(frozen=True)
-class GenomicRange(Sized, Container):
+@dataclass(frozen=True, init=False)
+class GenomicRange(StrandedPositionRange):
     __slots__ = {'chromosome', 'start', 'end', 'strand'}
 
     chromosome: str
-    start: int
-    end: int
-    strand: str
+
+    def __init__(self, chromosome: str, start: int, end: int, strand: str) -> None:
+        object.__setattr__(self, 'chromosome', chromosome)
+        super().__init__(start, end, strand)
 
     def __post_init__(self) -> None:
         if not (
@@ -76,11 +176,6 @@ class GenomicRange(Sized, Container):
             and is_strand(self.strand)
         ):
             raise ValueError("Invalid genomic range!")
-
-    # Required to allow multiprocessing to pickle the object
-    def __setstate__(self, state: Tuple) -> None:
-        for slot, value in state[1].items():
-            object.__setattr__(self, slot, value)
 
     @property
     def region(self) -> str:
@@ -139,10 +234,7 @@ class GenomicRange(Sized, Container):
         )
 
     def __contains__(self, other) -> bool:
-        if other.chromosome != self.chromosome or other.strand != self.strand:
-            return False
-
-        return other.start >= self.start and other.end <= self.end
+        return other.chromosome == self.chromosome and super().__contains__(other)
 
     def contains_position(self, genomic_position: GenomicPosition) -> bool:
         return (
@@ -166,6 +258,10 @@ class GenomicRange(Sized, Container):
         start: int = child.start - self.start
         end: int = child.end - self.start + 1
         return start, end
+
+    @property
+    def pos_range(self) -> PositionRange:
+        return PositionRange(self.start, self.end)
 
 
 @dataclass

@@ -58,8 +58,8 @@ def test_get_2del_mutations(offset, seq, exp_pos, exp_ref, exp_mseq, cds):
     # Generate target
     gr = GenomicRange('X', 10, 10 + len(seq) - 1, '+')
     t = (
-        CDSTargeton(PamProtectedReferenceSequence(seq, gr, seq), 'AA', 'A') if cds else
-        Targeton(PamProtectedReferenceSequence(seq, gr, seq))
+        CDSTargeton.from_pam_seq(PamProtectedReferenceSequence(seq, gr, seq), 'AA', 'A') if cds else
+        Targeton.from_pam_seq(PamProtectedReferenceSequence(seq, gr, seq))
     )
 
     # Generate in-frame deletions
@@ -84,7 +84,7 @@ def test_get_inframe_mutations(seq, pre, suf, strand, exp_pos, exp_ref, exp_mseq
 
     # Generate target
     gr = GenomicRange('X', 10, 10 + len(seq) - 1, strand)
-    t = CDSTargeton(PamProtectedReferenceSequence(seq, gr, seq), pre, suf)
+    t = CDSTargeton.from_pam_seq(PamProtectedReferenceSequence(seq, gr, seq), pre, suf)
 
     # Generate in-frame deletions
     mc = t.get_inframe_mutations()

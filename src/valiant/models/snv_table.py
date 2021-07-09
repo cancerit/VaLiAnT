@@ -34,10 +34,10 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import logging
-from typing import Dict, Set, Optional
+from typing import Dict, FrozenSet, Optional
 import pandas as pd
 from ..snv import _build_base_snv_table, build_snv_table, get_fast_exon_snv, get_all_syn_codons, get_fast_snvre, get_top_syn_codons, build_aa_sub_table, get_fast_aa_subs
-from .base import GenomicRange
+from .base import StrandedPositionRange
 from .codon_table import CodonTable, STOP_CODE
 
 
@@ -47,13 +47,13 @@ class AllAminoAcidsTable:
 
     _strand_table: Dict[str, pd.DataFrame]
 
-    def __init__(self, codon_table: CodonTable, strands: Set[str]) -> None:
+    def __init__(self, codon_table: CodonTable, strands: FrozenSet[str]) -> None:
         self._strand_table = {
             strand: build_aa_sub_table(codon_table, strand)
             for strand in strands
         }
 
-    def get_subs(self, genomic_range: GenomicRange, frame: int, seq: str) -> pd.DataFrame:
+    def get_subs(self, genomic_range: StrandedPositionRange, frame: int, seq: str) -> pd.DataFrame:
         return get_fast_aa_subs(
             self._strand_table[genomic_range.strand], frame, seq)
 
@@ -65,7 +65,7 @@ class SnvTable:
     _codon_table: CodonTable
     _strand_snv_table: Dict[str, pd.DataFrame]
 
-    def __init__(self, codon_table: CodonTable, strands: Set[str]) -> None:
+    def __init__(self, codon_table: CodonTable, strands: FrozenSet[str]) -> None:
         self._codon_table = codon_table
 
         base_snv_table: pd.DataFrame = _build_base_snv_table()
@@ -79,14 +79,14 @@ class SnvTable:
         return self._codon_table
 
     @property
-    def strands(self) -> Set[str]:
-        return set(self._strand_snv_table.keys())
+    def strands(self) -> FrozenSet[str]:
+        return frozenset(self._strand_snv_table.keys())
 
     def get_snvs(
         self,
         strand: str,
         cds_seq: str,
-        genomic_range: GenomicRange,
+        genomic_range: StrandedPositionRange,
         cds_prefix_length: int,
         cds_suffix_length: int,
         reset_index: bool = True
@@ -129,7 +129,7 @@ class SnvReTable:
             for strand, all_syn_table in strand_all_syn_tables.items()
         }
 
-    def get_snvres(self, genomic_range: GenomicRange, frame: int, seq: str, snvs: pd.DataFrame) -> pd.DataFrame:
+    def get_snvres(self, genomic_range: StrandedPositionRange, frame: int, seq: str, snvs: pd.DataFrame) -> pd.DataFrame:
         strand: str = genomic_range.strand
         return get_fast_snvre(
             self._strand_all_syn_table[strand],
@@ -152,7 +152,7 @@ class AuxiliaryTables:
     def __init__(
         self,
         codon_table: CodonTable,
-        strands: Set[str],
+        strands: FrozenSet[str],
         snv: bool,
         snvre: bool,
         all_aa: bool
