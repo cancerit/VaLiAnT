@@ -117,7 +117,7 @@ def test_genomic_range_get_relative_subrange(parent, child, exp_range, valid):
     (GenomicPosition('X', 300), False),
     (GenomicPosition('Y', 100), False)
 ])
-def test_genomic_range_contains_position(pos,exp):
+def test_genomic_range_contains_position(pos, exp):
     gr = GenomicRange('X', 100, 200, '+')
     assert gr.contains_position(pos) == exp
 
