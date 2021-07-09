@@ -1,6 +1,8 @@
 # Example libraries
 
-These instructions assume you have installed the Valiant package in your local environment. The scripts can be easily adapted to use the Docker or Singularity image by mounting the necessary paths as described in the [main documentation](../README.md).
+For more information on these examples, please see the [VaLiAnT Wiki](https://github.com/cancerit/VaLiAnT/wiki).
+
+These instructions assume you have installed the `valiant` package in your local environment. The scripts can be easily adapted to use the Docker or Singularity image by mounting the necessary paths as described in the [main documentation](../README.md).
 
 Once the examples are run, their outputs can be compared with the expected results via the corresponding `check_*.sh` scripts. The presence or absence of certain types of output file will depend on the execution parameters. The validation scripts depend on the `md5sum` utility (with `md5` as a fallback).
 

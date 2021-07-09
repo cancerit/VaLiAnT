@@ -2,7 +2,7 @@
 
 The Variant Library Annotation Tool (VaLiAnT) is an oligonucleotide library design and annotation tool for Saturation Genome Editing and other Deep Mutational Scanning experiments.
 
-Two BRCA1 libraries are included in the `examples` directory, including all necessary inputs and [instructions](examples/README.md) to generate them.
+A selection of libraries is included in the `examples` directory, including all necessary inputs and [instructions](examples/README.md) to generate them.
 
 Please also see the [VaLiAnT Wiki](https://github.com/cancerit/VaLiAnT/wiki) for more information on use cases.
 
