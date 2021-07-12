@@ -1,34 +1,19 @@
 ########## LICENCE ##########
-# VaLiAnT, (c) 2020, GRL (the "Software")
-# 
-# The Software remains the property of Genome Research Ltd ("GRL").
-# 
-# The Software is distributed "AS IS" under this Licence solely for non-commercial use in the hope that it will be useful,
-# but in order that GRL as a charitable foundation protects its assets for the benefit of its educational and research
-# purposes, GRL makes clear that no condition is made or to be implied, nor is any warranty given or to be implied, as to
-# the accuracy of the Software, or that it will be suitable for any particular purpose or for use under any specific
-# conditions. Furthermore, GRL disclaims all responsibility for the use which is made of the Software. It further
-# disclaims any liability for the outcomes arising from using  the Software.
-# 
-# The Licensee agrees to indemnify GRL and hold GRL harmless from and against any and all claims, damages and liabilities
-# asserted by third parties (including claims for negligence) which arise directly or indirectly from the use of the
-# Software or the sale of any products based on the Software.
-# 
-# No part of the Software may be reproduced, modified, transmitted or transferred in any form or by any means, electronic
-# or mechanical, without the express permission of GRL. The permission of GRL is not required if the said reproduction,
-# modification, transmission or transference is done without financial return, the conditions of this Licence are imposed
-# upon the receiver of the product, and all original and amended source code is included in any transmitted product. You
-# may be held legally responsible for any copyright infringement that is caused or encouraged by your failure to abide by
-# these terms and conditions.
-# 
-# You are not permitted under this Licence to use this Software commercially. Use for which any financial return is
-# received shall be defined as commercial use, and includes (1) integration of all or part of the source code or the
-# Software into a product for sale or license by or on behalf of Licensee to third parties or (2) use of the Software
-# or any derivative of it for research with the final aim of developing software products for sale or license to a third
-# party or (3) use of the Software or any derivative of it for research with the final aim of developing non-software
-# products for sale or license to a third party, or (4) use of the Software to provide any service to an external
-# organisation for which payment is received. If you are interested in using the Software commercially, please contact
-# legal@sanger.ac.uk. Contact details are: legal@sanger.ac.uk quoting reference Valiant-software.
+# VaLiAnT
+# Copyright (C) 2020-2021 Genome Research Ltd
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
 from __future__ import annotations
@@ -38,13 +23,13 @@ from functools import lru_cache
 from itertools import chain
 import logging
 import re
-from typing import Dict, Iterable, List, Optional, Set, Tuple
-import chardet
+from typing import Dict, Iterable, List, Optional, FrozenSet, Tuple
 import pandas as pd
 from pyranges import PyRanges
 from .base import GenomicRange
 from ..enums import TargetonMutator
-from ..utils import get_smallest_int_type, parse_list
+from ..loaders.tsv import load_tsv
+from ..utils import get_smallest_int_type, parse_list, parse_mutators
 
 
 CSV_HEADER = [
@@ -83,7 +68,7 @@ class TargetReferenceRegion:
     __slots__ = {'genomic_range', 'mutators'}
 
     genomic_range: GenomicRange
-    mutators: Set[TargetonMutator]
+    mutators: FrozenSet[TargetonMutator]
 
 
 @dataclass(init=False)
@@ -96,7 +81,7 @@ class ReferenceSequenceRanges:
     }
 
     ref_range: GenomicRange
-    sgrna_ids: Set[str]
+    sgrna_ids: FrozenSet[str]
     _const_regions: Tuple[Optional[GenomicRange], Optional[GenomicRange]]
     _target_regions: Tuple[
         Optional[TargetReferenceRegion],
@@ -113,8 +98,8 @@ class ReferenceSequenceRanges:
         target_region_2_start: int,
         target_region_2_end: int,
         target_region_2_extension: Tuple[int, int],
-        mutators: Tuple[Set[TargetonMutator], Set[TargetonMutator], Set[TargetonMutator]],
-        sgrna_ids: Set[str]
+        mutators: Tuple[FrozenSet[TargetonMutator], FrozenSet[TargetonMutator], FrozenSet[TargetonMutator]],
+        sgrna_ids: FrozenSet[str]
     ) -> None:
 
         def get_genomic_range(start: int, end: int) -> GenomicRange:
@@ -174,35 +159,15 @@ class ReferenceSequenceRanges:
         )
 
     @staticmethod
-    @lru_cache(maxsize=16)
-    def parse_mutator(s: str) -> TargetonMutator:
-        try:
-            return TargetonMutator(s)
-        except ValueError:
-            raise ValueError(f"Invalid mutator '{s}'!")
-
-    @staticmethod
-    def parse_tuples(s: str) -> List[Set[str]]:
+    def parse_mutator_tuples(s: str) -> List[FrozenSet[TargetonMutator]]:
         m: Optional[re.Match] = mutator_vector_re.match(s)
 
         if not m:
             raise ValueError("Invalid format for vector!")
 
         return [
-            set(
-                x for x in (
-                    mutator.strip()
-                    for mutator in mutator_group.split(',')
-                ) if x
-            ) if mutator_group else set()
+            parse_mutators(mutator_group) if mutator_group else frozenset()
             for mutator_group in m.groups()
-        ]
-
-    @staticmethod
-    def parse_mutators(s: str) -> List[Set[TargetonMutator]]:
-        return [
-            set(map(ReferenceSequenceRanges.parse_mutator, symbols))
-            for symbols in ReferenceSequenceRanges.parse_tuples(s)
         ]
 
     @classmethod
@@ -214,10 +179,10 @@ class ReferenceSequenceRanges:
             raise ValueError("Invalid extension vector: two values expected!")
 
         # Action vector
-        mutators: List[Set[TargetonMutator]] = cls.parse_mutators(row[7])
+        mutators: List[FrozenSet[TargetonMutator]] = cls.parse_mutator_tuples(row[7])
 
         # sgRNA ID vector
-        sgrna_ids: Set[str] = set(parse_list(row[8]))
+        sgrna_ids: FrozenSet[str] = frozenset(parse_list(row[8]))
 
         return cls(
             row[0],
@@ -231,8 +196,8 @@ class ReferenceSequenceRanges:
             sgrna_ids)
 
     @property
-    def mutators(self) -> Set[TargetonMutator]:
-        return set.union(*[trr.mutators for trr in self._target_regions if trr])
+    def mutators(self) -> FrozenSet[TargetonMutator]:
+        return frozenset.union(*[trr.mutators for trr in self._target_regions if trr])
 
     @property
     def target_regions(self) -> List[TargetReferenceRegion]:
@@ -288,37 +253,24 @@ class ReferenceSequenceRangeCollection:
 
     @classmethod
     def load(cls, fp: str) -> ReferenceSequenceRangeCollection:
-
-        # Detect encoding
-        with open(fp, 'rb') as rfh:
-            encoding: str = chardet.detect(rfh.read(10000))['encoding']
-
-        logging.debug("Oligonucleotide templates file encoding: %s." % encoding)
-
-        # Load oligonucleotide templates
-        with open(fp, encoding=encoding) as fh:
-            reader = csv.reader(fh, delimiter='\t')
-            if next(reader) != CSV_HEADER:
-                raise ValueError("Invalid header!")
-
-            return cls(map(ReferenceSequenceRanges.from_row, reader))
+        return cls(map(ReferenceSequenceRanges.from_row, load_tsv(fp, CSV_HEADER)))
 
     @property
-    def sgrna_ids(self) -> Set[str]:
-        return set.union(*[rsr.sgrna_ids for rsr in self._rsrs.values()])
+    def sgrna_ids(self) -> FrozenSet[str]:
+        return frozenset.union(*[rsr.sgrna_ids for rsr in self._rsrs.values()])
 
     @property
     def target_ranges(self) -> PyRanges:
         return self._region_ranges[~self._region_ranges.is_const]
 
     @property
-    def ref_ranges(self) -> Set[GenomicRange]:
-        return set(rsr.ref_range for rsr in self._rsrs.values())
+    def ref_ranges(self) -> FrozenSet[GenomicRange]:
+        return frozenset(rsr.ref_range for rsr in self._rsrs.values())
 
     @property
-    def strands(self) -> Set[str]:
-        return set(gr.strand for gr in self.ref_ranges)
+    def strands(self) -> FrozenSet[str]:
+        return frozenset(gr.strand for gr in self.ref_ranges)
 
     @property
-    def mutarors(self) -> Set[TargetonMutator]:
-        return set.union(*[rsr.mutators for rsr in self._rsrs.values()])
+    def mutarors(self) -> FrozenSet[TargetonMutator]:
+        return frozenset.union(*[rsr.mutators for rsr in self._rsrs.values()])

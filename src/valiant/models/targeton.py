@@ -1,42 +1,30 @@
 ########## LICENCE ##########
-# VaLiAnT, (c) 2020, GRL (the "Software")
-# 
-# The Software remains the property of Genome Research Ltd ("GRL").
-# 
-# The Software is distributed "AS IS" under this Licence solely for non-commercial use in the hope that it will be useful,
-# but in order that GRL as a charitable foundation protects its assets for the benefit of its educational and research
-# purposes, GRL makes clear that no condition is made or to be implied, nor is any warranty given or to be implied, as to
-# the accuracy of the Software, or that it will be suitable for any particular purpose or for use under any specific
-# conditions. Furthermore, GRL disclaims all responsibility for the use which is made of the Software. It further
-# disclaims any liability for the outcomes arising from using  the Software.
-# 
-# The Licensee agrees to indemnify GRL and hold GRL harmless from and against any and all claims, damages and liabilities
-# asserted by third parties (including claims for negligence) which arise directly or indirectly from the use of the
-# Software or the sale of any products based on the Software.
-# 
-# No part of the Software may be reproduced, modified, transmitted or transferred in any form or by any means, electronic
-# or mechanical, without the express permission of GRL. The permission of GRL is not required if the said reproduction,
-# modification, transmission or transference is done without financial return, the conditions of this Licence are imposed
-# upon the receiver of the product, and all original and amended source code is included in any transmitted product. You
-# may be held legally responsible for any copyright infringement that is caused or encouraged by your failure to abide by
-# these terms and conditions.
-# 
-# You are not permitted under this Licence to use this Software commercially. Use for which any financial return is
-# received shall be defined as commercial use, and includes (1) integration of all or part of the source code or the
-# Software into a product for sale or license by or on behalf of Licensee to third parties or (2) use of the Software
-# or any derivative of it for research with the final aim of developing software products for sale or license to a third
-# party or (3) use of the Software or any derivative of it for research with the final aim of developing non-software
-# products for sale or license to a third party, or (4) use of the Software to provide any service to an external
-# organisation for which payment is received. If you are interested in using the Software commercially, please contact
-# legal@sanger.ac.uk. Contact details are: legal@sanger.ac.uk quoting reference Valiant-software.
+# VaLiAnT
+# Copyright (C) 2020-2021 Genome Research Ltd
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from __future__ import annotations
 import abc
 from collections.abc import Sized
-from typing import Callable, ClassVar, Dict, List, Set
+from dataclasses import dataclass
+from typing import Callable, ClassVar, Dict, List, FrozenSet, Optional
 import numpy as np
 import pandas as pd
 from .codon_table import CodonTable, STOP_CODE
+from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS
 from .mutated_sequences import (
     DeletionMutatedSequence,
     Deletion1MutatedSequence,
@@ -46,7 +34,10 @@ from .mutated_sequences import (
     SingleNucleotideMutatedSequence,
     SingleCodonMutatedSequence
 )
+from .base import StrandedPositionRange, GenomicRange
+from .cdna import CDNA
 from .pam_protection import PamProtectedReferenceSequence
+from .sequences import Sequence
 from .snv_table import AuxiliaryTables
 from ..enums import TargetonMutator, VariantType
 from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
@@ -60,22 +51,19 @@ def get_snv_mutations(sequence: str) -> MutationCollection:
 
 
 class BaseTargeton(abc.ABC, Sized):
-    MUTATORS: ClassVar[Set[TargetonMutator]] = {
-        TargetonMutator.SNV,
-        TargetonMutator.DEL1,
-        TargetonMutator.DEL2_0,
-        TargetonMutator.DEL2_1
-    }
+    MUTATORS: ClassVar[FrozenSet[TargetonMutator]] = GENERIC_MUTATORS
 
-    def __init__(self, ref_sequence: PamProtectedReferenceSequence) -> None:
-        self.ref_sequence: PamProtectedReferenceSequence = ref_sequence
+    def __init__(self, seq: str, pam_seq: str, pr: StrandedPositionRange) -> None:
+        self.seq = seq
+        self.pam_seq = pam_seq
+        self.pos_range = pr
 
     def __len__(self) -> int:
         return len(self.sequence)
 
     @property
     def sequence(self) -> str:
-        return self.ref_sequence.pam_protected_sequence
+        return self.pam_seq
 
     def _get_mutator_method(self, mutator: TargetonMutator):
         return getattr(self, f"get_{mutator.value.replace('-', '_')}_mutations")
@@ -103,7 +91,7 @@ class BaseTargeton(abc.ABC, Sized):
 
     def _compute_mutations(
         self,
-        mutators: Set[TargetonMutator],
+        mutators: FrozenSet[TargetonMutator],
         aux_tables: AuxiliaryTables = None
     ) -> Dict[TargetonMutator, MutationCollection]:
         return {
@@ -115,31 +103,28 @@ class BaseTargeton(abc.ABC, Sized):
 class Targeton(BaseTargeton):
     __slots__ = {'ref_sequence'}
 
-    def compute_mutations(self, mutators: Set[TargetonMutator]) -> Dict[TargetonMutator, MutationCollection]:
+    @classmethod
+    def from_pam_seq(cls, ref_sequence: PamProtectedReferenceSequence) -> Targeton:
+        return cls(
+            ref_sequence.sequence,
+            ref_sequence.pam_protected_sequence,
+            ref_sequence.genomic_range)
+
+    def compute_mutations(self, mutators: FrozenSet[TargetonMutator]) -> Dict[TargetonMutator, MutationCollection]:
         return super()._compute_mutations(mutators)
 
 
 class CDSTargeton(BaseTargeton):
     __slots__ = {'ref_sequence', 'cds_prefix', 'cds_suffix'}
 
-    MUTATORS: ClassVar[Set[TargetonMutator]] = {
-        TargetonMutator.DEL1,
-        TargetonMutator.DEL2_0,
-        TargetonMutator.DEL2_1,
-        TargetonMutator.IN_FRAME,
-        TargetonMutator.SNV,
-        TargetonMutator.SNV_RE,
-        TargetonMutator.STOP,
-        TargetonMutator.ALA,
-        TargetonMutator.AA
-    }
+    MUTATORS: ClassVar[FrozenSet[TargetonMutator]] = GENERIC_MUTATORS | CDS_ONLY_MUTATORS
 
-    SNVRE_MUTATORS: ClassVar[Set[TargetonMutator]] = {
+    SNVRE_MUTATORS: ClassVar[FrozenSet[TargetonMutator]] = frozenset([
         TargetonMutator.SNV_RE
-    }
+    ])
 
-    def __init__(self, sequence: PamProtectedReferenceSequence, cds_prefix: str, cds_suffix: str) -> None:
-        super().__init__(sequence)
+    def __init__(self, seq: str, pam_seq: str, pr: StrandedPositionRange, cds_prefix: str, cds_suffix: str) -> None:
+        super().__init__(seq, pam_seq, pr)
         self.cds_prefix: str = cds_prefix
         self.cds_suffix: str = cds_suffix
 
@@ -147,9 +132,18 @@ class CDSTargeton(BaseTargeton):
         if (len(self) + len(self.cds_prefix) + len(self.cds_suffix)) % 3 != 0:
             raise ValueError("Invalid length for in-frame sequence!")
 
+    @classmethod
+    def from_pam_seq(cls, ref_sequence: PamProtectedReferenceSequence, cds_prefix: str, cds_suffix: str) -> CDSTargeton:
+        return cls(
+            ref_sequence.sequence,
+            ref_sequence.pam_protected_sequence,
+            ref_sequence.genomic_range,
+            cds_prefix,
+            cds_suffix)
+
     @property
     def strand(self) -> str:
-        return self.ref_sequence.genomic_range.strand
+        return self.pos_range.strand
 
     @property
     def cds_sequence(self) -> str:
@@ -169,11 +163,11 @@ class CDSTargeton(BaseTargeton):
 
     @property
     def start(self) -> int:
-        return self.ref_sequence.genomic_range.start
+        return self.pos_range.start
 
     @property
     def cds_sequence_start(self) -> int:
-        return self.ref_sequence.genomic_range.start - self.frame
+        return self.start - self.frame
 
     def _add_snv_metadata(
         self,
@@ -215,7 +209,7 @@ class CDSTargeton(BaseTargeton):
 
     def _get_snvres(self, aux: AuxiliaryTables, snvs: pd.DataFrame) -> MutationCollection:
         df: pd.DataFrame = aux.snvre_table.get_snvres(
-            self.ref_sequence.genomic_range, self.frame, self.sequence, snvs).rename(
+            self.pos_range, self.frame, self.sequence, snvs).rename(
                 columns={
                     'pos': 'mut_position',
                     'alt': 'new',
@@ -280,20 +274,20 @@ class CDSTargeton(BaseTargeton):
         if not aux_tables:
             raise RuntimeError("Auxiliary tables not provided!")
         df: pd.DataFrame = aux_tables.all_aa_table.get_subs(
-            self.ref_sequence.genomic_range, self.frame, self.sequence)
+            self.pos_range, self.frame, self.sequence)
         return MutationCollection(df=df, mutations=[
             SingleCodonMutatedSequence(r.mut_position, r.mseq, r.ref, r.new)
             for r in df.itertuples()
         ])
 
-    def compute_mutations(self, mutators: Set[TargetonMutator], aux: AuxiliaryTables) -> Dict[TargetonMutator, MutationCollection]:
+    def compute_mutations(self, mutators: FrozenSet[TargetonMutator], aux: AuxiliaryTables) -> Dict[TargetonMutator, MutationCollection]:
 
         # Classify mutators
         base_mutators = mutators - self.SNVRE_MUTATORS
         snvre_mutators = mutators & self.SNVRE_MUTATORS
 
         if snvre_mutators:
-            base_mutators.add(TargetonMutator.SNV)
+            base_mutators |= {TargetonMutator.SNV}
 
         # Compute base mutations (overwrites existing)
         mutations: Dict[TargetonMutator, MutationCollection] = super()._compute_mutations(
@@ -305,7 +299,7 @@ class CDSTargeton(BaseTargeton):
             snv_meta_full = aux.snv_table.get_snvs(
                 self.strand,
                 self.cds_sequence,
-                self.ref_sequence.genomic_range,
+                self.pos_range,
                 self.cds_prefix_length,
                 self.cds_suffix_length,
                 reset_index=False)

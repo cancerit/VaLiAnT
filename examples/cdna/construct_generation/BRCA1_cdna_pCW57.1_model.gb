@@ -1,0 +1,2517 @@
+LOCUS       BRCA1_cdna_pCW57.1_model       13366 bp    DNA     circular UNA 17-MAY-2021
+DEFINITION  Ligation of 2 sequences.
+ACCESSION   urn.local...1r2-ddp3isz
+VERSION     urn.local...1r2-ddp3isz
+KEYWORDS    .
+SOURCE      
+  ORGANISM  .
+FEATURES             Location/Qualifiers
+     misc_feature    1..69
+                     /Original_Bases
+                     /label
+                     /note="Geneious type: Editing History Insertion"
+     source          join(70..>330,<5923..>6069,<1..69)
+                     /organism="synthetic DNA construct"
+                     /mol_type="other DNA"
+                     /label="source synthetic DNA construct"
+     misc_feature    join(5923..>6069,<1..330)
+                     /Source="referenceToDocument: urn:local:.:nl-dd8reid"
+                     /label="pCW57.1_BB (concatenated sequence 1)"
+                     /note="Geneious type: Concatenated sequence"
+     promoter        1..315
+                     /note="Tet-responsive promoter PTight, consisting of seven
+                      tet operator sequences followed by the minimal CMV
+                     promoter"
+                     /label="tight TRE promoter"
+     protein_bind    9..27
+                     /gene="tetO"
+                     /bound_moiety="tetracycline repressor TetR"
+                     /note="bacterial operator O2 for the tetR and tetA genes"
+                     /label="tet operator"
+     protein_bind    45..63
+                     /gene="tetO"
+                     /bound_moiety="tetracycline repressor TetR"
+                     /note="bacterial operator O2 for the tetR and tetA genes"
+                     /label="tet operator"
+     protein_bind    80..98
+                     /gene="tetO"
+                     /bound_moiety="tetracycline repressor TetR"
+                     /note="bacterial operator O2 for the tetR and tetA genes"
+                     /label="tet operator"
+     protein_bind    116..134
+                     /gene="tetO"
+                     /bound_moiety="tetracycline repressor TetR"
+                     /note="bacterial operator O2 for the tetR and tetA genes"
+                     /label="tet operator"
+     protein_bind    152..170
+                     /gene="tetO"
+                     /bound_moiety="tetracycline repressor TetR"
+                     /note="bacterial operator O2 for the tetR and tetA genes"
+                     /label="tet operator"
+     protein_bind    187..205
+                     /gene="tetO"
+                     /bound_moiety="tetracycline repressor TetR"
+                     /note="bacterial operator O2 for the tetR and tetA genes"
+                     /label="tet operator"
+     protein_bind    223..241
+                     /gene="tetO"
+                     /bound_moiety="tetracycline repressor TetR"
+                     /note="bacterial operator O2 for the tetR and tetA genes"
+                     /label="tet operator"
+     primer_bind     288..312
+                     /note="Human CMV promoter, forward primer"
+                     /label="LNCX"
+     misc_feature    310..486
+                     /created_by="aw28"
+                     /modified_by="aw28"
+                     /label="targeton_1_2"
+     misc_feature    327..5926
+                     /Source="referenceToDocument: urn:local:.:nx-dd8rhmo"
+                     /label="BRCA1_NP_009225.1INSERT (concatenated sequence 2)"
+                     /note="Geneious type: Concatenated sequence"
+     gene            join(<327..>410,<411..>464,<465..>542,<543..>631,
+                     <632..>771,<772..>877,<878..>923,<924..>1000,<1001..>4426,
+                     <4427..>4515,<4516..>4687,<4688..>4814,<4815..>5005,
+                     <5006..>5316,<5317..>5404,<5405..>5482,<5483..>5523,
+                     <5524..>5607,<5608..>5662,<5663..>5736,<5737..>5797,
+                     <5798..>5926)
+                     /Source="BestRefSeq"
+                     /ID="gene43562"
+                     /Dbxref="GeneID:672,HGNC:HGNC:1100,MIM:113705"
+                     /description="BRCA1, DNA repair associated"
+                     /gbkey="Gene"
+                     /gene="BRCA1"
+                     /gene_biotype="protein_coding"
+                     /gene_synonym="BRCAI,BRCC1,BROVCA1,FANCS,IRIS,PNCA4,PPP1R5
+                     3,PSCP,RNF53"
+                     /label="BRCA1"
+     exon            <327..410
+                     /Source="BestRefSeq"
+                     /ID="id1552048"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            <327..410
+                     /Source="BestRefSeq"
+                     /ID="id1552071"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            <327..410
+                     /Source="BestRefSeq"
+                     /ID="id1552095"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            <327..410
+                     /Source="BestRefSeq"
+                     /ID="id1552161"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            <327..410
+                     /Source="BestRefSeq"
+                     /ID="id1552117"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     exon            <327..410
+                     /Source="BestRefSeq"
+                     /ID="id1552139"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     match           join(complement(<5798..>5926),complement(<5737..>5797),
+                     complement(<5663..>5736),complement(<5608..>5662),
+                     complement(<5524..>5607),complement(<5483..>5523),
+                     complement(<5405..>5482),complement(<5317..>5404),
+                     complement(<5006..>5316),complement(<4815..>5005),
+                     complement(<4688..>4814),complement(<4516..>4687),
+                     complement(<4427..>4515),complement(<1001..>4426),
+                     complement(<924..>1000),complement(<878..>923),
+                     complement(<772..>877),complement(<632..>771),
+                     complement(<543..>631),complement(<465..>542),
+                     complement(<411..>464),complement(<327..>410))
+                     /Source="RefSeq"
+                     /Score="193655.0"
+                     /ID="15d79c9c-3984-4ec0-bb38-c3eacc45ffd8"
+                     /Target="NG_005905.2 1 193689 -"
+                     /assembly_bases_aln=171621
+                     /assembly_bases_seq=171621
+                     /bit_score=360408
+                     /blast_aligner=1
+                     /blast_score=193655
+                     /common_component=0
+                     /e_value=0
+                     /filter_score=0
+                     /for_remapping=2
+                     /gap_count=3
+                     /hsp_percent_coverage=100
+                     /matchable_bases=171884
+                     /matched_bases=167799
+                     /not_for_annotation=2
+                     /num_ident=193679
+                     /num_mismatch=7
+                     /pct_coverage="99.9985"
+                     /pct_coverage_hiqual="99.9985"
+                     /pct_identity_gap="99.9943"
+                     /pct_identity_gapopen_only="99.9948"
+                     /pct_identity_ungap="99.9964"
+                     /rank=1
+                     /weighted_identity="0.999909"
+                     /Gap="M177885 I1 M344 D1 M2289 I2 M13168"
+                     /label="match"
+     mRNA            join(<327..>410,<411..>464,<465..>542,<543..>631,
+                     <632..>771,<772..>877,<878..>923,<924..>1000,<1001..>4426,
+                     <4427..>4515,<4516..>4687,<4688..>4814,<4815..>5005,
+                     <5006..>5316,<5317..>5404,<5405..>5482,<5483..>5523,
+                     <5524..>5607,<5608..>5662,<5663..>5736,<5737..>5797,
+                     <5798..>5926)
+                     /Source="BestRefSeq"
+                     /ID="rna129726"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="NM_007298.3"
+     transcript      join(<327..>410,<411..>464,<465..>542,<543..>631,
+                     <632..>771,<772..>877,<878..>923,<924..>1000,<1001..>4426,
+                     <4427..>4515,<4516..>4687,<4688..>4814,<4815..>5005,
+                     <5006..>5316,<5317..>5404,<5405..>5482,<5483..>5523,
+                     <5524..>5607,<5608..>5662,<5663..>5736,<5737..>5797,
+                     <5798..>5926)
+                     /Source="BestRefSeq"
+                     /ID="rna129725"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="NR_027676.1"
+     mRNA            join(<327..>410,<411..>464,<465..>542,<543..>631,
+                     <632..>771,<772..>877,<878..>923,<924..>1000,<1001..>4426,
+                     <4427..>4515,<4516..>4687,<4688..>4814,<4815..>5005,
+                     <5006..>5316,<5317..>5404,<5405..>5482,<5483..>5523,
+                     <5524..>5607,<5608..>5662,<5663..>5736,<5737..>5797,
+                     <5798..>5926)
+                     /Source="BestRefSeq"
+                     /ID="rna129724"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="NM_007299.3"
+     mRNA            join(<327..>410,<411..>464,<465..>542,<543..>631,
+                     <632..>771,<772..>877,<878..>923,<924..>1000,<1001..>4426,
+                     <4427..>4515,<4516..>4687,<4688..>4814,<4815..>5005,
+                     <5006..>5316,<5317..>5404,<5405..>5482,<5483..>5523,
+                     <5524..>5607,<5608..>5662,<5663..>5736,<5737..>5797,
+                     <5798..>5926)
+                     /Source="BestRefSeq"
+                     /ID="rna129723"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="NM_007297.3"
+     mRNA            join(<327..>410,<411..>464,<465..>542,<543..>631,
+                     <632..>771,<772..>877,<878..>923,<924..>1000,<1001..>4426,
+                     <4427..>4515,<4516..>4687,<4688..>4814,<4815..>5005,
+                     <5006..>5316,<5317..>5404,<5405..>5482,<5483..>5523,
+                     <5524..>5607,<5608..>5662,<5663..>5736,<5737..>5797,
+                     <5798..>5926)
+                     /Source="BestRefSeq"
+                     /ID="rna129722"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="NM_007300.3"
+     mRNA            join(<327..>410,<411..>464,<465..>542,<543..>631,
+                     <632..>771,<772..>877,<878..>923,<924..>1000,<1001..>4426,
+                     <4427..>4515,<4516..>4687,<4688..>4814,<4815..>5005,
+                     <5006..>5316,<5317..>5404,<5405..>5482,<5483..>5523,
+                     <5524..>5607,<5608..>5662,<5663..>5736,<5737..>5797,
+                     <5798..>5926)
+                     /Source="BestRefSeq"
+                     /ID="rna129721"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="NM_007294.3"
+     misc_feature    331..465
+                     /created_by="aw28"
+                     /Color="#034700"
+                     /modified_by="aw28"
+                     /label="1_2_r2_cdna"
+     CDS             join(331..410,411..464,465..542,543..631,632..771,
+                     772..877,878..923,924..1000,1001..4426,4427..4515,
+                     4516..4687,4688..4814,4815..5005,5006..5316,5317..5404,
+                     5405..5482,5483..5523,5524..5607,5608..5662,5663..5736,
+                     5737..5797,5798..5922)
+                     /Source="BestRefSeq"
+                     /codon_start=1
+                     /ID="cds90854"
+                     /Dbxref="CCDS:CCDS11453.1,GeneID:672,Genbank:NP_009225.1,H
+                     GNC:HGNC:1100,MIM:113705"
+                     /Note="isoform 1 is encoded by transcript variant 1"
+                     /gbkey="CDS"
+                     /gene="BRCA1"
+                     /product="breast cancer type 1 susceptibility protein
+                     isoform 1"
+                     /protein_id="NP_009225.1"
+                     /Color="#00ffff"
+                     /modified_by="aw28"
+                     /label="NP_009225.1"
+     exon            411..464
+                     /Source="BestRefSeq"
+                     /ID="id1552049"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            411..464
+                     /Source="BestRefSeq"
+                     /ID="id1552072"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            411..464
+                     /Source="BestRefSeq"
+                     /ID="id1552140"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            411..464
+                     /Source="BestRefSeq"
+                     /ID="id1552162"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            411..464
+                     /Source="BestRefSeq"
+                     /ID="id1552118"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    442..654
+                     /created_by="aw28"
+                     /modified_by="aw28"
+                     /label="targeton_3_4"
+     misc_feature    463..633
+                     /created_by="aw28"
+                     /Color="#034700"
+                     /modified_by="aw28"
+                     /label="3_4_r2_cdna"
+     exon            465..542
+                     /Source="BestRefSeq"
+                     /ID="id1552050"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            465..542
+                     /Source="BestRefSeq"
+                     /ID="id1552073"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            465..542
+                     /Source="BestRefSeq"
+                     /ID="id1552096"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            465..542
+                     /Source="BestRefSeq"
+                     /ID="id1552163"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            465..542
+                     /Source="BestRefSeq"
+                     /ID="id1552119"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     exon            465..520
+                     /Source="BestRefSeq"
+                     /ID="id1552141"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     Junction        join(477,481)
+                     /Reads_using=2
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="147+"
+                     /Junction_Destination="151+"
+                     /ID="junction 1"
+                     /label="junction 1"
+     Junction        join(489,493)
+                     /Reads_using=4
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="159+"
+                     /Junction_Destination="163+"
+                     /ID="junction 2"
+                     /label="junction 2"
+     Junction        join(501,505)
+                     /Reads_using=3
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="171+"
+                     /Junction_Destination="175+"
+                     /ID="junction 3"
+                     /label="junction 3"
+     Junction        join(512,516)
+                     /Reads_using=1
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="182+"
+                     /Junction_Destination="186+"
+                     /ID="junction 4"
+                     /label="junction 4"
+     Junction        join(525,529)
+                     /Reads_using=4
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="195+"
+                     /Junction_Destination="199+"
+                     /ID="junction 5"
+                     /label="junction 5"
+     exon            543..631
+                     /Source="BestRefSeq"
+                     /ID="id1552051"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            543..631
+                     /Source="BestRefSeq"
+                     /ID="id1552074"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            543..631
+                     /Source="BestRefSeq"
+                     /ID="id1552097"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            543..631
+                     /Source="BestRefSeq"
+                     /ID="id1552142"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            543..631
+                     /Source="BestRefSeq"
+                     /ID="id1552164"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            543..631
+                     /Source="BestRefSeq"
+                     /ID="id1552120"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    610..792
+                     /created_by="aw28"
+                     /modified_by="aw28"
+                     /label="targeton_5"
+     misc_feature    631..771
+                     /created_by="aw28"
+                     /Color="#034700"
+                     /modified_by="aw28"
+                     /label="5_r2_cdna"
+     exon            632..771
+                     /Source="BestRefSeq"
+                     /ID="id1552052"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            632..771
+                     /Source="BestRefSeq"
+                     /ID="id1552075"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            632..771
+                     /Source="BestRefSeq"
+                     /ID="id1552098"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            632..771
+                     /Source="BestRefSeq"
+                     /ID="id1552143"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            632..771
+                     /Source="BestRefSeq"
+                     /ID="id1552165"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            632..771
+                     /Source="BestRefSeq"
+                     /ID="id1552121"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    748..945
+                     /created_by="aw28"
+                     /Color="#aaaaaa"
+                     /modified_by="aw28"
+                     /label="targeton_6_7"
+     misc_feature    769..924
+                     /created_by="aw28"
+                     /Color="#034700"
+                     /modified_by="aw28"
+                     /label="6_7_r2_cdna"
+     exon            772..877
+                     /Source="BestRefSeq"
+                     /ID="id1552053"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            772..877
+                     /Source="BestRefSeq"
+                     /ID="id1552076"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            772..877
+                     /Source="BestRefSeq"
+                     /ID="id1552099"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            772..877
+                     /Source="BestRefSeq"
+                     /ID="id1552166"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            772..877
+                     /Source="BestRefSeq"
+                     /ID="id1552122"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     exon            775..877
+                     /Source="BestRefSeq"
+                     /ID="id1552144"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            878..923
+                     /Source="BestRefSeq"
+                     /ID="id1552054"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            878..923
+                     /Source="BestRefSeq"
+                     /ID="id1552077"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            878..923
+                     /Source="BestRefSeq"
+                     /ID="id1552145"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            878..923
+                     /Source="BestRefSeq"
+                     /ID="id1552167"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            878..923
+                     /Source="BestRefSeq"
+                     /ID="id1552100"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            878..923
+                     /Source="BestRefSeq"
+                     /ID="id1552123"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    901..1023
+                     /created_by="aw28"
+                     /modified_by="aw28"
+                     /label="targeton_8"
+     misc_feature    922..1002
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="8_r2_cdna"
+     exon            924..1000
+                     /Source="BestRefSeq"
+                     /ID="id1552055"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            924..1000
+                     /Source="BestRefSeq"
+                     /ID="id1552078"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            924..1000
+                     /Source="BestRefSeq"
+                     /ID="id1552146"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            924..1000
+                     /Source="BestRefSeq"
+                     /ID="id1552168"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            924..1000
+                     /Source="BestRefSeq"
+                     /ID="id1552101"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            924..1000
+                     /Source="BestRefSeq"
+                     /ID="id1552124"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    979..1170
+                     /Color="#aaaaaa"
+                     /created_by="aw28"
+                     /label="targeton_9.1"
+     misc_feature    1000..1149
+                     /created_by="aw28"
+                     /Color="#034700"
+                     /modified_by="aw28"
+                     /label="9.1_r2_cdna"
+     exon            1001..4426
+                     /Source="BestRefSeq"
+                     /ID="id1552056"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            1001..4426
+                     /Source="BestRefSeq"
+                     /ID="id1552079"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            1001..4426
+                     /Source="BestRefSeq"
+                     /ID="id1552147"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            1001..4426
+                     /Source="BestRefSeq"
+                     /ID="id1552102"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            1001..1117
+                     /Source="BestRefSeq"
+                     /ID="id1552169"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            1001..1117
+                     /Source="BestRefSeq"
+                     /ID="id1552125"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    1120..1311
+                     /created_by="aw28"
+                     /label="targeton_9.2"
+     misc_feature    1141..1290
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.2_r2_cdna"
+     misc_feature    1261..1452
+                     /created_by="aw28"
+                     /label="targeton_9.3"
+     misc_feature    1282..1431
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.3_r2_cdna"
+     misc_feature    1402..1593
+                     /created_by="aw28"
+                     /label="targeton_9.4"
+     misc_feature    1423..1572
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.4"
+     misc_feature    1543..1734
+                     /created_by="aw28"
+                     /label="targeton_9.5"
+     misc_feature    1564..1713
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.5"
+     misc_feature    1684..1875
+                     /created_by="aw28"
+                     /label="9.6_targeton"
+     misc_feature    1705..1854
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.6"
+     misc_feature    1825..2016
+                     /created_by="aw28"
+                     /label="9.7_targeton"
+     misc_feature    1846..1995
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.7"
+     misc_feature    1966..2157
+                     /created_by="aw28"
+                     /label="9.8_targeton"
+     misc_feature    1987..2136
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.8"
+     misc_feature    2107..2298
+                     /created_by="aw28"
+                     /label="9.9_targeton"
+     misc_feature    2128..2277
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.9"
+     misc_feature    2248..2439
+                     /created_by="aw28"
+                     /label="9.10_targeton"
+     misc_feature    2269..2418
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.10"
+     misc_feature    2389..2580
+                     /created_by="aw28"
+                     /label="9.11_targeton"
+     misc_feature    2410..2559
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.11"
+     misc_feature    2530..2721
+                     /created_by="aw28"
+                     /label="9.12_targeton"
+     misc_feature    2551..2700
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.12"
+     misc_feature    2671..2862
+                     /created_by="aw28"
+                     /label="9.13_targeton"
+     misc_feature    2692..2841
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.13"
+     misc_feature    2812..3003
+                     /created_by="aw28"
+                     /label="9.14_targeton"
+     misc_feature    2833..2982
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.14"
+     misc_feature    2953..3144
+                     /created_by="aw28"
+                     /label="9.15_targeton"
+     misc_feature    2974..3123
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.15"
+     misc_feature    3094..3285
+                     /created_by="aw28"
+                     /label="9.16_targeton"
+     misc_feature    3115..3264
+                     /created_by="aw28"
+                     /Color="#034700"
+                     /modified_by="aw28"
+                     /label="9.16"
+     misc_feature    3235..3426
+                     /created_by="aw28"
+                     /label="9.17_targeton"
+     misc_feature    3256..3405
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.17"
+     misc_feature    3376..3567
+                     /created_by="aw28"
+                     /label="9.18_targeton"
+     misc_feature    3397..3546
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.18"
+     misc_feature    3517..3708
+                     /created_by="aw28"
+                     /label="9.19_targeton"
+     misc_feature    3538..3687
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.19"
+     misc_feature    3658..3849
+                     /created_by="aw28"
+                     /label="9.20_targeton"
+     misc_feature    3679..3828
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.20"
+     misc_feature    3799..3990
+                     /created_by="aw28"
+                     /label="9.21_targeton"
+     misc_feature    3820..3969
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.21"
+     misc_feature    3940..4131
+                     /created_by="aw28"
+                     /label="9.22_targeton"
+     misc_feature    3961..4110
+                     /created_by="aw28"
+                     /Color="#034700"
+                     /modified_by="aw28"
+                     /label="9.22"
+     misc_feature    4081..4272
+                     /created_by="aw28"
+                     /label="9.23_targeton"
+     misc_feature    4102..4251
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.23"
+     misc_feature    4222..4413
+                     /created_by="aw28"
+                     /label="9.24_targeton"
+     misc_feature    4243..4392
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.24"
+     misc_feature    4363..4554
+                     /created_by="aw28"
+                     /label="9.25_10_targeton"
+     misc_feature    4384..4533
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="9.25_10"
+     exon            4427..4515
+                     /Source="BestRefSeq"
+                     /ID="id1552057"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            4427..4515
+                     /Source="BestRefSeq"
+                     /ID="id1552080"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            4427..4515
+                     /Source="BestRefSeq"
+                     /ID="id1552148"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            4427..4515
+                     /Source="BestRefSeq"
+                     /ID="id1552170"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            4427..4515
+                     /Source="BestRefSeq"
+                     /ID="id1552103"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            4427..4515
+                     /Source="BestRefSeq"
+                     /ID="id1552126"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    4504..4710
+                     /created_by="aw28"
+                     /label="11_targeton"
+     exon            4516..4687
+                     /Source="BestRefSeq"
+                     /ID="id1552058"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            4516..4687
+                     /Source="BestRefSeq"
+                     /ID="id1552081"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            4516..4687
+                     /Source="BestRefSeq"
+                     /ID="id1552149"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            4516..4687
+                     /Source="BestRefSeq"
+                     /ID="id1552171"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            4516..4687
+                     /Source="BestRefSeq"
+                     /ID="id1552104"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            4516..4687
+                     /Source="BestRefSeq"
+                     /ID="id1552127"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    4525..4689
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label=11
+     misc_feature    4666..4836
+                     /created_by="aw28"
+                     /label="12_targeton"
+     misc_feature    4687..4815
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label=12
+     exon            4688..4814
+                     /Source="BestRefSeq"
+                     /ID="id1552059"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            4688..4814
+                     /Source="BestRefSeq"
+                     /ID="id1552150"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            4688..4814
+                     /Source="BestRefSeq"
+                     /ID="id1552105"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            4691..4814
+                     /Source="BestRefSeq"
+                     /ID="id1552083"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            4691..4814
+                     /Source="BestRefSeq"
+                     /ID="id1552172"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            4691..4814
+                     /Source="BestRefSeq"
+                     /ID="id1552128"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    4792..5028
+                     /created_by="aw28"
+                     /label="targeton_13"
+     misc_feature    4813..5007
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label=13
+     exon            4815..5005
+                     /Source="BestRefSeq"
+                     /ID="id1552060"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            4815..5005
+                     /Source="BestRefSeq"
+                     /ID="id1552084"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            4815..5005
+                     /Source="BestRefSeq"
+                     /ID="id1552151"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            4815..5005
+                     /Source="BestRefSeq"
+                     /ID="id1552173"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            4815..5005
+                     /Source="BestRefSeq"
+                     /ID="id1552106"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            4815..5005
+                     /Source="BestRefSeq"
+                     /ID="id1552129"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    4984..5175
+                     /created_by="aw28"
+                     /label="14.1_targeton"
+     misc_feature    5005..5154
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="14.1"
+     exon            5006..5316
+                     /Source="BestRefSeq"
+                     /ID="id1552061"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            5006..5316
+                     /Source="BestRefSeq"
+                     /ID="id1552085"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            5006..5316
+                     /Source="BestRefSeq"
+                     /ID="id1552152"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            5006..5316
+                     /Source="BestRefSeq"
+                     /ID="id1552174"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            5006..5316
+                     /Source="BestRefSeq"
+                     /ID="id1552107"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            5006..5316
+                     /Source="BestRefSeq"
+                     /ID="id1552130"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    5125..5340
+                     /created_by="aw28"
+                     /label="14.2_targeton"
+     misc_feature    5146..5319
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="14.2"
+     misc_feature    5296..5427
+                     /created_by="aw28"
+                     /label="15_targeton"
+     misc_feature    5317..5406
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label=15
+     exon            5317..5404
+                     /Source="BestRefSeq"
+                     /ID="id1552062"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            5317..5404
+                     /Source="BestRefSeq"
+                     /ID="id1552086"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            5317..5404
+                     /Source="BestRefSeq"
+                     /ID="id1552153"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            5317..5404
+                     /Source="BestRefSeq"
+                     /ID="id1552175"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            5317..5404
+                     /Source="BestRefSeq"
+                     /ID="id1552108"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            5317..5404
+                     /Source="BestRefSeq"
+                     /ID="id1552131"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     Junction        join(5322,5326)
+                     /Reads_using=9
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="5322+"
+                     /Junction_Destination="5326+"
+                     /ID="junction 1"
+                     /label="junction 1"
+     Junction        join(5331,5335)
+                     /Reads_using=7
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="5331+"
+                     /Junction_Destination="5335+"
+                     /ID="junction 1"
+                     /label="junction 1"
+     Junction        join(5334,5338)
+                     /Reads_using=3
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="5334+"
+                     /Junction_Destination="5338+"
+                     /ID="junction 2"
+                     /label="junction 2"
+     Junction        join(5343,5347)
+                     /Reads_using=4
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="5343+"
+                     /Junction_Destination="5347+"
+                     /ID="junction 2"
+                     /label="junction 2"
+     Junction        join(5348,5352)
+                     /Reads_using=3
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="5348+"
+                     /Junction_Destination="5352+"
+                     /ID="junction 3"
+                     /label="junction 3"
+     Junction        join(5355,5359)
+                     /Reads_using=8
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="5355+"
+                     /Junction_Destination="5359+"
+                     /ID="junction 3"
+                     /label="junction 3"
+     Junction        join(5360,5364)
+                     /Reads_using=2
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="5360+"
+                     /Junction_Destination="5364+"
+                     /ID="junction 4"
+                     /label="junction 4"
+     Junction        join(5367,5371)
+                     /Reads_using=8
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="5367+"
+                     /Junction_Destination="5371+"
+                     /ID="junction 4"
+                     /label="junction 4"
+     Junction        join(5373,5377)
+                     /Reads_using=5
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="5373+"
+                     /Junction_Destination="5377+"
+                     /ID="junction 5"
+                     /label="junction 5"
+     Junction        join(5379,5383)
+                     /Reads_using=5
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="5379+"
+                     /Junction_Destination="5383+"
+                     /ID="junction 5"
+                     /label="junction 5"
+     misc_feature    5383..5547
+                     /created_by="aw28"
+                     /label="16_17_targeton"
+     Junction        join(5384,5388)
+                     /Reads_using=3
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="5384+"
+                     /Junction_Destination="5388+"
+                     /ID="junction 6"
+                     /label="junction 6"
+     Junction        join(5397,5401)
+                     /Reads_using=7
+                     /Reads_supporting_discovery=1
+                     /Junction_Type="Deletion"
+                     /Deletion_Size=3
+                     /Junction_Source="5397+"
+                     /Junction_Destination="5401+"
+                     /ID="junction 7"
+                     /label="junction 7"
+     misc_feature    5404..5526
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="16_17"
+     exon            5405..5482
+                     /Source="BestRefSeq"
+                     /ID="id1552063"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            5405..5482
+                     /Source="BestRefSeq"
+                     /ID="id1552087"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            5405..5482
+                     /Source="BestRefSeq"
+                     /ID="id1552154"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            5405..5482
+                     /Source="BestRefSeq"
+                     /ID="id1552176"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            5405..5482
+                     /Source="BestRefSeq"
+                     /ID="id1552109"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            5405..5482
+                     /Source="BestRefSeq"
+                     /ID="id1552132"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     exon            5483..5523
+                     /Source="BestRefSeq"
+                     /ID="id1552064"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            5483..5523
+                     /Source="BestRefSeq"
+                     /ID="id1552088"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            5483..5523
+                     /Source="BestRefSeq"
+                     /ID="id1552155"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            5483..5523
+                     /Source="BestRefSeq"
+                     /ID="id1552177"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            5483..5523
+                     /Source="BestRefSeq"
+                     /ID="id1552110"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            5483..5523
+                     /Source="BestRefSeq"
+                     /ID="id1552133"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    5503..5685
+                     /created_by="aw28"
+                     /label="18_19_targeton"
+     misc_feature    5524..5664
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="18_19"
+     exon            5524..5607
+                     /Source="BestRefSeq"
+                     /ID="id1552065"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            5524..5607
+                     /Source="BestRefSeq"
+                     /ID="id1552089"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            5524..5607
+                     /Source="BestRefSeq"
+                     /ID="id1552156"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            5524..5607
+                     /Source="BestRefSeq"
+                     /ID="id1552178"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            5524..5607
+                     /Source="BestRefSeq"
+                     /ID="id1552111"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            5524..5607
+                     /Source="BestRefSeq"
+                     /ID="id1552134"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     exon            5608..5662
+                     /Source="BestRefSeq"
+                     /ID="id1552066"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            5608..5662
+                     /Source="BestRefSeq"
+                     /ID="id1552090"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            5608..5662
+                     /Source="BestRefSeq"
+                     /ID="id1552157"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            5608..5662
+                     /Source="BestRefSeq"
+                     /ID="id1552179"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            5608..5662
+                     /Source="BestRefSeq"
+                     /ID="id1552112"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            5608..5662
+                     /Source="BestRefSeq"
+                     /ID="id1552135"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     misc_feature    5641..5820
+                     /created_by="aw28"
+                     /label="20_21_targeton"
+     misc_feature    5662..5799
+                     /Color="#034700"
+                     /created_by="aw28"
+                     /label="20_21"
+     exon            5663..5736
+                     /Source="BestRefSeq"
+                     /ID="id1552067"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            5663..5736
+                     /Source="BestRefSeq"
+                     /ID="id1552091"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            5663..5736
+                     /Source="BestRefSeq"
+                     /ID="id1552158"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            5663..5736
+                     /Source="BestRefSeq"
+                     /ID="id1552113"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            5663..5736
+                     /Source="BestRefSeq"
+                     /ID="id1552180"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     exon            5737..5797
+                     /Source="BestRefSeq"
+                     /ID="id1552068"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            5737..5797
+                     /Source="BestRefSeq"
+                     /ID="id1552092"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            5737..5797
+                     /Source="BestRefSeq"
+                     /ID="id1552159"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            5737..5797
+                     /Source="BestRefSeq"
+                     /ID="id1552114"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            5737..5797
+                     /Source="BestRefSeq"
+                     /ID="id1552136"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     exon            5737..5797
+                     /Source="BestRefSeq"
+                     /ID="id1552181"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     misc_feature    5776..5943
+                     /created_by="aw28"
+                     /modified_by="aw28"
+                     /label="22_targeton"
+     misc_feature    5797..5922
+                     /created_by="aw28"
+                     /Color="#034700"
+                     /modified_by="aw28"
+                     /label="22_r2_cdna"
+     exon            5798..>5926
+                     /Source="BestRefSeq"
+                     /ID="id1552069"
+                     /Dbxref="GeneID:672,Genbank:NM_007294.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     1"
+                     /transcript_id="NM_007294.3"
+                     /label="exon"
+     exon            5798..>5926
+                     /Source="BestRefSeq"
+                     /ID="id1552093"
+                     /Dbxref="GeneID:672,Genbank:NM_007300.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     2"
+                     /transcript_id="NM_007300.3"
+                     /label="exon"
+     exon            5798..>5926
+                     /Source="BestRefSeq"
+                     /ID="id1552160"
+                     /Dbxref="GeneID:672,Genbank:NR_027676.1,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="misc_RNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     6"
+                     /transcript_id="NR_027676.1"
+                     /label="exon"
+     exon            5798..>5926
+                     /Source="BestRefSeq"
+                     /ID="id1552115"
+                     /Dbxref="GeneID:672,Genbank:NM_007297.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     3"
+                     /transcript_id="NM_007297.3"
+                     /label="exon"
+     exon            5798..>5926
+                     /Source="BestRefSeq"
+                     /ID="id1552137"
+                     /Dbxref="GeneID:672,Genbank:NM_007299.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     5"
+                     /transcript_id="NM_007299.3"
+                     /label="exon"
+     exon            5798..>5926
+                     /Source="BestRefSeq"
+                     /ID="id1552182"
+                     /Dbxref="GeneID:672,Genbank:NM_007298.3,HGNC:HGNC:1100,MIM
+                     :113705"
+                     /gbkey="mRNA"
+                     /gene="BRCA1"
+                     /product="BRCA1, DNA repair associated, transcript variant
+                     4"
+                     /transcript_id="NM_007298.3"
+                     /label="exon"
+     protein_bind    complement(5928..6052)
+                     /gene="mutant version of attR"
+                     /bound_moiety="LR Clonase(TM)"
+                     /note="recombination site for the Gateway(R) LR reaction"
+                     /label="attR2"
+     source          <6070..>13366
+                     /organism="synthetic DNA construct"
+                     /mol_type="other DNA"
+                     /label="source synthetic DNA construct"
+     misc_feature    <6070..>13366
+                     /Source="referenceToDocument: urn:local:.:nl-dd8reid"
+                     /label="pCW57.1_BB (concatenated sequence 1)"
+                     /note="Geneious type: Concatenated sequence"
+     CDS             6070..6087
+                     /codon_start=1
+                     /product="6xHis affinity tag"
+                     /translation="HHHHHH"
+                     /label="6xHis"
+     promoter        6097..6607
+                     /note="human phosphoglycerate kinase 1 promoter"
+                     /label="hPGK promoter"
+     primer_bind     6526..6544
+                     /note="Human PGK promoter, forward primer"
+                     /label="hPGK-F"
+     CDS             6617..7213
+                     /codon_start=1
+                     /gene="pac from Streptomyces alboniger"
+                     /product="puromycin N-acetyltransferase"
+                     /note="confers resistance to puromycin"
+                     /translation="MTEYKPTVRLATRDDVPRAVRTLAAAFADYPATRHTVDPDRHIE
+                     RVTELQELFLTRVGLDIGKVWVADDGAAVAVWTTPESVEAGAVFAEIGPRMAELSGSR
+                     LAAQQQMEGLLAPHRPKEPAWFLATVGVSPDHQGKGLGSAVVLPGVEAAERAGVPAFL
+                     ETSAPRNLPFYERLGFTVTADVEVPEGPRTWCMTRKPGA"
+                     /label="PuroR"
+     primer_bind     complement(6617..6636)
+                     /note="Puromycin resistance gene, reverse primer. Also 
+                     called puro-variant-R"
+                     /label="Puro-R"
+     primer_bind     7113..7133
+                     /note="Puromycin resistance gene, forward primer"
+                     /label="Puro-F"
+     CDS             7214..7267
+                     /codon_start=1
+                     /product="2A peptide from Thosea asigna virus capsid 
+                     protein"
+                     /note="Eukaryotic ribosomes fail to insert a peptide bond
+                     between the Gly and Pro residues, yielding
+                     separatepolypeptides."
+                     /translation="EGRGSLLTCGDVEENPGP"
+                     /label="T2A"
+     CDS             7268..8014
+                     /codon_start=1
+                     /product="improved tetracycline-controlled transactivator"
+                     /note="In the Tet-On(R) system, rtTA-Advanced binds to the
+                      Tet-responsive element and stimulates transcription only
+                     in the presence of tetracycline or doxycycline."
+                     /translation="MSRLDKSKVINGALELLNGVGIEGLTTRKLAQKLGVEQPTLYWH
+                     VKNKRALLDALPIEMLDRHHTHFCPLEGESWQDFLRNNAKSYRCALLSHRDGAKVHLG
+                     TRPTEKQYETLENQLAFLCQQGFSLENALYALSAVGHFTLGCVLEEQEHQVAKEERET
+                     PTTDSMPPLLRQAIELFDRQGAEPAFLFGLELIICGLEKQLKCESGGPTDALDDFDLD
+                     MLPADALDDFDLDMLPADALDDFDLDMLPG"
+                     /label="rtTA-Advanced"
+     primer_bind     complement(8054..8074)
+                     /note="WPRE, reverse primer"
+                     /label="WPRE-R"
+     CDS             complement(8472..8483)
+                     /codon_start=1
+                     /product="Factor Xa recognition and cleavage site"
+                     /translation="IEGR"
+                     /label="Factor Xa site"
+     LTR             8688..8921
+                     /note="self-inactivating 3' long terminal repeat (LTR)
+                     from HIV-1"
+                     /label="3' LTR (Delta-U3)"
+     polyA_signal    8993..9114
+                     /note="SV40 polyadenylation signal"
+                     /label="SV40 poly(A) signal"
+     primer_bind     complement(9030..9049)
+                     /note="SV40 polyA, reverse primer"
+                     /label="SV40pA-R"
+     primer_bind     9084..9103
+                     /note="SV40 polyA terminator, reverse primer"
+                     /label="EBV-rev"
+     rep_origin      9154..9289
+                     /note="SV40 origin of replication"
+                     /label="SV40 ori"
+     primer_bind     9216..9235
+                     /note="SV40 promoter/origin, forward primer"
+                     /label="SV40pro-F"
+     promoter        9289..9360
+                     /gene="bla"
+                     /label="AmpR promoter"
+     CDS             9361..10221
+                     /codon_start=1
+                     /gene="bla"
+                     /product="beta-lactamase"
+                     /note="confers resistance to ampicillin, carbenicillin,
+                     and related antibiotics"
+                     /translation="MSIQHFRVALIPFFAAFCLPVFAHPETLVKVKDAEDQLGARVGY
+                     IELDLNSGKILESFRPEERFPMMSTFKVLLCGAVLSRIDAGQEQLGRRIHYSQNDLVE
+                     YSPVTEKHLTDGMTVRELCSAAITMSDNTAANLLLTTIGGPKELTAFLHNMGDHVTRL
+                     DRWEPELNEAIPNDERDTTMPVAMATTLRKLLTGELLTLASRQQLIDWMEADKVAGPL
+                     LRSALPAGWFIADKSGAGERGSRGIIAALGPDGKPSRIVVIYTTGSQATMDERNRQIA
+                     EIGASLIKHW"
+                     /label="AmpR"
+     primer_bind     complement(9579..9598)
+                     /note="Ampicillin resistance gene, reverse primer"
+                     /label="Amp-R"
+     rep_origin      10392..10980
+                     /direction="RIGHT"
+                     /note="high-copy-number ColE1/pMB1/pBR322/pUC origin of 
+                     replication"
+                     /label="ori"
+     primer_bind     10881..10900
+                     /note="pBR322 origin, forward primer"
+                     /label="pBR322ori-F"
+     primer_bind     11134..11151
+                     /note="L4440 vector, forward primer"
+                     /label="L4440"
+     protein_bind    11268..11289
+                     /bound_moiety="E. coli catabolite activator protein"
+                     /note="CAP binding activates transcription in the presence
+                      of cAMP."
+                     /label="CAP binding site"
+     promoter        11304..11334
+                     /note="promoter for the E. coli lac operon"
+                     /label="lac promoter"
+     protein_bind    11342..11358
+                     /bound_moiety="lac repressor encoded by lacI"
+                     /note="The lac repressor binds to the lac operator to 
+                     inhibit transcription in E. coli. This inhibition can be
+                     relieved by adding lactose or
+                     isopropyl-beta-D-thiogalactopyranoside (IPTG)."
+                     /label="lac operator"
+     primer_bind     11347..11369
+                     /note="In lacZ gene"
+                     /label="M13/pUC Reverse"
+     primer_bind     11366..11382
+                     /note="common sequencing primer, one of multiple similar 
+                     variants"
+                     /label="M13 rev"
+     primer_bind     11366..11382
+                     /note="In lacZ gene. Also called M13-rev"
+                     /label="M13 Reverse"
+     primer_bind     11401..11421
+                     /note="T3 promoter, forward primer"
+                     /label="T3"
+     promoter        11403..11421
+                     /note="promoter for bacteriophage T3 RNA polymerase"
+                     /label="T3 promoter"
+     promoter        11449..11675
+                     /note="Rous sarcoma virus enhancer/promoter"
+                     /label="RSV promoter"
+     LTR             11676..11856
+                     /note="truncated 5' long terminal repeat (LTR) from HIV-1"
+                     /label="5' LTR (truncated)"
+     misc_feature    11903..12028
+                     /note="packaging signal of human immunodeficiency virus 
+                     type 1"
+                     /label="HIV-1 Psi"
+     misc_feature    12521..12754
+                     /note="The Rev response element (RRE) of HIV-1 allows for
+                     Rev-dependent mRNA export from the nucleus to
+                     thecytoplasm."
+                     /label="RRE"
+     misc_feature    13196..13313
+                     /note="central polypurine tract and central termination 
+                     sequence of HIV-1"
+                     /label="cPPT/CTS"
+     misc_feature    13366^13367
+                     /Original_Bases="GAGTTTACTCCCTATCAGTGATAGAGAACGTATGTCGAGTT
+                     TACTCCCTATCAGTGATAGAGAACGATG"
+                     /label="GAGTTTACTCCCTATCAGTGATAGAGAACGTATGTCGAGTTTACTCCCTA
+                     TCAGTGATAGAGAACGATG"
+                     /note="Geneious type: Editing History Deletion"
+ORIGIN      
+        1 gagtttactc cctatcagtg atagagaacg tatgtcgagt ttactcccta tcagtgatag
+       61 agaacgatgt cgagtttact ccctatcagt gatagagaac gtatgtcgag tttactccct
+      121 atcagtgata gagaacgtat gtcgagttta ctccctatca gtgatagaga acgtatgtcg
+      181 agtttatccc tatcagtgat agagaacgta tgtcgagttt actccctatc agtgatagag
+      241 aacgtatgtc gaggtaggcg tgtacggtgg gaggcctata taagcagagc tcgtttagtg
+      301 aaccgtcaga tcgcctggag aattggctag atggatttat ctgctcttcg cgttgaagaa
+      361 gtacaaaatg tcattaatgc tatgcagaaa atcttagagt gtcccatctg tctggagttg
+      421 atcaaggaac ctgtctccac aaagtgtgac cacatatttt gcaaattttg catgctgaaa
+      481 cttctcaacc agaagaaagg gccttcacag tgtcctttat gtaagaatga tataaccaaa
+      541 aggagcctac aagaaagtac gagatttagt caacttgttg aagagctatt gaaaatcatt
+      601 tgtgcttttc agcttgacac aggtttggag tatgcaaaca gctataattt tgcaaaaaag
+      661 gaaaataact ctcctgaaca tctaaaagat gaagtttcta tcatccaaag tatgggctac
+      721 agaaaccgtg ccaaaagact tctacagagt gaacccgaaa atccttcctt gcaggaaacc
+      781 agtctcagtg tccaactctc taaccttgga actgtgagaa ctctgaggac aaagcagcgg
+      841 atacaacctc aaaagacgtc tgtctacatt gaattgggat ctgattcttc tgaagatacc
+      901 gttaataagg caacttattg cagtgtggga gatcaagaat tgttacaaat cacccctcaa
+      961 ggaaccaggg atgaaatcag tttggattct gcaaaaaagg ctgcttgtga attttctgag
+     1021 acggatgtaa caaatactga acatcatcaa cccagtaata atgatttgaa caccactgag
+     1081 aagcgtgcag ctgagaggca tccagaaaag tatcagggta gttctgtttc aaacttgcat
+     1141 gtggagccat gtggcacaaa tactcatgcc agctcattac agcatgagaa cagcagttta
+     1201 ttactcacta aagacagaat gaatgtagaa aaggctgaat tctgtaataa aagcaaacag
+     1261 cctggcttag caaggagcca acataacaga tgggctggaa gtaaggaaac atgtaatgat
+     1321 aggcggactc ccagcacaga aaaaaaggta gatctgaatg ctgatcccct gtgtgagaga
+     1381 aaagaatgga ataagcagaa actgccatgc tcagagaatc ctagagatac tgaagatgtt
+     1441 ccttggataa cactaaatag cagcattcag aaagttaatg agtggttttc cagaagtgat
+     1501 gaactgttag gttctgatga ctcacatgat ggggagtctg aatcaaatgc caaagtagct
+     1561 gatgtattgg acgttctaaa tgaggtagat gaatattctg gttcttcaga gaaaatagac
+     1621 ttactggcca gtgatcctca tgaggcttta atatgtaaaa gtgaaagagt tcactccaaa
+     1681 tcagtagaga gtaatattga agacaaaata tttgggaaaa cctatcggaa gaaggcaagc
+     1741 ctccccaact taagccatgt aactgaaaat ctaattatag gagcatttgt tactgagcca
+     1801 cagataatac aagagcgtcc cctcacaaat aaattaaagc gtaaaaggag acctacatca
+     1861 ggccttcatc ctgaggattt tatcaagaaa gcagatttgg cagttcaaaa gactcctgaa
+     1921 atgataaatc agggaactaa ccaaacggag cagaatggtc aagtgatgaa tattactaat
+     1981 agtggtcatg agaataaaac aaaaggtgat tctattcaga atgagaaaaa tcctaaccca
+     2041 atagaatcac tcgaaaaaga atctgctttc aaaacgaaag ctgaacctat aagcagcagt
+     2101 ataagcaata tggaactcga attaaatatc cacaattcaa aagcacctaa aaagaatagg
+     2161 ctgaggagga agtcttctac caggcatatt catgcgcttg aactagtagt cagtagaaat
+     2221 ctaagcccac ctaattgtac tgaattgcaa attgatagtt gttctagcag tgaagagata
+     2281 aagaaaaaaa agtacaacca aatgccagtc aggcacagca gaaacctaca actcatggaa
+     2341 ggtaaagaac ctgcaactgg agccaagaag agtaacaagc caaatgaaca gacaagtaaa
+     2401 agacatgaca gcgatacttt cccagagctg aagttaacaa atgcacctgg ttcttttact
+     2461 aagtgttcaa ataccagtga acttaaagaa tttgtcaatc ctagccttcc aagagaagaa
+     2521 aaagaagaga aactagaaac agttaaagtg tctaataatg ctgaagaccc caaagatctc
+     2581 atgttaagtg gagaaagggt tttgcaaact gaaagatctg tagagagtag cagtatttca
+     2641 ttggtacctg gtactgatta tggcactcag gaaagtatct cgttactgga agttagcact
+     2701 ctagggaagg caaaaacaga accaaataaa tgtgtgagtc agtgtgcagc atttgaaaac
+     2761 cccaagggac taattcatgg ttgttccaaa gataatagaa atgacacaga aggctttaag
+     2821 tatccattgg gacatgaagt taaccacagt cgggaaacaa gcatagaaat ggaagaaagt
+     2881 gaacttgatg ctcagtattt gcagaataca ttcaaggttt caaagcgcca gtcatttgct
+     2941 ccgttttcaa atccaggaaa tgcagaagag gaatgtgcaa cattctctgc ccactctggg
+     3001 tccttaaaga aacaaagtcc aaaagtcact tttgaatgtg aacaaaagga agaaaatcaa
+     3061 ggaaagaatg agtctaatat caagcctgta cagacagtta atatcactgc aggctttcct
+     3121 gtggttggtc agaaagataa gccagttgat aatgccaaat gtagtatcaa aggaggctct
+     3181 aggttttgtc tatcatctca gttcagaggc aacgaaactg gactcattac tccaaataaa
+     3241 catggacttt tacaaaaccc atatcgtata ccaccacttt ttcccatcaa gtcatttgtt
+     3301 aaaactaaat gtaagaaaaa tctgctagag gaaaactttg aggaacattc aatgtcacct
+     3361 gaaagagaaa tgggaaatga gaacattcca agtacagtga gcacaattag ccgtaataac
+     3421 attagagaaa atgtttttaa agaagccagc tcaagcaata ttaatgaagt aggttccagt
+     3481 actaatgaag tgggctccag tattaatgaa ataggttcca gtgatgaaaa cattcaagca
+     3541 gaactaggta gaaacagagg gccaaaattg aatgctatgc ttagattagg ggttttgcaa
+     3601 cctgaggtct ataaacaaag tcttcctgga agtaattgta agcatcctga aataaaaaag
+     3661 caagaatatg aagaagtagt tcagactgtt aatacagatt tctctccata tctgatttca
+     3721 gataacttag aacagcctat gggaagtagt catgcatctc aggtttgttc tgagacacct
+     3781 gatgacctgt tagatgatgg tgaaataaag gaagatacta gttttgctga aaatgacatt
+     3841 aaggaaagtt ctgctgtttt tagcaaaagc gtccagaaag gagagcttag caggagtcct
+     3901 agccctttca cccatacaca tttggctcag ggttaccgaa gaggggccaa gaaattagag
+     3961 tcctcagaag agaacttatc tagtgaggat gaagagcttc cctgcttcca acacttgtta
+     4021 tttggtaaag taaacaatat accttctcag tctactaggc atagcaccgt tgctaccgag
+     4081 tgtctgtcta agaacacaga ggagaattta ttatcattga agaatagctt aaatgactgc
+     4141 agtaaccagg taatattggc aaaggcatct caggaacatc accttagtga ggaaacaaaa
+     4201 tgttctgcta gcttgttttc ttcacagtgc agtgaattgg aagacttgac tgcaaataca
+     4261 aacacccagg atcctttctt gattggttct tccaaacaaa tgaggcatca gtctgaaagc
+     4321 cagggagttg gtctgagtga caaggaattg gtttcagatg atgaagaaag aggaacgggc
+     4381 ttggaagaaa ataatcaaga agagcaaagc atggattcaa acttaggtga agcagcatct
+     4441 gggtgtgaga gtgaaacaag cgtctctgaa gactgctcag ggctatcctc tcagagtgac
+     4501 attttaacca ctcagcagag ggataccatg caacataacc tgataaagct ccagcaggaa
+     4561 atggctgaac tagaagctgt gttagaacag catgggagcc agccttctaa cagctaccct
+     4621 tccatcataa gtgactcttc tgcccttgag gacctgcgaa atccagaaca aagcacatca
+     4681 gaaaaagcag tattaacttc acagaaaagt agtgaatacc ctataagcca gaatccagaa
+     4741 ggcctttctg ctgacaagtt tgaggtgtct gcagatagtt ctaccagtaa aaataaagaa
+     4801 ccaggagtgg aaaggtcatc cccttctaaa tgcccatcat tagatgatag gtggtacatg
+     4861 cacagttgct ctgggagtct tcagaataga aactacccat ctcaagagga gctcattaag
+     4921 gttgttgatg tggaggagca acagctggaa gagtctgggc cacacgattt gacggaaaca
+     4981 tcttacttgc caaggcaaga tctagaggga accccttacc tggaatctgg aatcagcctc
+     5041 ttctctgatg accctgaatc tgatccttct gaagacagag ccccagagtc agctcgtgtt
+     5101 ggcaacatac catcttcaac ctctgcattg aaagttcccc aattgaaagt tgcagaatct
+     5161 gcccagagtc cagctgctgc tcatactact gatactgctg ggtataatgc aatggaagaa
+     5221 agtgtgagca gggagaagcc agaattgaca gcttcaacag aaagggtcaa caaaagaatg
+     5281 tccatggtgg tgtctggcct gaccccagaa gaatttatgc tcgtgtacaa gtttgccaga
+     5341 aaacaccaca tcactttaac taatctaatt actgaagaga ctactcatgt tgttatgaaa
+     5401 acagatgctg agtttgtgtg tgaacggaca ctgaaatatt ttctaggaat tgcgggagga
+     5461 aaatgggtag ttagctattt ctgggtgacc cagtctatta aagaaagaaa aatgctgaat
+     5521 gagcatgatt ttgaagtcag aggagatgtg gtcaatggaa gaaaccacca aggtccaaag
+     5581 cgagcaagag aatcccagga cagaaagatc ttcagggggc tagaaatctg ttgctatggg
+     5641 cccttcacca acatgcccac agatcaactg gaatggatgg tacagctgtg tggtgcttct
+     5701 gtggtgaagg agctttcatc attcaccctt ggcacaggtg tccacccaat tgtggttgtg
+     5761 cagccagatg cctggacaga ggacaatggc ttccatgcaa ttgggcagat gtgtgaggca
+     5821 cctgtggtga cccgagagtg ggtgttggac agtgtagcac tctaccagtg ccaggagctg
+     5881 gacacctacc tgatacccca gatcccccac agccactact gatcgaccat agtgactgga
+     5941 tatgttgtgt tttacagtat tatgtagtct gttttttatg caaaatctaa tttaatatat
+     6001 tgatatttat atcattttac gtttctcgtt cagctttctt gtacaaagtg gtttagtaat
+     6061 gaaccggtcc accaccacca ccaccactaa ggatccgggg ttggggttgc gccttttcca
+     6121 aggcagccct gggtttgcgc agggacgcgg ctgctctggg cgtggttccg ggaaacgcag
+     6181 cggcgccgac cctgggtctc gcacattctt cacgtccgtt cgcagcgtca cccggatctt
+     6241 cgccgctacc cttgtgggcc ccccggcgac gcttcctgct ccgcccctaa gtcgggaagg
+     6301 ttccttgcgg ttcgcggcgt gccggacgtg acaaacggaa gccgcacgtc tcactagtac
+     6361 cctcgcagac ggacagcgcc agggagcaat ggcagcgcgc cgaccgcgat gggctgtggc
+     6421 caatagcggc tgctcagcag ggcgcgccga gagcagcggc cgggaagggg cggtgcggga
+     6481 ggcggggtgt ggggcggtag tgtgggccct gttcctgccc gcgcggtgtt ccgcattctg
+     6541 caagcctccg gagcgcacgt cggcagtcgg ctccctcgtt gaccgaatca ccgacctctc
+     6601 tccccagcaa ttcaccatga ccgagtacaa gcccacggtg cgcctcgcca cccgcgacga
+     6661 cgtccccagg gccgtacgca ccctcgccgc cgcgttcgcc gactaccccg ccacgcgcca
+     6721 caccgtcgat ccggaccgcc acatcgagcg ggtcaccgag ctgcaagaac tcttcctcac
+     6781 gcgcgtcggg ctcgacatcg gcaaggtgtg ggtcgcggac gacggcgccg cggtggcggt
+     6841 ctggaccacg ccggagagcg tcgaagcggg ggcggtgttc gccgagatcg gcccgcgcat
+     6901 ggccgagttg agcggttccc ggctggccgc gcagcaacag atggaaggcc tcctggcgcc
+     6961 gcaccggccc aaggagcccg cgtggttcct ggccaccgtc ggcgtctcgc ccgaccacca
+     7021 gggcaagggt ctgggcagcg ccgtcgtgct ccccggagtg gaggcggccg agcgcgccgg
+     7081 ggtgcccgcc ttcctggaga cctccgcgcc ccgcaacctc cccttctacg agcggctcgg
+     7141 cttcaccgtc accgccgacg tcgaggtgcc cgaaggaccg cgcacctggt gcatgacccg
+     7201 caagcccggt gccgaaggta gaggttctct cctcacttgt ggtgatgttg aagaaaaccc
+     7261 tggtccaatg tctagactgg acaagagcaa agtcataaac ggagctctgg aattactcaa
+     7321 tggtgtcggt atcgaaggcc tgacgacaag gaaactcgct caaaagctgg gagttgagca
+     7381 gcctaccctg tactggcacg tgaagaacaa gcgggccctg ctcgatgccc tgccaatcga
+     7441 gatgctggac aggcatcata cccacttctg ccccctggaa ggcgagtcat ggcaagactt
+     7501 tctgcggaac aacgccaagt cataccgctg tgctctcctc tcacatcgcg acggggctaa
+     7561 agtgcatctc ggcacccgcc caacagagaa acagtacgaa accctggaaa atcagctcgc
+     7621 gttcctgtgt cagcaaggct tctccctgga gaacgcactg tacgctctgt ccgccgtggg
+     7681 ccactttaca ctgggctgcg tattggagga acaggagcat caagtagcaa aagaggaaag
+     7741 agagacacct accaccgatt ctatgccccc acttctgaga caagcaattg agctgttcga
+     7801 ccggcaggga gccgaacctg ccttcctttt cggcctggaa ctaatcatat gtggcctgga
+     7861 gaaacagcta aagtgcgaaa gcggcgggcc gaccgacgcc cttgacgatt ttgacttaga
+     7921 catgctccca gccgatgccc ttgacgactt tgaccttgat atgctgcctg ctgacgctct
+     7981 tgacgatttt gaccttgaca tgctccccgg gtaactaagt aaggatcgat ccaagatatc
+     8041 gtattcttaa ctatgttgct ccttttacgc tatgtggata cgctgcttta atgcctttgt
+     8101 atcatgctat tgcttcccgt atggctttca ttttctcctc cttgtataaa tcctggttgc
+     8161 tgtctcttta tgaggagttg tggcccgttg tcaggcaacg tggcgtggtg tgcactgtgt
+     8221 ttgctgacgc aacccccact ggttggggca ttgccaccac ctgtcagctc ctttccggga
+     8281 ctttcgcttt ccccctccct attgccacgg cggaactcat cgccgcctgc cttgcccgct
+     8341 gctggacagg ggctcggctg ttgggcactg acaattccgt ggtgttgtcg gggaagctga
+     8401 cgtcctttcc atggctgctc gcctgtgttg ccacctggat tctgcgcggg acgtccttct
+     8461 gctacgtccc ttcggccctc aatccagcgg accttccttc ccgcggcctg ctgccggctc
+     8521 tgcggcctct tccgcgtctt cgccttcgcc ctcagacgag tcggatctcc ctttgggccg
+     8581 cctccccgcc tgtttcgcct cggcgtccgg actagaggta cctttaagac caatgactta
+     8641 caaggcagct gtagatctta gccacttttt aaaagaaaag gggggactgg aagggctaat
+     8701 tcactcccaa cgaagacaag atctgctttt tgcttgtact gggtctctct ggttagacca
+     8761 gatctgagcc tgggagctct ctggctaact agggaaccca ctgcttaagc ctcaataaag
+     8821 cttgccttga gtgcttcaag tagtgtgtgc ccgtctgttg tgtgactctg gtaactagag
+     8881 atccctcaga cccttttagt cagtgtggaa aatctctagc agtagtagtt catgtcatct
+     8941 tattattcag tatttataac ttgcaaagaa atgaatatca gagagtgaga ggaacttgtt
+     9001 tattgcagct tataatggtt acaaataaag caatagcatc acaaatttca caaataaagc
+     9061 atttttttca ctgcattcta gttgtggttt gtccaaactc atcaatgtat cttatcatgt
+     9121 ctggctctag ctatcccgcc cctaactccg cccatcccgc ccctaactcc gcccagttcc
+     9181 gcccattctc cgccccatgg ctgactaatt ttttttattt atgcagaggc cgaggccgcc
+     9241 tcggcctctg agctattcca gaagtagtga ggaggctttt ttggaggcct ttcaaatatg
+     9301 tatccgctca tgagacaata accctgataa atgcttcaat aatattgaaa aaggaagagt
+     9361 atgagtattc aacatttccg tgtcgccctt attccctttt ttgcggcatt ttgccttcct
+     9421 gtttttgctc acccagaaac gctggtgaaa gtaaaagatg ctgaagatca gttgggtgca
+     9481 cgagtgggtt acatcgaact ggatctcaac agcggtaaga tccttgagag ttttcgcccc
+     9541 gaagaacgtt ttccaatgat gagcactttt aaagttctgc tatgtggcgc ggtattatcc
+     9601 cgtattgacg ccgggcaaga gcaactcggt cgccgcatac actattctca gaatgacttg
+     9661 gttgagtact caccagtcac agaaaagcat cttacggatg gcatgacagt aagagaatta
+     9721 tgcagtgctg ccataaccat gagtgataac actgcggcca acttacttct gacaacgatc
+     9781 ggaggaccga aggagctaac cgcttttttg cacaacatgg gggatcatgt aactcgcctt
+     9841 gatcgttggg aaccggagct gaatgaagcc ataccaaacg acgagcgtga caccacgatg
+     9901 cctgtagcaa tggcaacaac gttgcgcaaa ctattaactg gcgaactact tactctagct
+     9961 tcccggcaac aattaataga ctggatggag gcggataaag ttgcaggacc acttctgcgc
+    10021 tcggcccttc cggctggctg gtttattgct gataaatctg gagccggtga gcgtgggtct
+    10081 cgcggtatca ttgcagcact ggggccagat ggtaagccct cccgtatcgt agttatctac
+    10141 acgacgggga gtcaggcaac tatggatgaa cgaaatagac agatcgctga gataggtgcc
+    10201 tcactgatta agcattggta actgtcagac caagtttact catatatact ttagattgat
+    10261 ttaaaacttc atttttaatt taaaaggatc taggtgaaga tcctttttga taatctcatg
+    10321 accaaaatcc cttaacgtga gttttcgttc cactgagcgt cagaccccgt agaaaagatc
+    10381 aaaggatctt cttgagatcc tttttttctg cgcgtaatct gctgcttgca aacaaaaaaa
+    10441 ccaccgctac cagcggtggt ttgtttgccg gatcaagagc taccaactct ttttccgaag
+    10501 gtaactggct tcagcagagc gcagatacca aatactgttc ttctagtgta gccgtagtta
+    10561 ggccaccact tcaagaactc tgtagcaccg cctacatacc tcgctctgct aatcctgtta
+    10621 ccagtggctg ctgccagtgg cgataagtcg tgtcttaccg ggttggactc aagacgatag
+    10681 ttaccggata aggcgcagcg gtcgggctga acggggggtt cgtgcacaca gcccagcttg
+    10741 gagcgaacga cctacaccga actgagatac ctacagcgtg agctatgaga aagcgccacg
+    10801 cttcccgaag ggagaaaggc ggacaggtat ccggtaagcg gcagggtcgg aacaggagag
+    10861 cgcacgaggg agcttccagg gggaaacgcc tggtatcttt atagtcctgt cgggtttcgc
+    10921 cacctctgac ttgagcgtcg atttttgtga tgctcgtcag gggggcggag cctatggaaa
+    10981 aacgccagca acgcggcctt tttacggttc ctggcctttt gctggccttt tgctcacatg
+    11041 ttctttcctg cgttatcccc tgattctgtg gataaccgta ttaccgcctt tgagtgagct
+    11101 gataccgctc gccgcagccg aacgaccgag cgcagcgagt cagtgagcga ggaagcggaa
+    11161 gagcgcccaa tacgcaaacc gcctctcccc gcgcgttggc cgattcatta atgcagctgg
+    11221 cacgacaggt ttcccgactg gaaagcgggc agtgagcgca acgcaattaa tgtgagttag
+    11281 ctcactcatt aggcacccca ggctttacac tttatgcttc cggctcgtat gttgtgtgga
+    11341 attgtgagcg gataacaatt tcacacagga aacagctatg accatgatta cgccaagcgc
+    11401 gcaattaacc ctcactaaag ggaacaaaag ctggagctgc aagcttaatg tagtcttatg
+    11461 caatactctt gtagtcttgc aacatggtaa cgatgagtta gcaacatgcc ttacaaggag
+    11521 agaaaaagca ccgtgcatgc cgattggtgg aagtaaggtg gtacgatcgt gccttattag
+    11581 gaaggcaaca gacgggtctg acatggattg gacgaaccac tgaattgccg cattgcagag
+    11641 atattgtatt taagtgccta gctcgataca taaacgggtc tctctggtta gaccagatct
+    11701 gagcctggga gctctctggc taactaggga acccactgct taagcctcaa taaagcttgc
+    11761 cttgagtgct tcaagtagtg tgtgcccgtc tgttgtgtga ctctggtaac tagagatccc
+    11821 tcagaccctt ttagtcagtg tggaaaatct ctagcagtgg cgcccgaaca gggacttgaa
+    11881 agcgaaaggg aaaccagagg agctctctcg acgcaggact cggcttgctg aagcgcgcac
+    11941 ggcaagaggc gaggggcggc gactggtgag tacgccaaaa attttgacta gcggaggcta
+    12001 gaaggagaga gatgggtgcg agagcgtcag tattaagcgg gggagaatta gatcgcgatg
+    12061 ggaaaaaatt cggttaaggc cagggggaaa gaaaaaatat aaattaaaac atatagtatg
+    12121 ggcaagcagg gagctagaac gattcgcagt taatcctggc ctgttagaaa catcagaagg
+    12181 ctgtagacaa atactgggac agctacaacc atcccttcag acaggatcag aagaacttag
+    12241 atcattatat aatacagtag caaccctcta ttgtgtgcat caaaggatag agataaaaga
+    12301 caccaaggaa gctttagaca agatagagga agagcaaaac aaaagtaaga ccaccgcaca
+    12361 gcaagcggcc gctgatcttc agacctggag gaggagatat gagggacaat tggagaagtg
+    12421 aattatataa atataaagta gtaaaaattg aaccattagg agtagcaccc accaaggcaa
+    12481 agagaagagt ggtgcagaga gaaaaaagag cagtgggaat aggagctttg ttccttgggt
+    12541 tcttgggagc agcaggaagc actatgggcg cagcgtcaat gacgctgacg gtacaggcca
+    12601 gacaattatt gtctggtata gtgcagcagc agaacaattt gctgagggct attgaggcgc
+    12661 aacagcatct gttgcaactc acagtctggg gcatcaagca gctccaggca agaatcctgg
+    12721 ctgtggaaag atacctaaag gatcaacagc tcctggggat ttggggttgc tctggaaaac
+    12781 tcatttgcac cactgctgtg ccttggaatg ctagttggag taataaatct ctggaacaga
+    12841 tttggaatca cacgacctgg atggagtggg acagagaaat taacaattac acaagcttaa
+    12901 tacactcctt aattgaagaa tcgcaaaacc agcaagaaaa gaatgaacaa gaattattgg
+    12961 aattagataa atgggcaagt ttgtggaatt ggtttaacat aacaaattgg ctgtggtata
+    13021 taaaattatt cataatgata gtaggaggct tggtaggttt aagaatagtt tttgctgtac
+    13081 tttctatagt gaatagagtt aggcagggat attcaccatt atcgtttcag acccacctcc
+    13141 caaccccgag gggacaattc tcgacctcga gacaaatggc agtattcatc cacaatttta
+    13201 aaagaaaagg ggggattggg gggtacagtg caggggaaag aatagtagac ataatagcaa
+    13261 cagacataca aactaaagaa ttacaaaaac aaattacaaa aattcaaaat tttcgggttt
+    13321 attacaggga cagcagagat ccactttggc cgcgaatcga tatgtc
+//
