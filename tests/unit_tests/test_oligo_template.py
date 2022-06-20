@@ -26,7 +26,7 @@ from valiant.models.pam_protection import PamProtectedReferenceSequence
 from valiant.models.sequences import Sequence, ReferenceSequence
 from valiant.models.targeton import Targeton
 from .constants import CODON_TABLE_FP, DUMMY_PAM_PROTECTION_NT
-from .utils import get_data_file_path, get_targeton
+from .utils import get_data_file_path, get_no_op_pam_protected_sequence, get_targeton
 
 TRANSCRIPT_INFO = TranscriptInfo('GENE_ID', 'TRANSCRIPT_ID')
 
@@ -44,10 +44,9 @@ def test_oligo_compute_mutations(targetons, mutator, pam_protection):
 
     ct = CodonTable.load(get_data_file_path(CODON_TABLE_FP))
     ref_seq = ''.join(targetons)
-    pam_ref_seq = PamProtectedReferenceSequence(
-        ref_seq,
-        GenomicRange('X', 1, sum(len(seq) for seq in targetons), '+'),
-        ref_seq)
+
+    gr = GenomicRange('X', 1, sum(len(seq) for seq in targetons), '+')
+    pam_ref_seq = get_no_op_pam_protected_sequence(ref_seq, gr)
 
     adaptor_5 = 'AAAAAA'
     adaptor_3 = 'AAAAAA'

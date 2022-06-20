@@ -20,7 +20,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from itertools import chain
 import logging
-from typing import Dict, Optional, Set, FrozenSet
+from typing import Dict, Iterable, List, Optional, Set, FrozenSet
 import pandas as pd
 from pyranges import PyRanges
 from pysam import VariantRecord
@@ -31,11 +31,26 @@ from ..loaders.vcf import get_vcf
 from ..utils import get_id_column
 
 
+def apply_pam_variants(ref_seq: ReferenceSequence, pam_variants: List[PamVariant]) -> str:
+    pam_seq: str = ref_seq.sequence
+
+    for variant in pam_variants:
+
+        # Validate variant genomic position relative to the sequence's
+        offset: int = variant.get_ref_offset(ref_seq)
+
+        # Update PAM-protected sequence
+        pam_seq = variant.mutate_from(pam_seq, offset, ref_check=True)
+
+    return pam_seq
+
+
 @dataclass(frozen=True)
 class PamProtectedReferenceSequence(ReferenceSequence):
-    __slots__ = {'sequence', 'genomic_range', 'pam_protected_sequence'}
+    __slots__ = {'sequence', 'genomic_range', 'pam_protected_sequence', 'pam_variants'}
 
     pam_protected_sequence: str
+    pam_variants: List[PamVariant]
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -43,14 +58,25 @@ class PamProtectedReferenceSequence(ReferenceSequence):
             raise ValueError("PAM protected sequence and genomic range have different lengths!")
 
     @classmethod
-    def from_reference_sequence(cls, ref_seq: ReferenceSequence, pam_seq: str) -> PamProtectedReferenceSequence:
-        return cls(ref_seq.sequence, ref_seq.genomic_range, pam_seq)
+    def from_reference_sequence(cls, ref_seq: ReferenceSequence, pam_variants_: Iterable[PamVariant]) -> PamProtectedReferenceSequence:
+        pam_variants: List[PamVariant] = sorted(
+            pam_variants_, key=lambda x: x.genomic_position.position)
+        pam_seq: str = apply_pam_variants(ref_seq, pam_variants)
+
+        return cls(
+            ref_seq.sequence,
+            ref_seq.genomic_range,
+            pam_seq,
+            pam_variants)
 
     def get_subsequence(self, genomic_range: GenomicRange) -> PamProtectedReferenceSequence:
-        start, end = self.genomic_range.get_relative_subrange(genomic_range)
         ref_seq: ReferenceSequence = super().get_subsequence(genomic_range)
-        pam_seq: str = self.pam_protected_sequence[start:end]
-        return PamProtectedReferenceSequence.from_reference_sequence(ref_seq, pam_seq)
+        pam_variants = [
+            variant
+            for variant in self.pam_variants
+            if genomic_range.contains_position(variant.genomic_position)
+        ]
+        return PamProtectedReferenceSequence.from_reference_sequence(ref_seq, pam_variants)
 
     def apply_variant(self, variant: BaseVariant, ref_check: bool = False) -> str:
         if not self.genomic_range.contains_position(variant.genomic_position):
@@ -147,15 +173,4 @@ def compute_pam_protected_sequence(
     ref_seq: ReferenceSequence,
     pam_variants: Set[PamVariant]
 ) -> PamProtectedReferenceSequence:
-    pam_seq: str = ref_seq.sequence
-
-    if len(pam_variants) > 0:
-        for variant in pam_variants:
-
-            # Validate variant genomic position relative to the sequence's
-            offset: int = variant.get_ref_offset(ref_seq)
-
-            # Update PAM-protected sequence
-            pam_seq = variant.mutate_from(pam_seq, offset, ref_check=True)
-
-    return PamProtectedReferenceSequence.from_reference_sequence(ref_seq, pam_seq)
+    return PamProtectedReferenceSequence.from_reference_sequence(ref_seq, pam_variants)
