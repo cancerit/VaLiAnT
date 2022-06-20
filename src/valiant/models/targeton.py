@@ -19,7 +19,6 @@
 from __future__ import annotations
 import abc
 from collections.abc import Sized
-from dataclasses import dataclass
 from typing import Callable, ClassVar, Dict, List, FrozenSet, Optional
 import numpy as np
 import pandas as pd
@@ -34,10 +33,8 @@ from .mutated_sequences import (
     SingleNucleotideMutatedSequence,
     SingleCodonMutatedSequence
 )
-from .base import StrandedPositionRange, GenomicRange
-from .cdna import CDNA
+from .base import StrandedPositionRange
 from .pam_protection import PamProtectedReferenceSequence
-from .sequences import Sequence
 from .snv_table import AuxiliaryTables
 from ..enums import TargetonMutator, VariantType
 from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
