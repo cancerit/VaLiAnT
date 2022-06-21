@@ -18,7 +18,9 @@
 
 from __future__ import annotations
 from itertools import groupby
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple
+
+from valiant.utils import validate_strand
 from ..globals import TRIPLET_RCS
 
 STOP_CODE = 'STOP'
@@ -80,6 +82,13 @@ class CodonTable:
 
     def translate_rc(self, codon: str) -> str:
         return self._codon2aa[TRIPLET_RCS[codon]]
+
+    def get_translate_f(self, strand: str) -> Callable[[str], str]:
+        validate_strand(strand)
+        return (
+            self.translate if strand == '+' else
+            self.translate_rc
+        )
 
     def get_translation_table(self) -> List[Tuple[str, str]]:
         return list(self._codon2aa.items())

@@ -158,12 +158,7 @@ def _build_base_snv_table() -> pd.DataFrame:
 
 
 def build_snv_table(base_snv_table: pd.DataFrame, codon_table: CodonTable, strand: str) -> pd.DataFrame:
-    validate_strand(strand)
-
-    tr: Callable[[str], str] = (
-        codon_table.translate if strand == '+' else
-        codon_table.translate_rc
-    )
+    tr = codon_table.get_translate_f(strand)
 
     df: pd.DataFrame = base_snv_table.copy()
 
