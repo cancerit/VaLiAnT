@@ -19,7 +19,9 @@
 from __future__ import annotations
 import abc
 from collections.abc import Sized
-from typing import Callable, ClassVar, Dict, List, FrozenSet, Optional
+from itertools import groupby
+import logging
+from typing import Callable, ClassVar, Dict, List, FrozenSet, Optional, Tuple
 import numpy as np
 import pandas as pd
 from .codon_table import CodonTable, STOP_CODE
@@ -34,9 +36,9 @@ from .mutated_sequences import (
     SingleCodonMutatedSequence
 )
 from .base import StrandedPositionRange
-from .pam_protection import PamProtectedReferenceSequence
+from .pam_protection import PamProtectedReferenceSequence, PamVariant
 from .snv_table import AuxiliaryTables
-from ..enums import TargetonMutator, VariantType
+from ..enums import MutationType, TargetonMutator, VariantType
 from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
 from ..utils import get_constant_category, get_out_of_frame_offset
 
@@ -325,3 +327,85 @@ class CDSTargeton(BaseTargeton):
             for pos, ref_seq, mseq in delete_non_overlapping_3_offset(
                 self.sequence, start_offset, end_offset)
         ])
+
+
+# TODO: consider only storing variant positions (as relative indices?)
+class PamProtCDSTargeton(CDSTargeton):
+    def __init__(
+        self,
+        seq: str,
+        pam_seq: str,
+        pr: StrandedPositionRange,
+        cds_prefix: str,
+        cds_suffix: str,
+        pam_variants: List[PamVariant]
+    ) -> None:
+        super().__init__(seq, pam_seq, pr, cds_prefix, cds_suffix)
+        self.pam_variants = pam_variants
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self._validate_pam_protection()
+
+    @classmethod
+    def from_pam_seq(cls, ref_sequence: PamProtectedReferenceSequence, cds_prefix: str, cds_suffix: str) -> PamProtCDSTargeton:
+        return cls(
+            ref_sequence.sequence,
+            ref_sequence.pam_protected_sequence,
+            ref_sequence.genomic_range,
+            cds_prefix,
+            cds_suffix,
+            ref_sequence.pam_variants)
+
+    def _get_rel_pos_index_offset(self) -> int:
+        return self.pos_range.start + len(self.cds_prefix)
+
+    def _validate_pam_protection(self) -> None:
+        """Verify no more than one PAM protection variants affect any given codon"""
+
+        offset: int = self._get_rel_pos_index_offset()
+
+        def get_variant_codon(variant: PamVariant) -> int:
+            return (variant.genomic_position.position - offset) // 3
+
+        pam_var_codons = list(map(get_variant_codon, self.pam_variants))
+        if len(set(pam_var_codons)) != len(pam_var_codons):
+
+            def key(t: Tuple[int, PamVariant]) -> int:
+                return t[0]
+
+            for codon_index, variants in groupby(sorted([
+                (get_variant_codon(variant), variant)
+                for variant in self.pam_variants
+            ], key=key), key=key):
+                if len(list(variants)) > 1:
+                    logging.error("PAM protection variants at %s affect the same codon (%d)!" % (
+                        ', '.join([str(x.genomic_position) for _, x in variants]),
+                        codon_index + 1))
+
+            raise ValueError("Multiple PAM protection variants in a single codon!")
+
+    def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[MutationType]:
+        if not self.pam_variants:
+            return []
+
+        ref_seq = f"{self.cds_prefix}{self.seq}{self.cds_suffix}"
+        pam_seq = f"{self.cds_prefix}{self.pam_seq}{self.cds_suffix}"
+
+        offset = self._get_rel_pos_index_offset()
+        tr = codon_table.get_translate_f(self.pos_range.strand)
+
+        def get_mutation_type(variant: PamVariant) -> MutationType:
+            codon_index: int = (variant.genomic_position.position - offset) // 3
+            codon_slice: slice = slice(codon_index, codon_index + 3)
+            ref = ref_seq[codon_slice]
+            alt = pam_seq[codon_slice]
+            ref_aa = tr(ref)
+            alt_aa = tr(alt)
+            return (
+                MutationType.SYNONYMOUS if alt_aa == ref_aa else
+                MutationType.NONSENSE if alt_aa == STOP_CODE else
+                MutationType.MISSENSE
+            )
+
+        return list(map(get_mutation_type, self.pam_variants))
