@@ -28,31 +28,57 @@ CUSTOM_MUTATOR = 'custom'
 
 DEFAULT_OLIGO_MAX_LENGTH = 300
 
+# Valid metadata table field names
+META_OLIGO_NAME = 'oligo_name'
+META_SPECIES = 'species'
+META_ASSEMBLY = 'assembly'
+META_GENE_ID = 'gene_id'
+META_TRANSCRIPT_ID = 'transcript_id'
+META_SRC_TYPE = 'src_type'
+META_REF_CHR = 'ref_chr'
+META_REF_STRAND = 'ref_strand'
+META_REF_START = 'ref_start'
+META_REF_END = 'ref_end'
+META_REVC = 'revc'
+META_REF_SEQ = 'ref_seq'
+META_PAM_SEQ = 'pam_seq'
+META_VCF_ALIAS = 'vcf_alias'
+META_VCF_VAR_ID = 'vcf_var_id'
+META_MUT_POSITION = 'mut_position'
+META_REF = 'ref'
+META_NEW = 'new'
+META_REF_AA = 'ref_aa'
+META_ALT_AA = 'alt_aa'
+META_MUT_TYPE = 'mut_type'
+META_MUTATOR = 'mutator'
+META_OLIGO_LENGTH = 'oligo_length'
+META_MSEQ = 'mseq'
+
 METADATA_FIELDS = [
-    'oligo_name',
-    'species',
-    'assembly',
-    'gene_id',
-    'transcript_id',
-    'src_type',
-    'ref_chr',
-    'ref_strand',
-    'ref_start',
-    'ref_end',
-    'revc',
-    'ref_seq',
-    'pam_seq',
-    'vcf_alias',
-    'vcf_var_id',
-    'mut_position',
-    'ref',
-    'new',
-    'ref_aa',
-    'alt_aa',
-    'mut_type',
-    'mutator',
-    'oligo_length',
-    'mseq'
+    META_OLIGO_NAME,
+    META_SPECIES,
+    META_ASSEMBLY,
+    META_GENE_ID,
+    META_TRANSCRIPT_ID,
+    META_SRC_TYPE,
+    META_REF_CHR,
+    META_REF_STRAND,
+    META_REF_START,
+    META_REF_END,
+    META_REVC,
+    META_REF_SEQ,
+    META_PAM_SEQ,
+    META_VCF_ALIAS,
+    META_VCF_VAR_ID,
+    META_MUT_POSITION,
+    META_REF,
+    META_NEW,
+    META_REF_AA,
+    META_ALT_AA,
+    META_MUT_TYPE,
+    META_MUTATOR,
+    META_OLIGO_LENGTH,
+    META_MSEQ
 ]
 
 METADATA_FIELDS_SET = set(METADATA_FIELDS)
