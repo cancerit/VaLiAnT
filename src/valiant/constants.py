@@ -54,6 +54,9 @@ META_MUTATOR = 'mutator'
 META_OLIGO_LENGTH = 'oligo_length'
 META_MSEQ = 'mseq'
 
+# Temporary field names (not included in the final table)
+META_VAR_TYPE = 'var_type'
+
 METADATA_FIELDS = [
     META_OLIGO_NAME,
     META_SPECIES,

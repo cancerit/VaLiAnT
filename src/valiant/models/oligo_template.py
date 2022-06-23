@@ -32,7 +32,17 @@ from .pam_protection import PamProtectedReferenceSequence
 from .snv_table import AuxiliaryTables
 from .targeton import BaseTargeton, CDSTargeton, Targeton
 from .variant import CustomVariant
-from ..constants import CUSTOM_MUTATOR
+from ..constants import (
+    CUSTOM_MUTATOR,
+    META_OLIGO_NAME,
+    META_VAR_TYPE,
+    META_MUT_POSITION,
+    META_REF,
+    META_NEW,
+    META_MUTATOR,
+    META_MSEQ,
+    META_OLIGO_LENGTH
+)
 from ..enums import MutationType, TargetonMutator
 from ..utils import get_constant_category
 
@@ -44,6 +54,17 @@ MUTATION_TYPE_LABELS: Dict[int, str] = {
 
 MUTATION_TYPE_CATEGORIES = sorted(MUTATION_TYPE_LABELS.values())
 MUTATION_TYPE_CATEGORIES_T = tuple(MUTATION_TYPE_CATEGORIES)
+
+EMPTY_MUTATION_TABLE_FIELDS = [
+    META_OLIGO_NAME,
+    META_VAR_TYPE,
+    META_MUT_POSITION,
+    META_REF,
+    META_NEW,
+    META_MUTATOR,
+    META_MSEQ,
+    META_OLIGO_LENGTH
+]
 
 
 def _decode_mut_type(x) -> str:
@@ -58,6 +79,10 @@ def decode_mut_types_cat(mut_type: pd.Series) -> pd.Categorical:
     return pd.Categorical(
         decode_mut_types(mut_type),
         categories=MUTATION_TYPE_CATEGORIES)
+
+
+def get_empty_mutation_table() -> pd.DataFrame:
+    return pd.DataFrame(columns=EMPTY_MUTATION_TABLE_FIELDS)
 
 
 class OligoSegment(abc.ABC):
@@ -340,16 +365,7 @@ class OligoTemplate:
 
     def get_mutation_table(self, aux: AuxiliaryTables, options: Options) -> pd.DataFrame:
         if not self.target_segments:
-            return pd.DataFrame(columns=[
-                'oligo_name',
-                'var_type',
-                'mut_position',
-                'ref',
-                'new',
-                'mutator',
-                'mseq',
-                'oligo_length'
-            ])
+            return get_empty_mutation_table()
 
         # Compute mutations per region
         region_mutations: pd.DataFrame = pd.concat([
