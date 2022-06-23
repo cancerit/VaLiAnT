@@ -170,7 +170,6 @@ class CDSTargeton(BaseTargeton):
 
     def _add_snv_metadata(
         self,
-        aux: AuxiliaryTables,
         snv_meta_full: pd.DataFrame,
         snvs: MutationCollection
     ) -> MutationCollection:
@@ -304,7 +303,7 @@ class CDSTargeton(BaseTargeton):
                 reset_index=False)
 
             # Attach pre-computed metadata to SNV's
-            snvs: MutationCollection = self._add_snv_metadata(aux, snv_meta_full, mutations[TargetonMutator.SNV])
+            snvs: MutationCollection = self._add_snv_metadata(snv_meta_full, mutations[TargetonMutator.SNV])
             mutations[TargetonMutator.SNV] = snvs
 
             # TODO: refactor dispatch
