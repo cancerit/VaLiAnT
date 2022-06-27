@@ -125,7 +125,7 @@ class ReferenceAnnotatedSequencePair(BaseAnnotatedSequencePair):
 
 
 @dataclass(frozen=True)
-class AnnotatedSequencePair(BaseAnnotatedSequencePair):
+class AnnotatedSequencePair(BaseAnnotatedSequencePair, Generic[VariantT]):
     """Potentially mutated sequence (and its reference and variants)"""
 
     __slots__ = ['pos_range', 'ref_seq', '_alt_seq', '_variants']
