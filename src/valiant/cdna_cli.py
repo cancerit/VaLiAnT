@@ -100,10 +100,9 @@ def get_annotated_cdna_mutations(
     sequence, cds_ext_5p, cds_ext_3p = cdna.get_extended_subsequence(
         targeton_cfg.r2_range)
     seq = sequence.sequence
-    return CDSTargeton(
-        seq, seq, StrandedPositionRange.to_plus_strand(
-            targeton_cfg.r2_range), cds_ext_5p, cds_ext_3p).compute_mutations(
-                targeton_cfg.mutators, aux)
+    spr = StrandedPositionRange.to_plus_strand(targeton_cfg.r2_range)
+    targeton = CDSTargeton.build_without_variants(spr, seq, cds_ext_5p, cds_ext_3p)
+    return targeton.compute_mutations(targeton_cfg.mutators, aux)
 
 
 def get_cdna_mutations(
@@ -111,10 +110,9 @@ def get_cdna_mutations(
     cdna: CDNA
 ) -> Dict[TargetonMutator, MutationCollection]:
     seq = cdna.get_subsequence_string(targeton_cfg.r2_range)
-    return Targeton(
-        seq, seq, StrandedPositionRange.to_plus_strand(
-            targeton_cfg.r2_range)).compute_mutations(
-                targeton_cfg.mutators)
+    spr = StrandedPositionRange.to_plus_strand(targeton_cfg.r2_range)
+    targeton = Targeton.build_without_variants(spr, seq)
+    return targeton.compute_mutations(targeton_cfg.mutators)
 
 
 def mut_coll_to_df(

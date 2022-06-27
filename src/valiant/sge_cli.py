@@ -36,7 +36,7 @@ from .models.refseq_ranges import genomic_ranges_to_pyranges, ReferenceSequenceR
 from .models.refseq_repository import fetch_reference_sequences, ReferenceSequenceRepository
 from .models.sequences import ReferenceSequence
 from .models.snv_table import AuxiliaryTables
-from .models.targeton import BaseTargeton, CDSTargeton, Targeton
+from .models.targeton import BaseTargeton, CDSTargeton, PamProtCDSTargeton, Targeton
 from .models.variant import CustomVariant, VariantRepository
 from .common_cli import common_params, existing_file
 from .cli_utils import load_codon_table, validate_adaptor, set_logger
@@ -131,8 +131,8 @@ def get_oligo_template(
     def get_cds_targeton(
         region_pam_seq: PamProtectedReferenceSequence,
         exg_gr_pair: GenomicRangePair
-    ) -> CDSTargeton:
-        return CDSTargeton.from_pam_seq(
+    ) -> PamProtCDSTargeton:
+        return PamProtCDSTargeton.from_pam_seq(
             region_pam_seq,
             get_cds_extension_sequence(exg_gr_pair[0]),
             get_cds_extension_sequence(exg_gr_pair[1]))

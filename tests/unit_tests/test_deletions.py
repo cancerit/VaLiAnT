@@ -40,12 +40,13 @@ del_offset_method = {
 ])
 @pytest.mark.parametrize('cds', [True, False])
 def test_get_2del_mutations(offset, seq, exp_pos, exp_ref, exp_mseq, cds):
+    cds_suffix = 'A' * (7 - len(seq))
 
     # Generate target
     gr = GenomicRange('X', 10, 10 + len(seq) - 1, '+')
     pam_seq = get_no_op_pam_protected_sequence(seq, gr)
     t = (
-        CDSTargeton.from_pam_seq(pam_seq, 'AA', 'A') if cds else
+        CDSTargeton.from_pam_seq(pam_seq, 'AA', cds_suffix) if cds else
         Targeton.from_pam_seq(pam_seq)
     )
 
