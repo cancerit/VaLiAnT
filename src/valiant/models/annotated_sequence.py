@@ -20,7 +20,7 @@ import abc
 from dataclasses import dataclass
 from itertools import groupby
 import logging
-from typing import List, Sized, Tuple
+from typing import Generic, List, Sized, Tuple, TypeVar
 
 from valiant.models.base import GenomicPosition, StrandedPositionRange
 from valiant.enums import MutationType
@@ -29,8 +29,11 @@ from valiant.models.variant import SubstitutionVariant
 from valiant.utils import has_duplicates
 
 
+VariantT = TypeVar('VariantT', bound='SubstitutionVariant')
+
+
 @dataclass(frozen=True)
-class BaseAnnotatedSequencePair(abc.ABC, Sized):
+class BaseAnnotatedSequencePair(abc.ABC, Sized, Generic[VariantT]):
     pos_range: StrandedPositionRange
     ref_seq: str
 
@@ -54,17 +57,22 @@ class BaseAnnotatedSequencePair(abc.ABC, Sized):
 
     @property
     @abc.abstractmethod
-    def variants(self) -> List[SubstitutionVariant]:
+    def variants(self) -> List[VariantT]:
         pass
+
+    @property
+    @abc.abstractmethod
+    def variant_count(self) -> int:
+        pass
+
+    @property
+    def variant_positions(self) -> List[GenomicPosition]:
+        return [x.genomic_position for x in self.variants]
 
     @property
     def _ext_offset(self) -> int:
         """Offset converting genomic positions into extended sequence indices"""
         return -self.pos_range.start
-
-    @property
-    def variant_positions(self) -> List[GenomicPosition]:
-        return [x.genomic_position for x in self.variants]
 
     def _get_codon_indices(self, positions: List[GenomicPosition]) -> List[int]:
         offset = self._ext_offset
@@ -108,8 +116,12 @@ class ReferenceAnnotatedSequencePair(BaseAnnotatedSequencePair):
         return self.alt_seq
 
     @property
-    def variants(self) -> List[SubstitutionVariant]:
+    def variants(self) -> List[VariantT]:
         return []
+
+    @property
+    def variant_count(self) -> int:
+        return 0
 
 
 @dataclass(frozen=True)
@@ -119,7 +131,7 @@ class AnnotatedSequencePair(BaseAnnotatedSequencePair):
     __slots__ = ['pos_range', 'ref_seq', '_alt_seq', '_variants']
 
     _alt_seq: str
-    _variants: List[SubstitutionVariant]
+    _variants: List[VariantT]
 
     def __post_init__(self) -> None:
         if len(self.ref_seq) != len(self.alt_seq):
@@ -129,7 +141,7 @@ class AnnotatedSequencePair(BaseAnnotatedSequencePair):
         return len(self.variants)
 
     @property
-    def variants(self) -> List[SubstitutionVariant]:
+    def variants(self) -> List[VariantT]:
         return self._variants
 
     @property
@@ -200,10 +212,10 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair):
     def log_same_codon_variants(self) -> None:
         offset = self._ext_offset
 
-        def get_variant_codon(variant: SubstitutionVariant) -> int:
+        def get_variant_codon(variant: VariantT) -> int:
             return (variant.genomic_position.position - offset) // 3
 
-        def sort_key(t: Tuple[int, SubstitutionVariant]) -> int:
+        def sort_key(t: Tuple[int, VariantT]) -> int:
             return t[0]
 
         for codon_index, variants in groupby(sorted([
