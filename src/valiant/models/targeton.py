@@ -57,6 +57,21 @@ class BaseTargeton(abc.ABC):
     def sequence(self) -> str:
         pass
 
+    @property
+    @abc.abstractmethod
+    def seq(self) -> str:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def pam_seq(self) -> str:
+        pass
+
+    @property
+    @abc.abstractmethod
+    def start(self) -> int:
+        pass
+
     def _get_mutator_method(self, mutator: TargetonMutator):
         return getattr(self, f"get_{mutator.value.replace('-', '_')}_mutations")
 
@@ -99,6 +114,18 @@ class Targeton(AnnotatedSequencePair, BaseTargeton, Generic[VariantT]):
     @property
     def sequence(self) -> str:
         return self.alt_seq
+
+    @property
+    def seq(self) -> str:
+        return self.ref_seq
+
+    @property
+    def pam_seq(self) -> str:
+        return self.alt_seq
+
+    @property
+    def start(self) -> int:
+        return self.pos_range.start
 
     @classmethod
     def build_without_variants(
@@ -160,6 +187,14 @@ class CDSTargeton(CDSAnnotatedSequencePair, BaseTargeton, Generic[VariantT]):
 
     @property
     def sequence(self) -> str:
+        return self.alt_seq
+
+    @property
+    def seq(self) -> str:
+        return self.ref_seq
+
+    @property
+    def pam_seq(self) -> str:
         return self.alt_seq
 
     @property
@@ -371,3 +406,13 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant], PamProtected):
 
     def compute_mutations(self, mutators: FrozenSet[TargetonMutator], aux: AuxiliaryTables) -> Dict[TargetonMutator, MutationCollection]:
         return super().compute_mutations(mutators, aux)
+
+
+@dataclass(frozen=True)
+class CDNATargeton(Targeton[PamVariant]):
+    __slots__ = ['pos_range', 'ref_seq']
+
+
+@dataclass(frozen=True)
+class CDNACDSTargeton(CDSTargeton[PamVariant]):
+    __slots__ = ['pos_range', 'ref_seq', 'cds_prefix', 'cds_suffix']

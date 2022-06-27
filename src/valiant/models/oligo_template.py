@@ -159,7 +159,7 @@ class TargetonOligoSegment(OligoSegment):
 
     @property
     def start(self) -> int:
-        return self.targeton.pos_range.start
+        return self.targeton.start
 
 
 @dataclass(init=False)
