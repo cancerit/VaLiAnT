@@ -25,15 +25,19 @@ from valiant.models.targeton import PamProtCDSTargeton
 from .utils import load_codon_table
 
 
+SGRNA_ID = 'some-id'
 codon_table = load_codon_table()
 
 
 def test_pam_prot_targeton_from_reference_sequence():
     chromosome = 'X'
-    ref_seq = ReferenceSequence('ACGTCA', GenomicRange(chromosome, 500, 505, '+'))
-    pam_variant = PamVariant(GenomicPosition(chromosome, 501), 'C', 'G')
-    pam_seq = PamProtectedReferenceSequence.from_reference_sequence(ref_seq, [pam_variant])
-    PamProtCDSTargeton.from_pam_seq(pam_seq, 'AT', 'C')
+    PamProtCDSTargeton(
+        GenomicRange(chromosome, 500, 505, '+'),
+        'ACGTCA',
+        'AGGTCA',
+        [PamVariant(GenomicPosition(chromosome, 501), 'C', 'G', SGRNA_ID)],
+        'AT',
+        'C')
 
 
 @pytest.mark.parametrize('alt,mut_type', [
@@ -49,8 +53,10 @@ def test_pam_prot_targeton_get_pam_variant_annotations(alt, mut_type):
     # TGG -> W
 
     chromosome = 'X'
-    ref_seq = ReferenceSequence('GCGTGC', GenomicRange(chromosome, 500, 505, '+'))
-    pam_variant = PamVariant(GenomicPosition(chromosome, 501), 'C', alt)
-    pam_seq = PamProtectedReferenceSequence.from_reference_sequence(ref_seq, [pam_variant])
-    targeton = PamProtCDSTargeton.from_pam_seq(pam_seq, 'T', 'CA')
-    assert targeton.get_pam_variant_annotations(codon_table) == [mut_type]
+    PamProtCDSTargeton(
+        GenomicRange(chromosome, 500, 505, '+'),
+        'GCGTGC',
+        f"G{alt}GTGC",
+        [PamVariant(GenomicPosition(chromosome, 501), 'C', alt, SGRNA_ID)],
+        'T',
+        'CA')
