@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+import abc
 from dataclasses import dataclass
 from itertools import groupby
 import logging
@@ -28,38 +29,38 @@ from valiant.models.variant import SubstitutionVariant
 
 
 @dataclass(frozen=True)
-class AnnotatedSequencePair:
-    __slots__ = ['pos_range', 'ref_seq', 'alt_seq', 'variants']
-
+class BaseAnnotatedSequencePair(abc.ABC):
     pos_range: StrandedPositionRange
     ref_seq: str
-    alt_seq: str
-    variants: List[SubstitutionVariant]
-
-    def __post_init__(self) -> None:
-        if len(self.ref_seq) != len(self.alt_seq):
-            raise ValueError("Mismatching paired sequence lengths!")
-
-    def variant_count(self) -> int:
-        return len(self.variants)
 
     @property
-    def variant_positions(self) -> List[GenomicPosition]:
-        return [x.genomic_position for x in self.variants]
+    @abc.abstractmethod
+    def alt_seq(self) -> str:
+        pass
 
     @property
+    @abc.abstractmethod
     def ext_ref_seq(self) -> str:
         return self.ref_seq
 
     @property
+    @abc.abstractmethod
     def ext_alt_seq(self) -> str:
         return self.alt_seq
 
     @property
+    @abc.abstractmethod
+    def variants(self) -> List[SubstitutionVariant]:
+        pass
+
+    @property
     def _ext_offset(self) -> int:
         """Offset converting genomic positions into extended sequence indices"""
-
         return -self.pos_range.start
+
+    @property
+    def variant_positions(self) -> List[GenomicPosition]:
+        return [x.genomic_position for x in self.variants]
 
     def _get_codon_indices(self, positions: List[GenomicPosition]) -> List[int]:
         offset = self._ext_offset
@@ -85,8 +86,66 @@ class AnnotatedSequencePair:
 
 
 @dataclass(frozen=True)
+class ReferenceAnnotatedSequencePair(BaseAnnotatedSequencePair):
+    """Non-mutated sequence"""
+
+    __slots__ = ['pos_range', 'ref_seq']
+
+    @property
+    def alt_seq(self) -> str:
+        return self.ref_seq
+
+    @property
+    def ext_ref_seq(self) -> str:
+        return self.ref_seq
+
+    @property
+    def ext_alt_seq(self) -> str:
+        return self.alt_seq
+
+    @property
+    def variants(self) -> List[SubstitutionVariant]:
+        return []
+
+
+@dataclass(frozen=True)
+class AnnotatedSequencePair(BaseAnnotatedSequencePair):
+    """Potentially mutated sequence (and its reference and variants)"""
+
+    __slots__ = ['pos_range', 'ref_seq', '_alt_seq', '_variants']
+
+    _alt_seq: str
+    _variants: List[SubstitutionVariant]
+
+    def __post_init__(self) -> None:
+        if len(self.ref_seq) != len(self.alt_seq):
+            raise ValueError("Mismatching paired sequence lengths!")
+
+    def variant_count(self) -> int:
+        return len(self.variants)
+
+    @property
+    def variants(self) -> List[SubstitutionVariant]:
+        return self._variants
+
+    @property
+    def alt_seq(self) -> str:
+        return self._alt_seq
+
+    @property
+    def ext_ref_seq(self) -> str:
+        return self.ref_seq
+
+    @property
+    def ext_alt_seq(self) -> str:
+        return self.alt_seq
+
+
+@dataclass(frozen=True)
 class CDSAnnotatedSequencePair(AnnotatedSequencePair):
-    __slots__ = ['pos_range', 'ref_seq', 'alt_seq', 'variants', 'cds_prefix', 'cds_suffix']
+    """Potentially mutated CDS sequence (and its reference and variants)"""
+
+    __slots__ = ['pos_range', 'ref_seq', '_alt_seq', '_variants', 'cds_prefix', 'cds_suffix']
 
     cds_prefix: str
     cds_suffix: str
