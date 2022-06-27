@@ -137,6 +137,7 @@ class AnnotatedSequencePair(BaseAnnotatedSequencePair):
         if len(self.ref_seq) != len(self.alt_seq):
             raise ValueError("Mismatching paired sequence lengths!")
 
+    @property
     def variant_count(self) -> int:
         return len(self.variants)
 
