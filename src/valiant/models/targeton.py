@@ -406,13 +406,3 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant], PamProtected):
 
     def compute_mutations(self, mutators: FrozenSet[TargetonMutator], aux: AuxiliaryTables) -> Dict[TargetonMutator, MutationCollection]:
         return super().compute_mutations(mutators, aux)
-
-
-@dataclass(frozen=True)
-class CDNATargeton(Targeton[PamVariant]):
-    __slots__ = ['pos_range', 'ref_seq']
-
-
-@dataclass(frozen=True)
-class CDNACDSTargeton(CDSTargeton[PamVariant]):
-    __slots__ = ['pos_range', 'ref_seq', 'cds_prefix', 'cds_suffix']
