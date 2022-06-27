@@ -18,12 +18,10 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from itertools import chain
 import logging
 from typing import Dict, Iterable, List, Optional, Set, FrozenSet
 import pandas as pd
 from pyranges import PyRanges
-from pysam import VariantRecord
 from .base import GenomicRange
 from .sequences import ReferenceSequence
 from .variant import BaseVariant, get_variant, SubstitutionVariant
@@ -87,7 +85,9 @@ class PamProtectedReferenceSequence(ReferenceSequence):
 
 @dataclass(frozen=True)
 class PamVariant(SubstitutionVariant):
-    __slots__ = {'genomic_position', 'ref', 'alt'}
+    __slots__ = {'genomic_position', 'ref', 'alt', 'sgrna_id'}
+
+    sgrna_id: str
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -97,15 +97,10 @@ class PamVariant(SubstitutionVariant):
                 "for the purposes of PAM protection!")
 
     @classmethod
-    def from_substitution(cls, var: SubstitutionVariant) -> PamVariant:
-        return PamVariant(var.genomic_position, var.ref, var.alt)
-
-    @classmethod
-    def from_variant_record(cls, r: VariantRecord) -> PamVariant:
-        var: BaseVariant = get_variant(r)
+    def from_substitution(cls, var: SubstitutionVariant, sgrna_id: str) -> PamVariant:
         if not isinstance(var, SubstitutionVariant):
             raise ValueError("PAM protection variants must be substitutions!")
-        return cls.from_substitution(var)
+        return PamVariant(var.genomic_position, var.ref, var.alt, sgrna_id)
 
 
 class PamProtectionVariantRepository:
@@ -124,18 +119,18 @@ class PamProtectionVariantRepository:
         return sum(map(len, self._variants.values()))
 
     def get_sgrna_variants(self, sgrna_id: str) -> FrozenSet[PamVariant]:
-        return frozenset(self._variants[sgrna_id])
+        try:
+            return frozenset(self._variants[sgrna_id])
+
+        except KeyError:
+            raise RuntimeError(f"sgRNA ID '{sgrna_id} not found!'")
 
     def get_sgrna_variants_bulk(self, sgrna_ids: FrozenSet[str]) -> FrozenSet[PamVariant]:
-        try:
-            return frozenset(chain.from_iterable(
-                self.get_sgrna_variants(sgrna_id)
-                for sgrna_id in sgrna_ids
-            ))
-
-        except KeyError as ex:
-            sgrna_id: str = ex.args[0]
-            raise RuntimeError(f"sgRNA ID '{sgrna_id} not found!'")
+        empty: FrozenSet[PamVariant] = frozenset()
+        return empty.union(*[
+            self.get_sgrna_variants(sgrna_id)
+            for sgrna_id in sgrna_ids
+        ])
 
     def load(self, fp: str) -> None:
 
@@ -145,7 +140,7 @@ class PamProtectionVariantRepository:
                 sgrna_id: str = record.info['SGRNA'].strip()
                 if sgrna_id in self._variants:
                     self._variants[sgrna_id].add(
-                        PamVariant.from_variant_record(record))
+                        PamVariant.from_substitution(get_variant(record), sgrna_id))
 
         # Log loaded variant statistics
         logging.debug("Collected %d PAM protection variants." % self.count)

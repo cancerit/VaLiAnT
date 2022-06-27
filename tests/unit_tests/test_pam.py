@@ -33,7 +33,7 @@ def test_compute_pam_protected_sequence(seq, pos, ref, alt, ppseq, valid):
     start = 100
     end = start + len(seq) - 1
 
-    variant = PamVariant(GenomicPosition(chromosome, pos), ref, alt)
+    variant = PamVariant(GenomicPosition(chromosome, pos), ref, alt, 'sgrna-1')
 
     gr = GenomicRange(chromosome, start, end, '+')
     ref_seq = ReferenceSequence(seq, gr)
