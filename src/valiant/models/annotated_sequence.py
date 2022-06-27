@@ -45,12 +45,12 @@ class BaseAnnotatedSequencePair(abc.ABC, Sized):
     @property
     @abc.abstractmethod
     def ext_ref_seq(self) -> str:
-        return self.ref_seq
+        pass
 
     @property
     @abc.abstractmethod
     def ext_alt_seq(self) -> str:
-        return self.alt_seq
+        pass
 
     @property
     @abc.abstractmethod
@@ -160,8 +160,16 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair):
             raise ValueError("Invalid length for in-frame sequence!")
 
     @property
+    def cds_prefix_length(self) -> int:
+        return len(self.cds_prefix)
+
+    @property
+    def cds_suffix_length(self) -> int:
+        return len(self.cds_suffix)
+
+    @property
     def ext_seq_length(self) -> int:
-        return len(self) + len(self.cds_prefix) + len(self.cds_suffix)
+        return len(self) + self.cds_prefix_length + self.cds_suffix_length
 
     @property
     def cds_ref_seq(self) -> str:
