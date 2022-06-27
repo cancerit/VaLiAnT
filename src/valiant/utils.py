@@ -140,3 +140,7 @@ def get_source_type_column(src_type: str, n: int) -> pd.Series:
 
 def repr_enum_list(enums: Iterable[Enum]) -> str:
     return ', '.join(str(e.value) for e in enums)
+
+
+def has_duplicates(items: List[int]) -> bool:
+    return len(set(items)) != len(items)

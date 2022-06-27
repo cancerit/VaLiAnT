@@ -20,18 +20,22 @@ import abc
 from dataclasses import dataclass
 from itertools import groupby
 import logging
-from typing import Dict, List, Tuple
+from typing import List, Sized, Tuple
 
 from valiant.models.base import GenomicPosition, StrandedPositionRange
 from valiant.enums import MutationType
 from valiant.models.codon_table import CodonTable
 from valiant.models.variant import SubstitutionVariant
+from valiant.utils import has_duplicates
 
 
 @dataclass(frozen=True)
-class BaseAnnotatedSequencePair(abc.ABC):
+class BaseAnnotatedSequencePair(abc.ABC, Sized):
     pos_range: StrandedPositionRange
     ref_seq: str
+
+    def __len__(self) -> int:
+        return len(self.ref_seq)
 
     @property
     @abc.abstractmethod
@@ -150,6 +154,15 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair):
     cds_prefix: str
     cds_suffix: str
 
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.ext_seq_length % 3:
+            raise ValueError("Invalid length for in-frame sequence!")
+
+    @property
+    def ext_seq_length(self) -> int:
+        return len(self) + len(self.cds_prefix) + len(self.cds_suffix)
+
     @property
     def cds_ref_seq(self) -> str:
         return f"{self.cds_prefix}{self.ref_seq}{self.cds_suffix}"
@@ -176,7 +189,7 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair):
 
         return self.frame + super()._ext_offset
 
-    def _log_same_codon_variants(self) -> None:
+    def log_same_codon_variants(self) -> None:
         offset = self._ext_offset
 
         def get_variant_codon(variant: SubstitutionVariant) -> int:
@@ -190,17 +203,22 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair):
             for variant in self.variants
         ], key=sort_key), key=sort_key):
             if len(list(variants)) > 1:
-                logging.error("Variants at %s affect the same codon (%d)!" % (
+                logging.warning("Variants at %s affect the same codon (%d)!" % (
                     ', '.join([str(x.genomic_position) for _, x in variants]),
                     codon_index + 1))
 
+    @property
+    def contains_same_codon_variants(self) -> bool:
+        codon_indices = super().get_codon_indices(self.variant_positions)
+        return has_duplicates(codon_indices)
+
     def get_codon_indices(self, positions: List[GenomicPosition], **kwargs) -> List[int]:
-        codon_indices = self._get_codon_indices(positions)
+        codon_indices = super().get_codon_indices(positions)
         no_duplicate_codons = kwargs.get('no_duplicate_codons', False)
 
         # Verify no two variants affect the same codon
-        if no_duplicate_codons and len(set(codon_indices)) != len(codon_indices):
-            self._log_same_codon_variants()
+        if no_duplicate_codons and has_duplicates(codon_indices):
+            self.log_same_codon_variants()
             raise ValueError("Variant affecting the same codon!")
 
         return codon_indices
