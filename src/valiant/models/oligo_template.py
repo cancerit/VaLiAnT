@@ -127,10 +127,6 @@ class RegionOligoRenderer(BaseOligoRenderer):
         self.prefix = prefix
         self.suffix = suffix
 
-    def get_oligo_name(self, mutator: TargetonMutator, start_offset: int, ms: MutatedSequence) -> str:
-        return super()._get_oligo_name(
-            ms.type.value, mutator.value, start_offset + ms.position, ms.ref, ms.new)
-
     def _render_mutated_ref_sequence(self, mseq: str) -> str:
         return f"{self.prefix}{mseq}{self.suffix}"
 
