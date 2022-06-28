@@ -146,7 +146,6 @@ def get_oligo_template(
             get_cds_extension_sequence(exg_gr_pair[0]),
             get_cds_extension_sequence(exg_gr_pair[1]))
 
-    # TODO: check unhandled branch!
     def get_targeton(region_pam_seq: PamProtectedReferenceSequence) -> ITargeton:
         if cds:
             exg_gr_pair: Optional[GenomicRangePair] = cds.get_cds_extensions(
