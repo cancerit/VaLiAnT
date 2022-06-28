@@ -18,9 +18,9 @@
 
 import pytest
 from valiant.enums import MutationType
+from valiant.models.annotated_sequence import CDSAnnotatedSequencePair
 from valiant.models.base import GenomicPosition, GenomicRange
-from valiant.models.pam_protection import PamProtectedReferenceSequence, PamVariant
-from valiant.models.sequences import ReferenceSequence
+from valiant.models.pam_protection import PamVariant
 from valiant.models.targeton import PamProtCDSTargeton
 from .utils import load_codon_table
 
@@ -31,13 +31,13 @@ codon_table = load_codon_table()
 
 def test_pam_prot_targeton_from_reference_sequence():
     chromosome = 'X'
-    PamProtCDSTargeton(
+    PamProtCDSTargeton(CDSAnnotatedSequencePair(
         GenomicRange(chromosome, 500, 505, '+'),
         'ACGTCA',
         'AGGTCA',
         [PamVariant(GenomicPosition(chromosome, 501), 'C', 'G', SGRNA_ID)],
         'AT',
-        'C')
+        'C'))
 
 
 @pytest.mark.parametrize('alt,mut_type', [
@@ -53,10 +53,10 @@ def test_pam_prot_targeton_get_pam_variant_annotations(alt, mut_type):
     # TGG -> W
 
     chromosome = 'X'
-    PamProtCDSTargeton(
+    PamProtCDSTargeton(CDSAnnotatedSequencePair(
         GenomicRange(chromosome, 500, 505, '+'),
         'GCGTGC',
         f"G{alt}GTGC",
         [PamVariant(GenomicPosition(chromosome, 501), 'C', alt, SGRNA_ID)],
         'T',
-        'CA')
+        'CA'))

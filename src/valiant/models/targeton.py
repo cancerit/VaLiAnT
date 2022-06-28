@@ -23,7 +23,7 @@ from typing import Callable, ClassVar, Dict, Generic, List, FrozenSet, Optional
 import numpy as np
 import pandas as pd
 
-from valiant.models.annotated_sequence import AnnotatedSequencePair, BaseAnnotatedSequencePair, CDSAnnotatedSequencePair, VariantT
+from valiant.models.annotated_sequence import AnnotatedSequencePair, AnnotatedSequenceT, CDSAnnotatedSequencePair, VariantT
 from valiant.models.base import StrandedPositionRange
 from valiant.models.pam_protection import PamProtectedReferenceSequence, PamVariant
 from .codon_table import CodonTable, STOP_CODE
@@ -108,8 +108,29 @@ class BaseTargeton(abc.ABC):
 
 
 @dataclass(frozen=True)
-class Targeton(AnnotatedSequencePair, BaseTargeton, Generic[VariantT]):
-    __slots__ = ['pos_range', 'ref_seq', '_alt_seq', '_variants']
+class ITargeton(BaseTargeton, Generic[AnnotatedSequenceT], abc.ABC):
+    annotated_seq: AnnotatedSequenceT
+
+    @property
+    def ref_seq(self) -> str:
+        return self.annotated_seq.ref_seq
+
+    @property
+    def alt_seq(self) -> str:
+        return self.annotated_seq.alt_seq
+
+    @property
+    def pos_range(self) -> StrandedPositionRange:
+        return self.annotated_seq.pos_range
+
+    @property
+    def variant_count(self) -> int:
+        return self.annotated_seq.variant_count
+
+
+@dataclass(frozen=True)
+class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT]):
+    __slots__ = ['annotated_seq']
 
     @property
     def sequence(self) -> str:
@@ -133,26 +154,26 @@ class Targeton(AnnotatedSequencePair, BaseTargeton, Generic[VariantT]):
         pos_range: StrandedPositionRange,
         ref_seq: str
     ) -> Targeton:
-        return cls(pos_range, ref_seq, ref_seq, [])
+        return cls(AnnotatedSequencePair(pos_range, ref_seq, ref_seq, []))
 
     @classmethod
     def from_pam_seq(
         cls,
         pam_seq: PamProtectedReferenceSequence
     ) -> Targeton:
-        return cls(
+        return cls(AnnotatedSequencePair(
             pam_seq.genomic_range,
             pam_seq.sequence,
             pam_seq.pam_protected_sequence,
-            pam_seq.pam_variants)
+            pam_seq.pam_variants))
 
     def compute_mutations(self, mutators: FrozenSet[TargetonMutator]) -> Dict[TargetonMutator, MutationCollection]:
         return super()._compute_mutations(mutators)
 
 
 @dataclass(frozen=True)
-class CDSTargeton(CDSAnnotatedSequencePair, BaseTargeton, Generic[VariantT]):
-    __slots__ = ['pos_range', 'ref_seq', '_alt_seq', '_variants', 'cds_prefix', 'cds_suffix']
+class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT]):
+    __slots__ = ['annotated_seq']
 
     MUTATORS: ClassVar[FrozenSet[TargetonMutator]] = GENERIC_MUTATORS | CDS_ONLY_MUTATORS
 
@@ -168,7 +189,8 @@ class CDSTargeton(CDSAnnotatedSequencePair, BaseTargeton, Generic[VariantT]):
         cds_prefix: str,
         cds_suffix: str
     ) -> CDSTargeton:
-        return cls(pos_range, ref_seq, ref_seq, [], cds_prefix, cds_suffix)
+        return cls(CDSAnnotatedSequencePair(
+            pos_range, ref_seq, ref_seq, [], cds_prefix, cds_suffix))
 
     @classmethod
     def from_pam_seq(
@@ -177,13 +199,13 @@ class CDSTargeton(CDSAnnotatedSequencePair, BaseTargeton, Generic[VariantT]):
         cds_prefix: str,
         cds_suffix: str
     ) -> CDSTargeton:
-        return cls(
+        return cls(CDSAnnotatedSequencePair(
             pam_seq.genomic_range,
             pam_seq.sequence,
             pam_seq.pam_protected_sequence,
             pam_seq.pam_variants,
             cds_prefix,
-            cds_suffix)
+            cds_suffix))
 
     @property
     def sequence(self) -> str:
@@ -203,11 +225,23 @@ class CDSTargeton(CDSAnnotatedSequencePair, BaseTargeton, Generic[VariantT]):
 
     @property
     def cds_sequence(self) -> str:
-        return self.ext_alt_seq
+        return self.annotated_seq.ext_alt_seq
+
+    @property
+    def cds_prefix_length(self) -> int:
+        return self.annotated_seq.cds_prefix_length
+
+    @property
+    def cds_suffix_length(self) -> int:
+        return self.annotated_seq.cds_suffix_length
 
     @property
     def start(self) -> int:
         return self.pos_range.start
+
+    @property
+    def frame(self) -> int:
+        return self.annotated_seq.frame
 
     @property
     def cds_sequence_start(self) -> int:
@@ -382,27 +416,23 @@ class PamProtected(abc.ABC):
 
 @dataclass(frozen=True)
 class PamProtTargeton(Targeton[PamVariant], PamProtected):
-    __slots__ = ['pos_range', 'ref_seq', '_alt_seq', '_variants']
+    __slots__ = ['annotated_seq']
 
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
         return [None] * self.variant_count
 
-    def compute_mutations(self, mutators: FrozenSet[TargetonMutator]) -> Dict[TargetonMutator, MutationCollection]:
-        return super().compute_mutations(mutators)
 
 
 @dataclass(frozen=True)
 class PamProtCDSTargeton(CDSTargeton[PamVariant], PamProtected):
-    __slots__ = ['pos_range', 'ref_seq', 'cds_prefix', 'cds_suffix', '_alt_seq', '_variants']
+    __slots__ = ['annotated_seq']
 
     def __post_init__(self) -> None:
-        if self.contains_same_codon_variants:
-            self.log_same_codon_variants()
+        if self.annotated_seq.contains_same_codon_variants:
+            self.annotated_seq.log_same_codon_variants()
             raise ValueError("Multiple PAM protection variants in a single codon!")
 
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
-        return self.get_variant_mutation_types(
+        return self.annotated_seq.get_variant_mutation_types(
             codon_table, no_duplicate_codons=True)
 
-    def compute_mutations(self, mutators: FrozenSet[TargetonMutator], aux: AuxiliaryTables) -> Dict[TargetonMutator, MutationCollection]:
-        return super().compute_mutations(mutators, aux)

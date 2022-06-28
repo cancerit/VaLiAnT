@@ -30,6 +30,7 @@ from valiant.utils import has_duplicates
 
 
 VariantT = TypeVar('VariantT', bound='SubstitutionVariant')
+AnnotatedSequenceT = TypeVar('AnnotatedSequenceT', bound='BaseAnnotatedSequencePair')
 
 
 @dataclass(frozen=True)
