@@ -159,7 +159,7 @@ class AnnotatedSequencePair(BaseAnnotatedSequencePair, Generic[VariantT]):
 
 
 @dataclass(frozen=True)
-class CDSAnnotatedSequencePair(AnnotatedSequencePair):
+class CDSAnnotatedSequencePair(AnnotatedSequencePair, Generic[VariantT]):
     """Potentially mutated CDS sequence (and its reference and variants)"""
 
     __slots__ = ['pos_range', 'ref_seq', '_alt_seq', '_variants', 'cds_prefix', 'cds_suffix']
