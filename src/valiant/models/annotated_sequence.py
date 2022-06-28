@@ -29,13 +29,14 @@ from valiant.models.variant import SubstitutionVariant
 from valiant.utils import has_duplicates
 
 
+RangeT = TypeVar('RangeT', bound='StrandedPositionRange')
 VariantT = TypeVar('VariantT', bound='SubstitutionVariant')
 AnnotatedSequenceT = TypeVar('AnnotatedSequenceT', bound='BaseAnnotatedSequencePair')
 
 
 @dataclass(frozen=True)
-class BaseAnnotatedSequencePair(abc.ABC, Sized, Generic[VariantT]):
-    pos_range: StrandedPositionRange
+class BaseAnnotatedSequencePair(abc.ABC, Sized, Generic[RangeT, VariantT]):
+    pos_range: RangeT
     ref_seq: str
 
     def __len__(self) -> int:

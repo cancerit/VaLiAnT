@@ -23,8 +23,8 @@ from typing import Callable, ClassVar, Dict, Generic, List, FrozenSet, Optional
 import numpy as np
 import pandas as pd
 
-from valiant.models.annotated_sequence import AnnotatedSequencePair, AnnotatedSequenceT, CDSAnnotatedSequencePair, VariantT
-from valiant.models.base import StrandedPositionRange
+from valiant.models.annotated_sequence import AnnotatedSequencePair, AnnotatedSequenceT, CDSAnnotatedSequencePair, RangeT, VariantT
+from valiant.models.base import GenomicRange, StrandedPositionRange
 from valiant.models.pam_protection import PamProtectedReferenceSequence, PamVariant
 from .codon_table import CodonTable, STOP_CODE
 from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS
@@ -129,7 +129,7 @@ class ITargeton(BaseTargeton, Generic[AnnotatedSequenceT], abc.ABC):
 
 
 @dataclass(frozen=True)
-class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT]):
+class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT, RangeT]):
     __slots__ = ['annotated_seq']
 
     @property
@@ -151,7 +151,7 @@ class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT]):
     @classmethod
     def build_without_variants(
         cls,
-        pos_range: StrandedPositionRange,
+        pos_range: RangeT,
         ref_seq: str
     ) -> Targeton:
         return cls(AnnotatedSequencePair(pos_range, ref_seq, ref_seq, []))
@@ -172,7 +172,7 @@ class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT]):
 
 
 @dataclass(frozen=True)
-class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT]):
+class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]):
     __slots__ = ['annotated_seq']
 
     MUTATORS: ClassVar[FrozenSet[TargetonMutator]] = GENERIC_MUTATORS | CDS_ONLY_MUTATORS
@@ -184,7 +184,7 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT]):
     @classmethod
     def build_without_variants(
         cls,
-        pos_range: StrandedPositionRange,
+        pos_range: RangeT,
         ref_seq: str,
         cds_prefix: str,
         cds_suffix: str
@@ -415,7 +415,7 @@ class PamProtected(abc.ABC):
 
 
 @dataclass(frozen=True)
-class PamProtTargeton(Targeton[PamVariant], PamProtected):
+class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
     __slots__ = ['annotated_seq']
 
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
@@ -424,7 +424,7 @@ class PamProtTargeton(Targeton[PamVariant], PamProtected):
 
 
 @dataclass(frozen=True)
-class PamProtCDSTargeton(CDSTargeton[PamVariant], PamProtected):
+class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     __slots__ = ['annotated_seq']
 
     def __post_init__(self) -> None:
