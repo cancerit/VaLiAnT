@@ -179,7 +179,7 @@ class MutationCollection(BaseMutationCollection):
     ])
 
     def __post_init__(self) -> None:
-        if self.df is not None and frozenset(self.df.columns) != self.REQUIRED_FIELDS:
+        if self.df is not None and not frozenset(self.df.columns) >= self.REQUIRED_FIELDS:
             raise ValueError("Invalid mutation collection fields!")
 
     @classmethod
