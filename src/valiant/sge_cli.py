@@ -23,20 +23,22 @@ import sys
 from typing import Dict, Iterable, List, Optional, FrozenSet, Set, Tuple
 import click
 from pyranges import PyRanges
+
 from .enums import TargetonMutator
 from .models.base import GenomicRange
 from .models.codon_table import CodonTable
 from .models.exon import AnnotationRepository, CDSContextRepository, GenomicRangePair, TranscriptInfo
 from .models.metadata_table import MetadataTable
 from .models.oligo_generation_info import OligoGenerationInfo
-from .models.oligo_template import InvariantOligoSegment, OligoSegment, OligoTemplate, TargetonOligoSegment
+from .models.oligo_segment import InvariantOligoSegment, OligoSegment, TargetonOligoSegment
+from .models.oligo_template import OligoTemplate
 from .models.options import Options
 from .models.pam_protection import compute_pam_protected_sequence, PamProtectedReferenceSequence, PamProtectionVariantRepository, PamVariant
 from .models.refseq_ranges import genomic_ranges_to_pyranges, ReferenceSequenceRangeCollection, ReferenceSequenceRanges, TargetReferenceRegion
 from .models.refseq_repository import fetch_reference_sequences, ReferenceSequenceRepository
 from .models.sequences import ReferenceSequence
 from .models.snv_table import AuxiliaryTables
-from .models.targeton import BaseTargeton, CDSTargeton, PamProtCDSTargeton, Targeton
+from .models.targeton import ITargeton, PamProtCDSTargeton, PamProtTargeton
 from .models.variant import CustomVariant, VariantRepository
 from .common_cli import common_params, existing_file
 from .cli_utils import load_codon_table, validate_adaptor, set_logger
@@ -110,11 +112,18 @@ def get_oligo_template(
 
     # 2. Get constant regions
 
-    def get_constant_segment(gr: Optional[GenomicRange]) -> Optional[InvariantOligoSegment]:
-        return InvariantOligoSegment(pam_ref_seq.get_subsequence(gr)) if gr else None
+    def get_constant_targeton(gr: GenomicRange) -> PamProtTargeton:
+        return PamProtTargeton.from_pam_seq(
+            pam_ref_seq.get_subsequence(gr))
 
-    const_region_1: Optional[InvariantOligoSegment] = get_constant_segment(rsr.const_region_1)
-    const_region_2: Optional[InvariantOligoSegment] = get_constant_segment(rsr.const_region_2)
+    def get_constant_segment(gr: GenomicRange) -> InvariantOligoSegment:
+        return InvariantOligoSegment(get_constant_targeton(gr))
+
+    def get_constant_region_segment(gr: Optional[GenomicRange]) -> Optional[InvariantOligoSegment]:
+        return InvariantOligoSegment(get_constant_targeton(gr)) if gr else None
+
+    const_region_1: Optional[InvariantOligoSegment] = get_constant_region_segment(rsr.const_region_1)
+    const_region_2: Optional[InvariantOligoSegment] = get_constant_region_segment(rsr.const_region_2)
 
     # 3. Get potential target regions
 
@@ -137,13 +146,14 @@ def get_oligo_template(
             get_cds_extension_sequence(exg_gr_pair[0]),
             get_cds_extension_sequence(exg_gr_pair[1]))
 
-    def get_targeton(region_pam_seq: PamProtectedReferenceSequence) -> BaseTargeton:
+    # TODO: check unhandled branch!
+    def get_targeton(region_pam_seq: PamProtectedReferenceSequence) -> ITargeton:
         if cds:
             exg_gr_pair: Optional[GenomicRangePair] = cds.get_cds_extensions(
                 region_pam_seq.genomic_range)
             if exg_gr_pair is not None:
                 return get_cds_targeton(region_pam_seq, exg_gr_pair)
-        return Targeton.from_pam_seq(region_pam_seq)
+        return PamProtTargeton.from_pam_seq(region_pam_seq)
 
     def get_oligo_segment(trr: TargetReferenceRegion) -> OligoSegment:
         region_pam_seq = pam_ref_seq.get_subsequence(trr.genomic_range)

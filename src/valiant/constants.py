@@ -26,6 +26,8 @@ DEFAULT_CODON_TABLE_FILE_NAME = 'default_codon_table.csv'
 REVCOMP_OLIGO_NAME_SUFFIX = '_rc'
 CUSTOM_MUTATOR = 'custom'
 
+MUTATION_TYPE_NON_CDS = 'ncd'
+
 DEFAULT_OLIGO_MAX_LENGTH = 300
 
 # Valid metadata table field names
@@ -53,6 +55,7 @@ META_MUT_TYPE = 'mut_type'
 META_MUTATOR = 'mutator'
 META_OLIGO_LENGTH = 'oligo_length'
 META_MSEQ = 'mseq'
+META_PAM_MUT_ANNOT = 'meta_pam_mut_annot'
 
 # Temporary field names (not included in the final table)
 META_VAR_TYPE = 'var_type'
@@ -81,7 +84,8 @@ METADATA_FIELDS = [
     META_MUT_TYPE,
     META_MUTATOR,
     META_OLIGO_LENGTH,
-    META_MSEQ
+    META_MSEQ,
+    META_PAM_MUT_ANNOT
 ]
 
 METADATA_FIELDS_SET = set(METADATA_FIELDS)

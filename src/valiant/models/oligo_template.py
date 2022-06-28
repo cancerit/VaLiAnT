@@ -20,9 +20,13 @@ from __future__ import annotations
 import abc
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, Dict, List, Optional, Set, FrozenSet, Tuple
+from itertools import chain
+from typing import Callable, Dict, Iterable, List, Optional, Set, FrozenSet, Tuple
 import numpy as np
 import pandas as pd
+from valiant.models.codon_table import CodonTable
+
+from valiant.models.oligo_segment import OligoSegment, TargetonOligoSegment
 from .base import GenomicRange, TranscriptInfo
 from .custom_variants import CustomVariantMutation, CustomVariantMutationCollection, CustomVariantOligoRenderer
 from .mutated_sequences import MutatedSequence, MutationCollection
@@ -30,18 +34,19 @@ from .oligo_renderer import BaseOligoRenderer
 from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
 from .snv_table import AuxiliaryTables
-from .targeton import BaseTargeton, CDSTargeton, Targeton
 from .variant import CustomVariant
 from ..constants import (
     CUSTOM_MUTATOR,
     META_OLIGO_NAME,
+    META_PAM_MUT_ANNOT,
     META_VAR_TYPE,
     META_MUT_POSITION,
     META_REF,
     META_NEW,
     META_MUTATOR,
     META_MSEQ,
-    META_OLIGO_LENGTH
+    META_OLIGO_LENGTH,
+    MUTATION_TYPE_NON_CDS
 )
 from ..enums import MutationType, TargetonMutator
 from ..utils import get_constant_category
@@ -85,81 +90,11 @@ def get_empty_mutation_table() -> pd.DataFrame:
     return pd.DataFrame(columns=EMPTY_MUTATION_TABLE_FIELDS)
 
 
-class OligoSegment(abc.ABC):
-
-    @property
-    @abc.abstractmethod
-    def sequence(self) -> str:
-        pass
-
-    @property
-    @abc.abstractmethod
-    def genomic_range(self) -> GenomicRange:
-        pass
-
-    @property
-    @abc.abstractmethod
-    def pam_protected_sequence(self) -> str:
-        pass
-
-    @property
-    def start(self) -> int:
-        return self.genomic_range.start
-
-
-@dataclass
-class InvariantOligoSegment(OligoSegment):
-    __slots__ = {'ref_sequence'}
-
-    ref_sequence: PamProtectedReferenceSequence
-
-    @property
-    def sequence(self) -> str:
-        return self.ref_sequence.sequence
-
-    @property
-    def genomic_range(self) -> GenomicRange:
-        return self.ref_sequence.genomic_range
-
-    @property
-    def pam_protected_sequence(self) -> str:
-        return self.ref_sequence.pam_protected_sequence
-
-    @property
-    def ref_seq(self) -> PamProtectedReferenceSequence:
-        return self.ref_sequence
-
-
-@dataclass
-class TargetonOligoSegment(OligoSegment):
-    __slots__ = {'targeton', 'mutator'}
-
-    targeton: BaseTargeton
-    mutators: FrozenSet[TargetonMutator]
-
-    @property
-    def sequence(self) -> str:
-        return self.targeton.seq
-
-    @property
-    def pam_protected_sequence(self) -> str:
-        return self.targeton.pam_seq
-
-    @property
-    def genomic_range(self) -> GenomicRange:
-        # This property can only be used for SGE libraries
-        return self.targeton.pos_range  # type: ignore
-
-    def compute_mutations(self, aux: AuxiliaryTables) -> Dict[TargetonMutator, MutationCollection]:
-        if isinstance(self.targeton, CDSTargeton):
-            return self.targeton.compute_mutations(self.mutators, aux)
-        if isinstance(self.targeton, Targeton):
-            return self.targeton.compute_mutations(self.mutators)
-        raise TypeError("Invalid targeton type!")
-
-    @property
-    def start(self) -> int:
-        return self.targeton.start
+def encode_pam_mutation_types(mutation_types: Iterable[Optional[MutationType]]) -> str:
+    return ';'.join([
+        MUTATION_TYPE_LABELS[x.value] if x is not None else MUTATION_TYPE_NON_CDS
+        for x in mutation_types
+    ])
 
 
 @dataclass(init=False)
@@ -363,6 +298,13 @@ class OligoTemplate:
         df['mutator'] = get_constant_category(CUSTOM_MUTATOR, df.shape[0])
         return renderer.get_metadata_table(df, options)
 
+    def _get_pam_variant_annotations(self, codon_table: CodonTable, n: int) -> pd.Categorical:
+        s: str = encode_pam_mutation_types(chain.from_iterable([
+            segment.get_pam_annotations(codon_table)
+            for segment in self.segments
+        ]))
+        return get_constant_category(s, n, categories=[s])
+
     def get_mutation_table(self, aux: AuxiliaryTables, options: Options) -> pd.DataFrame:
         if not self.target_segments:
             return get_empty_mutation_table()
@@ -393,5 +335,10 @@ class OligoTemplate:
 
         # Compute oligonucleotide lengths
         all_mutations['oligo_length'] = all_mutations.mseq.str.len().astype(np.int32)
+
+        # Add PAM variant annotations
+        rown: int = all_mutations.shape[0]
+        all_mutations[META_PAM_MUT_ANNOT] = self._get_pam_variant_annotations(
+            aux.codon_table, rown)
 
         return all_mutations

@@ -19,7 +19,7 @@
 from __future__ import annotations
 import abc
 from dataclasses import dataclass
-from typing import Callable, ClassVar, Dict, Generic, List, FrozenSet, Optional
+from typing import Callable, ClassVar, Dict, Generic, List, FrozenSet, Optional, Type, TypeVar
 import numpy as np
 import pandas as pd
 
@@ -41,6 +41,11 @@ from .snv_table import AuxiliaryTables
 from ..enums import MutationType, TargetonMutator, VariantType
 from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
 from ..utils import get_constant_category, get_out_of_frame_offset
+
+
+TargetonT = TypeVar('TargetonT', bound='ITargeton')
+NonCDSTargetonT = TypeVar('NonCDSTargetonT', bound='Targeton')
+CDSTargetonT = TypeVar('CDSTargetonT', bound='CDSTargeton')
 
 
 def get_snv_mutations(sequence: str) -> MutationCollection:
@@ -150,17 +155,17 @@ class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT, RangeT]):
 
     @classmethod
     def build_without_variants(
-        cls,
+        cls: Type[NonCDSTargetonT],
         pos_range: RangeT,
         ref_seq: str
-    ) -> Targeton:
+    ) -> NonCDSTargetonT:
         return cls(AnnotatedSequencePair(pos_range, ref_seq, ref_seq, []))
 
     @classmethod
     def from_pam_seq(
-        cls,
+        cls: Type[NonCDSTargetonT],
         pam_seq: PamProtectedReferenceSequence
-    ) -> Targeton:
+    ) -> NonCDSTargetonT:
         return cls(AnnotatedSequencePair(
             pam_seq.genomic_range,
             pam_seq.sequence,
@@ -183,22 +188,22 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
 
     @classmethod
     def build_without_variants(
-        cls,
+        cls: Type[CDSTargetonT],
         pos_range: RangeT,
         ref_seq: str,
         cds_prefix: str,
         cds_suffix: str
-    ) -> CDSTargeton:
+    ) -> CDSTargetonT:
         return cls(CDSAnnotatedSequencePair(
             pos_range, ref_seq, ref_seq, [], cds_prefix, cds_suffix))
 
     @classmethod
     def from_pam_seq(
-        cls,
+        cls: Type[CDSTargetonT],
         pam_seq: PamProtectedReferenceSequence,
         cds_prefix: str,
         cds_suffix: str
-    ) -> CDSTargeton:
+    ) -> CDSTargetonT:
         return cls(CDSAnnotatedSequencePair(
             pam_seq.genomic_range,
             pam_seq.sequence,
