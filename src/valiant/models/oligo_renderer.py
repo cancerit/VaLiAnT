@@ -17,6 +17,7 @@
 #############################
 
 from dataclasses import dataclass
+from functools import partial
 from typing import Callable, List, Optional, Tuple, Any
 import numpy as np
 import pandas as pd
@@ -76,6 +77,21 @@ def get_oligo_name(
             )
 
         raise ValueError("Invalid variant type!")
+
+
+def get_oligo_name_from_row(oligo_name_prefix: str, r) -> str:
+    return get_oligo_name(
+        oligo_name_prefix,
+        r.var_type,
+        r.mutator,
+        r.mut_position,
+        r.ref if not pd.isnull(r.ref) else None,
+        r.new if not pd.isnull(r.new) else None)
+
+
+def get_oligo_names_from_dataframe(oligo_name_prefix: str, df: pd.DataFrame) -> pd.Series:
+    f = partial(get_oligo_name_from_row, oligo_name_prefix)
+    return pd.Series(df.apply(f, axis=1), dtype='string')
 
 
 @dataclass(init=False)
@@ -154,6 +170,9 @@ class BaseOligoRenderer:
 
     def _get_oligo_name(self, var_type: int, source: str, start: int, ref: Optional[str], alt: Optional[str]) -> str:
         return get_oligo_name(self._oligo_name_prefix, var_type, source, start, ref, alt)
+
+    def get_oligo_names_from_dataframe(self, df: pd.DataFrame) -> pd.Series:
+        return get_oligo_names_from_dataframe(self._oligo_name_prefix, df)
 
     def get_metadata_table(self, df: pd.DataFrame, options: Options) -> pd.DataFrame:
         if set(df.columns.array) < {'oligo_name', 'mut_position', 'ref', 'new', 'mutator', 'mseq'}:
