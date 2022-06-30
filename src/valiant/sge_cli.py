@@ -405,6 +405,7 @@ def sge(
     sequences_only: bool,
     revcomp_minus_strand: bool,
     max_length: int,
+    min_length: int,
 
     # Extra
     log: str
@@ -421,7 +422,10 @@ def sge(
     ASSEMBLY will be included in the metadata
     """
 
-    options: Options = Options(revcomp_minus_strand, max_length)
+    options = Options(
+        oligo_max_length=max_length,
+        oligo_min_length=min_length,
+        revcomp_minus_strand=revcomp_minus_strand)
 
     # Set logging up
     set_logger(log)

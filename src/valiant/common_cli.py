@@ -18,7 +18,7 @@
 
 from functools import wraps
 import click
-from .constants import DEFAULT_OLIGO_MAX_LENGTH
+from .constants import DEFAULT_OLIGO_MAX_LENGTH, DEFAULT_OLIGO_MIN_LENGTH
 
 
 existing_file = click.Path(exists=True, file_okay=True, dir_okay=False)
@@ -41,6 +41,11 @@ def common_params(f):
         type=int,
         default=DEFAULT_OLIGO_MAX_LENGTH,
         help="Maximum oligonucleotide length")
+    @click.option(
+        '--min-length',
+        type=int,
+        default=DEFAULT_OLIGO_MIN_LENGTH,
+        help="Minimum oligonucleotide length")
     @wraps(f)
     def wrapper(*args, **kwargs):
         return f(*args, **kwargs)

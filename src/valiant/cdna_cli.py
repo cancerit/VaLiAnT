@@ -23,6 +23,8 @@ from typing import Callable, Dict, Optional, NoReturn
 import click
 import numpy as np
 import pandas as pd
+
+from valiant.models.options import Options
 from .constants import CDS_ONLY_MUTATORS, META_OLIGO_NAME, MUTATOR_CATEGORIES
 from .cli_utils import load_codon_table, validate_adaptor, set_logger
 from .common_cli import common_params, existing_file
@@ -238,7 +240,7 @@ def process_targeton(
     adaptor_5: Optional[str],
     adaptor_3: Optional[str],
     get_cdna_f: Callable,
-    max_length: int,
+    options: Options,
     output: str,
     targeton_cfg: CDNATargetonConfig
 ) -> OligoGenerationInfo:
@@ -249,7 +251,7 @@ def process_targeton(
         assembly,
         get_targeton_metadata_table(
             get_cdna_f, aux, adaptor_5, adaptor_3, targeton_cfg),
-        max_length)
+        options.oligo_max_length)
 
     base_fn = f"{targeton_cfg.seq_id}_{targeton_cfg.get_hash()}"
     metadata.write_common_files(output, base_fn)
@@ -296,6 +298,7 @@ def cdna(
 
     # Actions
     max_length: int,
+    min_length: int,
 
     # Extra
     log: str
@@ -311,6 +314,11 @@ def cdna(
     SPECIES will be included in the metadata
     ASSEMBLY will be included in the metadata
     """
+
+    options = Options(
+        oligo_max_length=max_length,
+        oligo_min_length=min_length,
+        revcomp_minus_strand=False)
 
     # Set logging up
     set_logger(log)
@@ -350,7 +358,7 @@ def cdna(
         adaptor_5,
         adaptor_3,
         get_cdna_f,
-        max_length,
+        options,
         output)
 
     for targeton_cfg in targetons.cts:

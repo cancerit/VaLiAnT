@@ -29,6 +29,7 @@ CUSTOM_MUTATOR = 'custom'
 MUTATION_TYPE_NON_CDS = 'ncd'
 
 DEFAULT_OLIGO_MAX_LENGTH = 300
+DEFAULT_OLIGO_MIN_LENGTH = 1
 
 # Valid metadata table field names
 META_OLIGO_NAME = 'oligo_name'

@@ -23,3 +23,4 @@ from dataclasses import dataclass
 class Options:
     revcomp_minus_strand: bool
     oligo_max_length: int
+    oligo_min_length: int
