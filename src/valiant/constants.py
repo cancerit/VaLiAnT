@@ -55,8 +55,8 @@ META_MUT_TYPE = 'mut_type'
 META_MUTATOR = 'mutator'
 META_OLIGO_LENGTH = 'oligo_length'
 META_MSEQ = 'mseq'
-META_PAM_MUT_ANNOT = 'meta_pam_mut_annot'
-META_PAM_MUT_SGRNA_ID = 'meta_pam_mut_sgrna_id'
+META_PAM_MUT_ANNOT = 'pam_mut_annot'
+META_PAM_MUT_SGRNA_ID = 'pam_mut_sgrna_id'
 
 # Temporary field names (not included in the final table)
 META_VAR_TYPE = 'var_type'
