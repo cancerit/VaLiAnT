@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from dataclasses import dataclass
 import pytest
 from valiant.enums import TargetonMutator
 from valiant.models.base import GenomicRange, TranscriptInfo
@@ -55,15 +54,15 @@ def test_oligo_compute_mutations(targetons, mutator, pam_protection):
     ot = OligoTemplate(TRANSCRIPT_INFO, pam_ref_seq, set(), set(), adaptor_5, adaptor_3, segments)
     for _, target_segment in ot.target_segments:
         mutation_collections = target_segment.compute_mutations(ct)
-        mutation_collection = mutation_collections[mutator]
+        df = mutation_collections[mutator].df
         if pam_protection:
             if mutator == TargetonMutator.DEL1:
                 assert all(
-                    set(m.sequence) == {DUMMY_PAM_PROTECTION_NT}
-                    for m in mutation_collection.mutations
+                    set(m.mseq) == {DUMMY_PAM_PROTECTION_NT}
+                    for m in df.itertuples()
                 )
             elif mutator == TargetonMutator.SNV:
                 assert all(
-                    set(m.sequence) - {m.new} == {DUMMY_PAM_PROTECTION_NT}
-                    for m in mutation_collection.mutations
+                    set(m.mseq) - {m.new} == {DUMMY_PAM_PROTECTION_NT}
+                    for m in df.itertuples()
                 )

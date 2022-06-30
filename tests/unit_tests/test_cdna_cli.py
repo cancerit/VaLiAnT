@@ -150,7 +150,7 @@ def test_mut_coll_to_df():
         get_empty_aa_column,
         start_pos,
         TargetonMutator.SNV,
-        MutationCollection(df=raw_df.copy(deep=True)))
+        MutationCollection(raw_df.copy(deep=True)))
 
     # Check mutation position field
     assert df.mut_position.min() == raw_df.mut_position.min() + start_pos

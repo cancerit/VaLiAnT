@@ -127,10 +127,6 @@ class RegionOligoRenderer(BaseOligoRenderer):
         self.prefix = prefix
         self.suffix = suffix
 
-    def get_oligo_name(self, mutator: TargetonMutator, start_offset: int, ms: MutatedSequence) -> str:
-        return super()._get_oligo_name(
-            ms.type.value, mutator.value, start_offset + ms.position, ms.ref, ms.new)
-
     def _render_mutated_ref_sequence(self, mseq: str) -> str:
         return f"{self.prefix}{mseq}{self.suffix}"
 
@@ -162,17 +158,10 @@ class OligoMutationCollection:
             raise RuntimeError(
                 f"Empty mutation collection for mutator '{self.mutator}'!")
 
-        get_oligo_name: Callable[[MutatedSequence], str] = partial(
-            self.renderer.get_oligo_name,
-            self.mutator,
-            self.target_region_start)
-
         df: pd.DataFrame = self.mutation_collection.df
-        df['oligo_name'] = pd.Series(
-            map(get_oligo_name, self.mutation_collection.mutations),
-            dtype='string')
-        df['mutator'] = get_constant_category(self.mutator.value, df.shape[0])
-        df.mut_position += self.target_region_start
+        df[META_MUTATOR] = get_constant_category(self.mutator.value, df.shape[0])
+        df[META_MUT_POSITION] += self.target_region_start
+        df[META_OLIGO_NAME] = self.renderer.get_oligo_names_from_dataframe(df)
 
         return self.renderer.get_metadata_table(df, options)
 

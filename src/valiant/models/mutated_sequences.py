@@ -154,25 +154,21 @@ class SingleCodonMutatedSequence(MutatedSequence):
 
 @dataclass
 class BaseMutationCollection(abc.ABC):
-    __slots__ = {'df'}
-
     df: Optional[pd.DataFrame]
-
-    def __init__(self, df: pd.DataFrame = None) -> None:
-        self.df = df
 
     @property
     def is_empty(self) -> bool:
         return self.df is None or self.df.shape[0] == 0
 
     @classmethod
-    def from_variants(cls, mutations):
+    @abc.abstractmethod
+    def from_variants(cls, mutations: List):
         pass
 
 
 @dataclass
 class MutationCollection(BaseMutationCollection):
-    __slots__ = {'df', 'mutations'}
+    __slots__ = ['df']
 
     REQUIRED_FIELDS: ClassVar[FrozenSet[str]] = frozenset([
         'var_type',
@@ -182,15 +178,8 @@ class MutationCollection(BaseMutationCollection):
         'mseq'
     ])
 
-    # TODO: to remove when oligonucleotide names will be computed from the metadata table
-    mutations: List[MutatedSequence]
-
-    def __init__(self, df: pd.DataFrame = None, mutations: List[MutatedSequence] = None) -> None:
-        super().__init__(df)
-        self.mutations = mutations or []
-
     def __post_init__(self) -> None:
-        if self.df is not None and frozenset(self.df.columns) != self.REQUIRED_FIELDS:
+        if self.df is not None and not frozenset(self.df.columns) >= self.REQUIRED_FIELDS:
             raise ValueError("Invalid mutation collection fields!")
 
     @classmethod
@@ -213,4 +202,4 @@ class MutationCollection(BaseMutationCollection):
         df.new = df.new.astype('category')
         df.mseq = df.mseq.astype('string')
 
-        return cls(df=df, mutations=mutations)
+        return cls(df)

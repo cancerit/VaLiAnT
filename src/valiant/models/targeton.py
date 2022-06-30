@@ -286,8 +286,7 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
         snv_joint.mut_position -= self.start
 
         # Wrap complete SNV metadata in a collection
-        return MutationCollection(
-            df=snv_joint, mutations=snvs.mutations)
+        return MutationCollection(snv_joint)
 
     def _get_snvres(self, aux: AuxiliaryTables, snvs: pd.DataFrame) -> MutationCollection:
         df: pd.DataFrame = aux.snvre_table.get_snvres(
@@ -300,11 +299,7 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
                     'mut_type': 'mut_type'
                 })
 
-        # TODO: avoid generating mutation list when possible
-        return MutationCollection(df=df, mutations=[
-            SingleCodonMutatedSequence(r.mut_position, r.mseq, r.ref, r.new)
-            for r in df.itertuples()
-        ])
+        return MutationCollection(df)
 
     def _get_codon_mutations(self, codon_table: CodonTable, aa: str) -> MutationCollection:
 
@@ -357,10 +352,7 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
             raise RuntimeError("Auxiliary tables not provided!")
         df: pd.DataFrame = aux_tables.all_aa_table.get_subs(
             self.pos_range, self.frame, self.sequence)
-        return MutationCollection(df=df, mutations=[
-            SingleCodonMutatedSequence(r.mut_position, r.mseq, r.ref, r.new)
-            for r in df.itertuples()
-        ])
+        return MutationCollection(df)
 
     def compute_mutations(self, mutators: FrozenSet[TargetonMutator], aux: AuxiliaryTables) -> Dict[TargetonMutator, MutationCollection]:
 

@@ -23,7 +23,7 @@ from typing import Callable, Dict, Optional, NoReturn
 import click
 import numpy as np
 import pandas as pd
-from .constants import CDS_ONLY_MUTATORS, MUTATOR_CATEGORIES
+from .constants import CDS_ONLY_MUTATORS, META_OLIGO_NAME, MUTATOR_CATEGORIES
 from .cli_utils import load_codon_table, validate_adaptor, set_logger
 from .common_cli import common_params, existing_file
 from .enums import TargetonMutator
@@ -36,7 +36,7 @@ from .models.codon_table import CodonTable
 from .models.metadata_table import MetadataTable
 from .models.mutated_sequences import MutationCollection
 from .models.oligo_generation_info import OligoGenerationInfo
-from .models.oligo_renderer import get_oligo_name
+from .models.oligo_renderer import get_oligo_name, get_oligo_names_from_dataframe
 from .models.oligo_template import MUTATION_TYPE_CATEGORIES_T, decode_mut_types_cat
 from .models.snv_table import AuxiliaryTables
 from .models.targeton import Targeton, CDSTargeton
@@ -220,15 +220,7 @@ def get_targeton_metadata_table(
     oligo_name_prefix = f"{targeton_cfg.seq_id}_{transcript_label}.{gene_label}_"
 
     # Generate oligonucleotide names
-    df['oligo_name'] = pd.Series(
-        df.apply(lambda r: get_oligo_name(
-            oligo_name_prefix,
-            r.var_type,
-            r.mutator,
-            r.mut_position,
-            r.ref if not pd.isnull(r.ref) else None,
-            r.new if not pd.isnull(r.new) else None), axis=1),
-        dtype='string')
+    df[META_OLIGO_NAME] = get_oligo_names_from_dataframe(oligo_name_prefix, df)
 
     # Drop field that would be discarded downstream
     df = df.drop('var_type', axis=1)
