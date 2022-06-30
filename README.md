@@ -629,6 +629,8 @@ For cDNA targets, the reference chromosome (`ref_chr`) and strand (`ref_strand`)
 |`mutator`|type of mutator|Label of the [type of mutator](#mutation-types) that generated the oligonucleotide.|
 |`oligo_length`|integer|Oligonucleotide length.|
 |`mseq`|DNA sequence|Full oligonucleotide sequence (with adaptors, if any).|
+|`pam_mut_annot`|`syn`\|`mis`\|`non`\|`ncd`|Applied PAM protection variant [mutation types](#mutation-types) (or `ncd` if affecting a noncoding region)|
+|`pam_mut_sgrna_id`|sgRNA ID|sgRNA ID bound to the PAM protection variant affecting the same codon as the mutation, if any (CDS only)|
 
 Example:
 
