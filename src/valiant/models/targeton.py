@@ -18,8 +18,9 @@
 
 from __future__ import annotations
 import abc
-from dataclasses import dataclass
-from typing import Callable, ClassVar, Dict, Generic, List, FrozenSet, Optional, Type, TypeVar
+from dataclasses import dataclass, field
+from functools import partial
+from typing import Any, Callable, ClassVar, Dict, Generic, List, FrozenSet, Optional, Type, TypeVar
 import numpy as np
 import pandas as pd
 
@@ -27,7 +28,7 @@ from valiant.models.annotated_sequence import AnnotatedSequencePair, AnnotatedSe
 from valiant.models.base import GenomicRange, StrandedPositionRange
 from valiant.models.pam_protection import PamProtectedReferenceSequence, PamVariant
 from .codon_table import CodonTable, STOP_CODE
-from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS
+from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS, META_MUT_POSITION, META_PAM_MUT_SGRNA_ID
 from .mutated_sequences import (
     DeletionMutatedSequence,
     Deletion1MutatedSequence,
@@ -354,7 +355,12 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
             self.pos_range, self.frame, self.sequence)
         return MutationCollection(df)
 
-    def compute_mutations(self, mutators: FrozenSet[TargetonMutator], aux: AuxiliaryTables) -> Dict[TargetonMutator, MutationCollection]:
+    def compute_mutations(
+        self,
+        mutators: FrozenSet[TargetonMutator],
+        aux: AuxiliaryTables,
+        **kwargs
+    ) -> Dict[TargetonMutator, MutationCollection]:
 
         # Classify mutators
         base_mutators = mutators - self.SNVRE_MUTATORS
@@ -419,17 +425,79 @@ class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
         return [None] * self.variant_count
 
 
-
 @dataclass(frozen=True)
 class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
-    __slots__ = ['annotated_seq']
+    __slots__ = ['annotated_seq', '_variant_codon_indices']
+
+    _SGRNA_IDS: ClassVar[str] = 'sgrna_ids'
 
     def __post_init__(self) -> None:
         if self.annotated_seq.contains_same_codon_variants:
             self.annotated_seq.log_same_codon_variants()
             raise ValueError("Multiple PAM protection variants in a single codon!")
+        object.__setattr__(
+            self,
+            '_variant_codon_indices',
+            self.annotated_seq.get_variant_codon_indices())
 
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
         return self.annotated_seq.get_variant_mutation_types(
             codon_table, no_duplicate_codons=True)
 
+    @property
+    def has_pam_variants(self) -> bool:
+        return self.variant_count > 0
+
+    def _assign_pam_sgrna_ids_to_mutations(self, sgrna_ids: FrozenSet[str], mutations: MutationCollection) -> None:
+        if not self.has_pam_variants or mutations.is_empty:
+            return
+
+        sgrna_ids_to_codon_indices: Dict[int, str] = {
+            codon_index: variant.sgrna_id
+            for variant, codon_index in zip(
+                self.annotated_seq.variants,
+                getattr(self, '_variant_codon_indices'))
+        }
+
+        df: pd.DataFrame = mutations.df
+        codon_index = '_codon_index'
+        df[codon_index] = (df[META_MUT_POSITION] + self.frame) // 3
+        df[META_PAM_MUT_SGRNA_ID] = pd.Categorical(
+            df[codon_index].replace(sgrna_ids_to_codon_indices),
+            categories=sgrna_ids)
+        df.drop(codon_index, axis=1, inplace=True)
+
+    def _get_sgrna_ids(self, d: Dict[str, Any]) -> FrozenSet[str]:
+        sgrna_ids: Optional[FrozenSet[str]] = d.get(self._SGRNA_IDS, None)
+        if sgrna_ids is None:
+            raise RuntimeError("sgRNA ID's required!")
+        if not isinstance(sgrna_ids, frozenset):
+            raise TypeError("sgRNA ID's: not a FrozenSet!")
+        return sgrna_ids
+
+    def compute_mutations(
+        self,
+        mutators: FrozenSet[TargetonMutator],
+        aux: AuxiliaryTables,
+        **kwargs
+    ) -> Dict[TargetonMutator, MutationCollection]:
+        f"""
+        Compute all mutations
+
+        sgRNA ID's should be provided unless no PAM protection was applied.
+
+        Keyword arguments:
+        - {self._SGRNA_IDS}: FrozenSet[str]
+        """
+
+        if self.has_pam_variants:
+            sgrna_ids = self._get_sgrna_ids(kwargs)
+
+        mutations = super().compute_mutations(mutators, aux)
+
+        if self.has_pam_variants:
+            f = partial(self._assign_pam_sgrna_ids_to_mutations, sgrna_ids)
+            for mc in mutations.values():
+                f(mc)
+
+        return mutations

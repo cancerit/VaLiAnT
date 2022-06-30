@@ -94,6 +94,9 @@ class BaseAnnotatedSequencePair(abc.ABC, Sized, Generic[RangeT, VariantT]):
         return self.get_codon_mutation_types_at_codons(
             codon_table, self.get_codon_indices(positions, **kwargs))
 
+    def get_variant_codon_indices(self, **kwargs) -> List[int]:
+        return self.get_codon_indices(self.variant_positions, **kwargs)
+
     def get_variant_mutation_types(self, codon_table: CodonTable, **kwargs) -> List[MutationType]:
         return self.get_codon_mutation_types_at(
             codon_table, self.variant_positions, **kwargs)

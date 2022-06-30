@@ -74,9 +74,9 @@ class TargetonOligoSegment(OligoSegment[ITargeton], Generic[TargetonT]):
     def targeton(self) -> ITargeton:
         return self.region
 
-    def compute_mutations(self, aux: AuxiliaryTables) -> Dict[TargetonMutator, MutationCollection]:
+    def compute_mutations(self, aux: AuxiliaryTables, **kwargs) -> Dict[TargetonMutator, MutationCollection]:
         if isinstance(self.targeton, CDSTargeton):
-            return self.targeton.compute_mutations(self.mutators, aux)
+            return self.targeton.compute_mutations(self.mutators, aux, **kwargs)
         if isinstance(self.targeton, Targeton):
             return self.targeton.compute_mutations(self.mutators)
         raise TypeError("Invalid targeton type!")
