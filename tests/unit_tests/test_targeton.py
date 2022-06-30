@@ -108,6 +108,6 @@ def test_pam_prot_targeton_compute_mutations(pam_variant_clash):
         # Validate the sgRNA ID field
         df['codon_index'] = (df['mut_position'] + frame) // 3
         mask = df['codon_index'].mod(2).ne(0)
-        assert pd.isna(df.loc[mask, 'meta_pam_mut_sgrna_id'].unique())
-        assert df.loc[df.codon_index == 0, 'meta_pam_mut_sgrna_id'].unique() == sgrna_id_1
-        assert df.loc[df.codon_index == 2, 'meta_pam_mut_sgrna_id'].unique() == sgrna_id_2
+        assert pd.isna(df.loc[mask, 'pam_mut_sgrna_id'].unique())
+        assert df.loc[df.codon_index == 0, 'pam_mut_sgrna_id'].unique() == sgrna_id_1
+        assert df.loc[df.codon_index == 2, 'pam_mut_sgrna_id'].unique() == sgrna_id_2
