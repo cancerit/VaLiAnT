@@ -251,6 +251,7 @@ def process_targeton(
         assembly,
         get_targeton_metadata_table(
             get_cdna_f, aux, adaptor_5, adaptor_3, targeton_cfg),
+        options.oligo_min_length,
         options.oligo_max_length)
 
     base_fn = f"{targeton_cfg.seq_id}_{targeton_cfg.get_hash()}"

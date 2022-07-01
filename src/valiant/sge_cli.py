@@ -340,6 +340,7 @@ def generate_oligos(output: str, ref_repository: ReferenceSequenceRepository, au
         species,
         assembly,
         ot.get_mutation_table(aux, options),
+        options.oligo_min_length,
         options.oligo_max_length)
 
     # Generate file name prefix
