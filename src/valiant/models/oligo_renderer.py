@@ -23,8 +23,9 @@ import numpy as np
 import pandas as pd
 from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
-from ..constants import REVCOMP_OLIGO_NAME_SUFFIX
+from ..constants import REVCOMP_OLIGO_NAME_SUFFIX, META_MAVE_NT, META_REF_AA
 from ..enums import VariantType
+from ..mave_hgvs import MAVEPrefix, get_mave_nt
 from ..utils import get_constant_category, reverse_complement, get_source_type_column
 
 
@@ -174,6 +175,20 @@ class BaseOligoRenderer:
     def get_oligo_names_from_dataframe(self, df: pd.DataFrame) -> pd.Series:
         return get_oligo_names_from_dataframe(self._oligo_name_prefix, df)
 
+    def get_mave_nt_from_row(self, r) -> str:
+        is_cds: bool = META_REF_AA in r and not pd.isna(r.ref_aa)
+        prefix: MAVEPrefix = (
+            MAVEPrefix.CODING if is_cds else
+            MAVEPrefix.NON_CODING
+        )
+        return get_mave_nt(
+            prefix,
+            r.var_type,
+            r.mutator,
+            r.mut_position,
+            r.ref,
+            r.new)
+
     def get_metadata_table(self, df: pd.DataFrame, options: Options) -> pd.DataFrame:
         if set(df.columns.array) < {'oligo_name', 'mut_position', 'ref', 'new', 'mutator', 'mseq'}:
             raise ValueError("Invalid mutation metadata data frame!")
@@ -201,5 +216,10 @@ class BaseOligoRenderer:
 
         # Set sequence source type
         df['src_type'] = get_source_type_column('ref', rown)
+
+        # Add mutation MAVE-HGVS code
+        df[META_MAVE_NT] = pd.Series(
+            df.apply(self.get_mave_nt_from_row, axis=1),
+            dtype='string')
 
         return df
