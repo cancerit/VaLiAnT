@@ -23,11 +23,13 @@ from typing import Callable, Dict, Optional, NoReturn
 import click
 import numpy as np
 import pandas as pd
-from .constants import CDS_ONLY_MUTATORS, META_OLIGO_NAME, MUTATOR_CATEGORIES
+from .constants import CDS_ONLY_MUTATORS, META_MAVE_NT, META_OLIGO_NAME, MUTATOR_CATEGORIES
 from .cli_utils import load_codon_table, validate_adaptor, set_logger
 from .common_cli import common_params, existing_file
 from .enums import TargetonMutator
 from .errors import SequenceNotFound, InvalidMutatorForTarget
+from .mave_hgvs import MAVEPrefix, get_mave_nt
+from .metadata_utils import get_mave_nt_from_row
 from .models.base import StrandedPositionRange, PositionRange
 from .models.cdna import CDNA, AnnotatedCDNA
 from .models.cdna_seq_repository import CDNASequenceRepository
@@ -155,7 +157,8 @@ def get_targeton_metadata_table(
     aux: AuxiliaryTables,
     adaptor_5: Optional[str],
     adaptor_3: Optional[str],
-    targeton_cfg: CDNATargetonConfig
+    targeton_cfg: CDNATargetonConfig,
+    has_cds_annot: bool
 ) -> pd.DataFrame:
     cdna = get_cdna_f(targeton_cfg)
     t_start, t_end = targeton_cfg.targeton_range.to_tuple()
@@ -222,6 +225,10 @@ def get_targeton_metadata_table(
     # Generate oligonucleotide names
     df[META_OLIGO_NAME] = get_oligo_names_from_dataframe(oligo_name_prefix, df)
 
+    # Add mutation MAVE-HGVS code
+    f = partial(get_mave_nt_from_row, has_cds_annot)
+    df[META_MAVE_NT] = pd.Series(df.apply(f, axis=1), dtype='string')
+
     # Drop field that would be discarded downstream
     df = df.drop('var_type', axis=1)
 
@@ -239,6 +246,7 @@ def process_targeton(
     adaptor_3: Optional[str],
     get_cdna_f: Callable,
     max_length: int,
+    has_cds_annot: bool,
     output: str,
     targeton_cfg: CDNATargetonConfig
 ) -> OligoGenerationInfo:
@@ -248,7 +256,7 @@ def process_targeton(
         species,
         assembly,
         get_targeton_metadata_table(
-            get_cdna_f, aux, adaptor_5, adaptor_3, targeton_cfg),
+            get_cdna_f, aux, adaptor_5, adaptor_3, targeton_cfg, has_cds_annot),
         max_length)
 
     base_fn = f"{targeton_cfg.seq_id}_{targeton_cfg.get_hash()}"
@@ -315,6 +323,8 @@ def cdna(
     # Set logging up
     set_logger(log)
 
+    has_cds_annot: bool = annot is not None
+
     # Validate adaptor sequences
     validate_adaptor(adaptor_5)
     validate_adaptor(adaptor_3)
@@ -351,6 +361,7 @@ def cdna(
         adaptor_3,
         get_cdna_f,
         max_length,
+        has_cds_annot,
         output)
 
     for targeton_cfg in targetons.cts:
