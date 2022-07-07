@@ -421,8 +421,6 @@ def sge(
     ASSEMBLY will be included in the metadata
     """
 
-    options: Options = Options(revcomp_minus_strand, max_length)
-
     # Set logging up
     set_logger(log)
 
@@ -435,7 +433,9 @@ def sge(
 
     # Load CDS, stop codon, and UTR features from GTF/GFF2 file (if any)
     annotation: Optional[AnnotationRepository] = _load_gff_file(gff)
-    exons: Optional[CDSContextRepository] = annotation.cds if annotation else None
+    is_annotation_available: bool = annotation is not None
+    options: Options = Options(revcomp_minus_strand, max_length, is_annotation_available)
+    exons: Optional[CDSContextRepository] = annotation.cds if is_annotation_available else None
 
     # Load oligonucleotide templates
     rsrs: ReferenceSequenceRangeCollection = _load_oligo_templates(oligo_info)

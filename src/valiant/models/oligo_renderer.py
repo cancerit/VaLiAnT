@@ -205,7 +205,7 @@ class BaseOligoRenderer:
         df['src_type'] = get_source_type_column('ref', rown)
 
         # Add mutation MAVE-HGVS code
-        f = partial(get_mave_nt_from_row, True)
+        f = partial(get_mave_nt_from_row, options.is_annotation_available)
         df[META_MAVE_NT] = pd.Series(df.apply(f, axis=1), dtype='string')
 
         return df
