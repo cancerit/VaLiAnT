@@ -28,7 +28,7 @@ from valiant.models.annotated_sequence import AnnotatedSequencePair, AnnotatedSe
 from valiant.models.base import GenomicRange, StrandedPositionRange
 from valiant.models.pam_protection import PamProtectedReferenceSequence, PamVariant
 from .codon_table import CodonTable, STOP_CODE
-from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS, META_MUT_POSITION, META_PAM_MUT_SGRNA_ID
+from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS, META_MUT_POSITION, META_PAM_MUT_SGRNA_ID, META_REF, ARRAY_SEPARATOR
 from .mutated_sequences import (
     DeletionMutatedSequence,
     Deletion1MutatedSequence,
@@ -425,20 +425,48 @@ class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
         return [None] * self.variant_count
 
 
+def get_sgrna_ids(frame: int, codon_to_sgrna_ids: Dict[int, str], mut_pos: int, mut_ref: Optional[str]) -> List[str]:
+    start: int = mut_pos + frame
+    codon_start: int = start // 3
+    ref_length: int = len(mut_ref) if mut_ref else 0
+    return (
+        [
+            codon_to_sgrna_ids[codon_index]
+            for codon_index in range(codon_start, ((start + ref_length) // 3) + 1)
+            if codon_index in codon_to_sgrna_ids
+        ] if ref_length > 1 else
+        [codon_to_sgrna_ids[codon_start]] if codon_start in codon_to_sgrna_ids else
+        []
+    )
+
+
+def get_sgrna_ids_from_row(frame: int, codon_to_sgrna_ids: Dict[int, str], r) -> List[str]:
+    mut_ref: Optional[str] = r[META_REF] if not pd.isna(r[META_REF]) else None
+    return get_sgrna_ids(frame, codon_to_sgrna_ids, r[META_MUT_POSITION], mut_ref)
+
+
 @dataclass(frozen=True)
 class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
-    __slots__ = ['annotated_seq', '_variant_codon_indices']
+    __slots__ = ['annotated_seq', '_codon_to_sgrna_id']
 
     _SGRNA_IDS: ClassVar[str] = 'sgrna_ids'
+
+    def _get_codon_to_sgrna_id(self) -> Dict[int, str]:
+        """Create mapping of codon indices to sgRNA identifiers"""
+
+        return {
+            codon_index: variant.sgrna_id
+            for variant, codon_index in zip(
+                self.annotated_seq.variants,
+                self.annotated_seq.get_variant_codon_indices())
+        } if self.has_pam_variants else {}
 
     def __post_init__(self) -> None:
         if self.annotated_seq.contains_same_codon_variants:
             self.annotated_seq.log_same_codon_variants()
             raise ValueError("Multiple PAM protection variants in a single codon!")
-        object.__setattr__(
-            self,
-            '_variant_codon_indices',
-            self.annotated_seq.get_variant_codon_indices())
+
+        object.__setattr__(self, '_codon_to_sgrna_id', self._get_codon_to_sgrna_id())
 
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
         return self.annotated_seq.get_variant_mutation_types(
@@ -448,24 +476,21 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     def has_pam_variants(self) -> bool:
         return self.variant_count > 0
 
+    @classmethod
+    def from_annotated_sequence(cls, annotated_sequence: CDSAnnotatedSequencePair) -> PamProtCDSTargeton:
+        return cls(annotated_sequence, codon_to_sgrna_id)
+
     def _assign_pam_sgrna_ids_to_mutations(self, sgrna_ids: FrozenSet[str], mutations: MutationCollection) -> None:
         if not self.has_pam_variants or mutations.is_empty:
             return
 
-        sgrna_ids_to_codon_indices: Dict[int, str] = {
-            codon_index: variant.sgrna_id
-            for variant, codon_index in zip(
-                self.annotated_seq.variants,
-                getattr(self, '_variant_codon_indices'))
-        }
+        def get_sgrna_id_str(r) -> str:
+            return ARRAY_SEPARATOR.join(sorted(set(
+                get_sgrna_ids_from_row(
+                    self.frame, self._codon_to_sgrna_id, r))))
 
         df: pd.DataFrame = mutations.df
-        codon_index = '_codon_index'
-        df[codon_index] = (df[META_MUT_POSITION] + self.frame) // 3
-        df[META_PAM_MUT_SGRNA_ID] = pd.Categorical(
-            df[codon_index].replace(sgrna_ids_to_codon_indices),
-            categories=sgrna_ids)
-        df.drop(codon_index, axis=1, inplace=True)
+        df[META_PAM_MUT_SGRNA_ID] = df.apply(get_sgrna_id_str, axis=1).astype('string')
 
     def _get_sgrna_ids(self, d: Dict[str, Any]) -> FrozenSet[str]:
         sgrna_ids: Optional[FrozenSet[str]] = d.get(self._SGRNA_IDS, None)
