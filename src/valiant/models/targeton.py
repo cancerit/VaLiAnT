@@ -40,6 +40,7 @@ from .mutated_sequences import (
 )
 from .snv_table import AuxiliaryTables
 from ..enums import MutationType, TargetonMutator, VariantType
+from ..sgrna_utils import set_metadata_sgrna_ids
 from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
 from ..utils import get_constant_category, get_out_of_frame_offset
 
@@ -425,26 +426,6 @@ class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
         return [None] * self.variant_count
 
 
-def get_sgrna_ids(frame: int, codon_to_sgrna_ids: Dict[int, str], mut_pos: int, mut_ref: Optional[str]) -> List[str]:
-    start: int = mut_pos + frame
-    codon_start: int = start // 3
-    ref_length: int = len(mut_ref) if mut_ref else 0
-    return (
-        [
-            codon_to_sgrna_ids[codon_index]
-            for codon_index in range(codon_start, ((start + ref_length) // 3) + 1)
-            if codon_index in codon_to_sgrna_ids
-        ] if ref_length > 1 else
-        [codon_to_sgrna_ids[codon_start]] if codon_start in codon_to_sgrna_ids else
-        []
-    )
-
-
-def get_sgrna_ids_from_row(frame: int, codon_to_sgrna_ids: Dict[int, str], r) -> List[str]:
-    mut_ref: Optional[str] = r[META_REF] if not pd.isna(r[META_REF]) else None
-    return get_sgrna_ids(frame, codon_to_sgrna_ids, r[META_MUT_POSITION], mut_ref)
-
-
 @dataclass(frozen=True)
 class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     __slots__ = ['annotated_seq', '_codon_to_sgrna_id']
@@ -480,17 +461,14 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     def from_annotated_sequence(cls, annotated_sequence: CDSAnnotatedSequencePair) -> PamProtCDSTargeton:
         return cls(annotated_sequence, codon_to_sgrna_id)
 
+    def set_metadata_sgrna_ids(self, mutations: MutationCollection) -> None:
+        return set_metadata_sgrna_ids(self.frame, self._codon_to_sgrna_id, mutations.df)
+
     def _assign_pam_sgrna_ids_to_mutations(self, sgrna_ids: FrozenSet[str], mutations: MutationCollection) -> None:
         if not self.has_pam_variants or mutations.is_empty:
             return
 
-        def get_sgrna_id_str(r) -> str:
-            return ARRAY_SEPARATOR.join(sorted(set(
-                get_sgrna_ids_from_row(
-                    self.frame, self._codon_to_sgrna_id, r))))
-
-        df: pd.DataFrame = mutations.df
-        df[META_PAM_MUT_SGRNA_ID] = df.apply(get_sgrna_id_str, axis=1).astype('string')
+        self.set_metadata_sgrna_ids(mutations)
 
     def _get_sgrna_ids(self, d: Dict[str, Any]) -> FrozenSet[str]:
         sgrna_ids: Optional[FrozenSet[str]] = d.get(self._SGRNA_IDS, None)
