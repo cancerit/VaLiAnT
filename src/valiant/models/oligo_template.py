@@ -34,7 +34,7 @@ from .oligo_renderer import BaseOligoRenderer
 from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
 from .snv_table import AuxiliaryTables
-from .variant import CustomVariant
+from .variant import BaseVariant, CustomVariant
 from ..constants import (
     CUSTOM_MUTATOR,
     META_OLIGO_NAME,
@@ -229,11 +229,20 @@ class OligoTemplate:
     def ref_segments(self) -> List[OligoSegment]:
         return self.segments
 
+    def _get_custom_variant_sgrna_ids(self, variant: CustomVariant) -> FrozenSet[str]:
+        spr = variant.get_ref_range(self.strand)
+        return frozenset().union(*[
+            segment.get_sgrna_ids(spr)
+            for segment in self.segments
+        ])
+
     def _compute_custom_variants(self) -> CustomVariantMutationCollection:
         return CustomVariantMutationCollection.from_variants([
             CustomVariantMutation(
-                variant, self.ref_seq.apply_variant(
-                    variant.base_variant, ref_check=False))
+                variant,
+                self.ref_seq.apply_variant(
+                    variant.base_variant, ref_check=False),
+                self._get_custom_variant_sgrna_ids(variant))
             for variant in self.custom_variants
         ])
 

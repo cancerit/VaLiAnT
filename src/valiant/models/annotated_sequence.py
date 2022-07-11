@@ -190,6 +190,14 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair, Generic[VariantT]):
         return len(self) + self.cds_prefix_length + self.cds_suffix_length
 
     @property
+    def codon_count(self) -> int:
+        return self.ext_seq_length // 3
+
+    @property
+    def last_codon_index(self) -> int:
+        return self.codon_count - 1
+
+    @property
     def cds_ref_seq(self) -> str:
         return f"{self.cds_prefix}{self.ref_seq}{self.cds_suffix}"
 

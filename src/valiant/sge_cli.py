@@ -112,31 +112,6 @@ def get_oligo_template(
 
     # 2. Get constant regions
 
-    def get_constant_targeton(gr: GenomicRange) -> PamProtTargeton:
-        return PamProtTargeton.from_pam_seq(
-            pam_ref_seq.get_subsequence(gr))
-
-    def get_constant_segment(gr: GenomicRange) -> InvariantOligoSegment:
-        return InvariantOligoSegment(get_constant_targeton(gr))
-
-    def get_constant_region_segment(gr: Optional[GenomicRange]) -> Optional[InvariantOligoSegment]:
-        return InvariantOligoSegment(get_constant_targeton(gr)) if gr else None
-
-    const_region_1: Optional[InvariantOligoSegment] = get_constant_region_segment(rsr.const_region_1)
-    const_region_2: Optional[InvariantOligoSegment] = get_constant_region_segment(rsr.const_region_2)
-
-    # 3. Get potential target regions
-
-    def get_cds_extension_sequence(genomic_range: Optional[GenomicRange]) -> str:
-        if genomic_range is None:
-            return ''
-
-        sequence: Optional[str] = ref.get_genomic_range_sequence(genomic_range)
-        if sequence is None:
-            raise RuntimeError("CDS extension sequence not found!")
-
-        return sequence
-
     def get_cds_targeton(
         region_pam_seq: PamProtectedReferenceSequence,
         exg_gr_pair: GenomicRangePair
@@ -154,11 +129,30 @@ def get_oligo_template(
                 return get_cds_targeton(region_pam_seq, exg_gr_pair)
         return PamProtTargeton.from_pam_seq(region_pam_seq)
 
+    def get_constant_region_segment(gr: Optional[GenomicRange]) -> Optional[InvariantOligoSegment]:
+        return InvariantOligoSegment(
+            get_targeton(pam_ref_seq.get_subsequence(gr))) if gr else None
+
+    const_region_1: Optional[InvariantOligoSegment] = get_constant_region_segment(rsr.const_region_1)
+    const_region_2: Optional[InvariantOligoSegment] = get_constant_region_segment(rsr.const_region_2)
+
+    # 3. Get potential target regions
+
+    def get_cds_extension_sequence(genomic_range: Optional[GenomicRange]) -> str:
+        if genomic_range is None:
+            return ''
+
+        sequence: Optional[str] = ref.get_genomic_range_sequence(genomic_range)
+        if sequence is None:
+            raise RuntimeError("CDS extension sequence not found!")
+
+        return sequence
+
     def get_oligo_segment(trr: TargetReferenceRegion) -> OligoSegment:
         region_pam_seq = pam_ref_seq.get_subsequence(trr.genomic_range)
         return (
             TargetonOligoSegment(get_targeton(region_pam_seq), trr.mutators) if trr.mutators else
-            get_constant_segment(trr.genomic_range)
+            get_constant_region_segment(trr.genomic_range)
         )
 
     def get_transcript_info(genomic_ranges: Iterable[GenomicRange]) -> Optional[TranscriptInfo]:

@@ -50,12 +50,16 @@ def get_sgrna_ids_from_row(frame: int, codon_to_sgrna_ids: Dict[int, str], r: pd
     return get_sgrna_ids(frame, codon_to_sgrna_ids, r[META_MUT_POSITION], mut_ref)
 
 
+def sgrna_ids_to_string(sgrna_ids: Set[str]) -> str:
+    return ARRAY_SEPARATOR.join(sorted(sgrna_ids))
+
+
 def get_sgrna_ids_from_row_as_string(frame: int, codon_to_sgrna_ids: Dict[int, str], r: pd.Series) -> str:
     """Concatenated sgRNA ID's or empty string"""
 
-    return ARRAY_SEPARATOR.join(sorted(
+    return sgrna_ids_to_string(
         get_sgrna_ids_from_row(
-            frame, codon_to_sgrna_ids, r)))
+            frame, codon_to_sgrna_ids, r))
 
 
 def set_metadata_sgrna_ids(frame: int, codon_to_sgrna_ids: Dict[int, str], metadata: pd.DataFrame) -> None:

@@ -134,6 +134,14 @@ class ITargeton(BaseTargeton, Generic[AnnotatedSequenceT], abc.ABC):
     def variant_count(self) -> int:
         return self.annotated_seq.variant_count
 
+    @abc.abstractmethod
+    def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
+        pass
+
+    @abc.abstractmethod
+    def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        pass
+
 
 @dataclass(frozen=True)
 class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT, RangeT]):
@@ -173,6 +181,12 @@ class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT, RangeT]):
             pam_seq.sequence,
             pam_seq.pam_protected_sequence,
             pam_seq.pam_variants))
+
+    def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
+        return []
+
+    def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        return frozenset()
 
     def compute_mutations(self, mutators: FrozenSet[TargetonMutator]) -> Dict[TargetonMutator, MutationCollection]:
         return super()._compute_mutations(mutators)
@@ -253,6 +267,32 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
     @property
     def cds_sequence_start(self) -> int:
         return self.start - self.frame
+
+    def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
+        """Get the indices of the codons spanned by the input range, if any"""
+
+        # Check an intersection exists
+        if spr not in self.annotated_seq.pos_range:
+            # Fail on incorrect strand (pathological state)
+            if spr.strand != self.annotated_seq.pos_range.strand:
+                raise ValueError("Failed to retrieve codon indices: incorrect strand!")
+            return []
+
+        start: int = self.annotated_seq.pos_range.start
+        end: int = self.annotated_seq.pos_range.end
+
+        # Get first and last codon indices
+        codon_start: int = 0 if spr.start <= start else (spr.start - start) // 3
+        codon_end: int = (
+            self.annotated_seq.last_codon_index if spr.end >= end else
+            self.annotated_seq.last_codon_index - ((end - spr.end) // 3)
+        )
+
+        # Generate full codon index range
+        return list(range(codon_start, codon_end + 1))
+
+    def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        return frozenset()
 
     def _add_snv_metadata(
         self,
@@ -452,6 +492,13 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
         return self.annotated_seq.get_variant_mutation_types(
             codon_table, no_duplicate_codons=True)
+
+    def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        return frozenset({
+            self._codon_to_sgrna_id[codon_index]
+            for codon_index in self.get_codon_indices(spr)
+            if codon_index in self._codon_to_sgrna_id
+        })
 
     @property
     def has_pam_variants(self) -> bool:

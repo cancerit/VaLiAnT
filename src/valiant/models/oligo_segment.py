@@ -22,11 +22,12 @@ from typing import Dict, FrozenSet, Generic, List, Optional
 
 from valiant.enums import MutationType, TargetonMutator
 
-from valiant.models.base import GenomicRange
+from valiant.models.base import GenomicRange, StrandedPositionRange
 from valiant.models.codon_table import CodonTable
 from valiant.models.mutated_sequences import MutationCollection
 from valiant.models.snv_table import AuxiliaryTables
 from valiant.models.targeton import CDSTargeton, ITargeton, Targeton, TargetonT, PamProtected
+from valiant.models.custom_variants import CustomVariant
 
 
 @dataclass
@@ -57,6 +58,9 @@ class OligoSegment(abc.ABC, Generic[TargetonT]):
             self.region.get_pam_variant_annotations(codon_table) if is_pam else  # type: ignore
             []
         )
+
+    def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        return self.region.get_sgrna_ids(spr)
 
 
 @dataclass
