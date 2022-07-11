@@ -17,11 +17,9 @@
 #############################
 
 from __future__ import annotations
-import abc
 from dataclasses import dataclass
-from functools import partial
 from itertools import chain
-from typing import Callable, Dict, Iterable, List, Optional, Set, FrozenSet, Tuple
+from typing import Dict, Iterable, List, Optional, Set, FrozenSet, Tuple
 import numpy as np
 import pandas as pd
 from valiant.models.codon_table import CodonTable
@@ -29,13 +27,14 @@ from valiant.models.codon_table import CodonTable
 from valiant.models.oligo_segment import OligoSegment, TargetonOligoSegment
 from .base import GenomicRange, TranscriptInfo
 from .custom_variants import CustomVariantMutation, CustomVariantMutationCollection, CustomVariantOligoRenderer
-from .mutated_sequences import MutatedSequence, MutationCollection
+from .mutated_sequences import MutationCollection
 from .oligo_renderer import BaseOligoRenderer
 from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
 from .snv_table import AuxiliaryTables
 from .variant import CustomVariant
 from ..constants import (
+    ARRAY_SEPARATOR,
     CUSTOM_MUTATOR,
     META_OLIGO_NAME,
     META_PAM_MUT_ANNOT,
@@ -91,7 +90,7 @@ def get_empty_mutation_table() -> pd.DataFrame:
 
 
 def encode_pam_mutation_types(mutation_types: Iterable[Optional[MutationType]]) -> str:
-    return ';'.join([
+    return ARRAY_SEPARATOR.join([
         MUTATION_TYPE_LABELS[x.value] if x is not None else MUTATION_TYPE_NON_CDS
         for x in mutation_types
     ])
@@ -229,11 +228,20 @@ class OligoTemplate:
     def ref_segments(self) -> List[OligoSegment]:
         return self.segments
 
+    def _get_custom_variant_sgrna_ids(self, variant: CustomVariant) -> FrozenSet[str]:
+        spr = variant.get_ref_range(self.strand)
+        return frozenset().union(*[
+            segment.get_sgrna_ids(spr)
+            for segment in self.segments
+        ])
+
     def _compute_custom_variants(self) -> CustomVariantMutationCollection:
         return CustomVariantMutationCollection.from_variants([
             CustomVariantMutation(
-                variant, self.ref_seq.apply_variant(
-                    variant.base_variant, ref_check=False))
+                variant,
+                self.ref_seq.apply_variant(
+                    variant.base_variant, ref_check=False),
+                self._get_custom_variant_sgrna_ids(variant))
             for variant in self.custom_variants
         ])
 

@@ -103,33 +103,6 @@ class BaseAnnotatedSequencePair(abc.ABC, Sized, Generic[RangeT, VariantT]):
 
 
 @dataclass(frozen=True)
-class ReferenceAnnotatedSequencePair(BaseAnnotatedSequencePair):
-    """Non-mutated sequence"""
-
-    __slots__ = ['pos_range', 'ref_seq']
-
-    @property
-    def alt_seq(self) -> str:
-        return self.ref_seq
-
-    @property
-    def ext_ref_seq(self) -> str:
-        return self.ref_seq
-
-    @property
-    def ext_alt_seq(self) -> str:
-        return self.alt_seq
-
-    @property
-    def variants(self) -> List[VariantT]:
-        return []
-
-    @property
-    def variant_count(self) -> int:
-        return 0
-
-
-@dataclass(frozen=True)
 class AnnotatedSequencePair(BaseAnnotatedSequencePair, Generic[VariantT]):
     """Potentially mutated sequence (and its reference and variants)"""
 
@@ -188,6 +161,14 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair, Generic[VariantT]):
     @property
     def ext_seq_length(self) -> int:
         return len(self) + self.cds_prefix_length + self.cds_suffix_length
+
+    @property
+    def codon_count(self) -> int:
+        return self.ext_seq_length // 3
+
+    @property
+    def last_codon_index(self) -> int:
+        return self.codon_count - 1
 
     @property
     def cds_ref_seq(self) -> str:

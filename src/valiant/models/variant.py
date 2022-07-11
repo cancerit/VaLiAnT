@@ -24,7 +24,7 @@ from typing import Dict, List, Optional, Set, Tuple, ClassVar, Any, Callable
 import pandas as pd
 from pyranges import PyRanges
 from pysam import VariantRecord
-from .base import GenomicPosition, GenomicRange
+from .base import GenomicPosition, GenomicRange, StrandedPositionRange
 from .refseq_repository import ReferenceSequenceRepository
 from .sequences import ReferenceSequence
 from ..enums import VariantType, VariantClassification
@@ -163,6 +163,12 @@ class CustomVariant:
     base_variant: BaseVariant
     vcf_alias: Optional[str]
     vcf_variant_id: Optional[str]
+
+    def get_ref_range(self, strand: str) -> StrandedPositionRange:
+        start: int = self.base_variant.genomic_position.position
+        ref_length: int = len(getattr(self.base_variant, 'ref', ''))
+        end: int = start + (ref_length if ref_length > 1 else 0)
+        return StrandedPositionRange(start, end, strand)
 
 
 VAR_TYPE_CONSTRUCTOR: Dict[int, Callable[[Any], BaseVariant]] = {

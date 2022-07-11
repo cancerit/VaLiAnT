@@ -94,6 +94,8 @@ METADATA_FIELDS = [
 
 METADATA_FIELDS_SET = set(METADATA_FIELDS)
 
+ARRAY_SEPARATOR = ';'
+
 SRC_TYPES = [
     'ref',
     'cdna'

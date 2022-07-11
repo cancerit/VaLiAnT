@@ -28,7 +28,7 @@ from valiant.models.annotated_sequence import AnnotatedSequencePair, AnnotatedSe
 from valiant.models.base import GenomicRange, StrandedPositionRange
 from valiant.models.pam_protection import PamProtectedReferenceSequence, PamVariant
 from .codon_table import CodonTable, STOP_CODE
-from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS, META_MUT_POSITION, META_PAM_MUT_SGRNA_ID
+from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS, META_MUT_POSITION, META_PAM_MUT_SGRNA_ID, META_REF, ARRAY_SEPARATOR
 from .mutated_sequences import (
     DeletionMutatedSequence,
     Deletion1MutatedSequence,
@@ -40,6 +40,7 @@ from .mutated_sequences import (
 )
 from .snv_table import AuxiliaryTables
 from ..enums import MutationType, TargetonMutator, VariantType
+from ..sgrna_utils import set_metadata_sgrna_ids
 from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
 from ..utils import get_constant_category, get_out_of_frame_offset
 
@@ -133,6 +134,14 @@ class ITargeton(BaseTargeton, Generic[AnnotatedSequenceT], abc.ABC):
     def variant_count(self) -> int:
         return self.annotated_seq.variant_count
 
+    @abc.abstractmethod
+    def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
+        pass
+
+    @abc.abstractmethod
+    def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        pass
+
 
 @dataclass(frozen=True)
 class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT, RangeT]):
@@ -172,6 +181,12 @@ class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT, RangeT]):
             pam_seq.sequence,
             pam_seq.pam_protected_sequence,
             pam_seq.pam_variants))
+
+    def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
+        return []
+
+    def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        return frozenset()
 
     def compute_mutations(self, mutators: FrozenSet[TargetonMutator]) -> Dict[TargetonMutator, MutationCollection]:
         return super()._compute_mutations(mutators)
@@ -252,6 +267,37 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
     @property
     def cds_sequence_start(self) -> int:
         return self.start - self.frame
+
+    def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
+        """Get the indices of the codons spanned by the input range, if any"""
+
+        # Check an intersection exists
+        # NOTE: `pos_range` may be a GenomicRange, in which case __contains__
+        # would fail due to the absence of the chromosome attribute in `spr`
+
+        # Fail on incorrect strand (pathological state)
+        if spr.strand != self.annotated_seq.pos_range.strand:
+            raise ValueError("Failed to retrieve codon indices: incorrect strand!")
+
+        start: int = self.annotated_seq.pos_range.start
+        end: int = self.annotated_seq.pos_range.end
+
+        # NOTE: in a `PositionRange`, `end` is guaranteed to be larger than `start`
+        if spr.end < start or spr.start > end:
+            return []
+
+        # Get first and last codon indices
+        codon_start: int = 0 if spr.start <= start else (spr.start - start) // 3
+        codon_end: int = (
+            self.annotated_seq.last_codon_index if spr.end >= end else
+            self.annotated_seq.last_codon_index - ((end - spr.end) // 3)
+        )
+
+        # Generate full codon index range
+        return list(range(codon_start, codon_end + 1))
+
+    def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        return frozenset()
 
     def _add_snv_metadata(
         self,
@@ -427,45 +473,54 @@ class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
 
 @dataclass(frozen=True)
 class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
-    __slots__ = ['annotated_seq', '_variant_codon_indices']
+    __slots__ = ['annotated_seq', '_codon_to_sgrna_id']
 
     _SGRNA_IDS: ClassVar[str] = 'sgrna_ids'
+
+    def _get_codon_to_sgrna_id(self) -> Dict[int, str]:
+        """Create mapping of codon indices to sgRNA identifiers"""
+
+        return {
+            codon_index: variant.sgrna_id
+            for variant, codon_index in zip(
+                self.annotated_seq.variants,
+                self.annotated_seq.get_variant_codon_indices())
+        } if self.has_pam_variants else {}
 
     def __post_init__(self) -> None:
         if self.annotated_seq.contains_same_codon_variants:
             self.annotated_seq.log_same_codon_variants()
             raise ValueError("Multiple PAM protection variants in a single codon!")
-        object.__setattr__(
-            self,
-            '_variant_codon_indices',
-            self.annotated_seq.get_variant_codon_indices())
+
+        object.__setattr__(self, '_codon_to_sgrna_id', self._get_codon_to_sgrna_id())
 
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
         return self.annotated_seq.get_variant_mutation_types(
             codon_table, no_duplicate_codons=True)
 
+    def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        return frozenset({
+            self._codon_to_sgrna_id[codon_index]
+            for codon_index in self.get_codon_indices(spr)
+            if codon_index in self._codon_to_sgrna_id
+        })
+
     @property
     def has_pam_variants(self) -> bool:
         return self.variant_count > 0
+
+    @classmethod
+    def from_annotated_sequence(cls, annotated_sequence: CDSAnnotatedSequencePair) -> PamProtCDSTargeton:
+        return cls(annotated_sequence, codon_to_sgrna_id)
+
+    def set_metadata_sgrna_ids(self, mutations: MutationCollection) -> None:
+        return set_metadata_sgrna_ids(self.frame, self._codon_to_sgrna_id, mutations.df)
 
     def _assign_pam_sgrna_ids_to_mutations(self, sgrna_ids: FrozenSet[str], mutations: MutationCollection) -> None:
         if not self.has_pam_variants or mutations.is_empty:
             return
 
-        sgrna_ids_to_codon_indices: Dict[int, str] = {
-            codon_index: variant.sgrna_id
-            for variant, codon_index in zip(
-                self.annotated_seq.variants,
-                getattr(self, '_variant_codon_indices'))
-        }
-
-        df: pd.DataFrame = mutations.df
-        codon_index = '_codon_index'
-        df[codon_index] = (df[META_MUT_POSITION] + self.frame) // 3
-        df[META_PAM_MUT_SGRNA_ID] = pd.Categorical(
-            df[codon_index].replace(sgrna_ids_to_codon_indices),
-            categories=sgrna_ids)
-        df.drop(codon_index, axis=1, inplace=True)
+        self.set_metadata_sgrna_ids(mutations)
 
     def _get_sgrna_ids(self, d: Dict[str, Any]) -> FrozenSet[str]:
         sgrna_ids: Optional[FrozenSet[str]] = d.get(self._SGRNA_IDS, None)

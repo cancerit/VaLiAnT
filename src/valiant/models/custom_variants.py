@@ -18,9 +18,11 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, FrozenSet
 import numpy as np
 import pandas as pd
+from ..constants import META_PAM_MUT_SGRNA_ID
+from ..sgrna_utils import sgrna_ids_to_string
 from .mutated_sequences import BaseMutationCollection
 from .oligo_renderer import BaseOligoRenderer
 from .pam_protection import PamProtectedReferenceSequence
@@ -52,21 +54,37 @@ class CustomVariantOligoRenderer(BaseOligoRenderer):
         return super()._get_oligo_name(var_type, vcf_alias, start, ref, alt)
 
 
-@dataclass
+@dataclass(frozen=True)
 class CustomVariantMutation:
+    __slots__ = ['variant', 'sequence', 'sgrna_ids']
+
     variant: CustomVariant
     sequence: str
+    sgrna_ids: FrozenSet[str]
 
-    def to_row(self) -> Tuple[Optional[str], Optional[str], int, int, Optional[str], Optional[str], str]:
+    @property
+    def ref(self) -> Optional[str]:
+        return getattr(self.variant.base_variant, 'ref', None)
+
+    @property
+    def alt(self) -> Optional[str]:
+        return getattr(self.variant.base_variant, 'alt', None)
+
+    @property
+    def ref_length(self) -> int:
+        return len(self.ref) if self.ref else 0
+
+    def to_row(self) -> Tuple[Optional[str], Optional[str], int, int, Optional[str], Optional[str], str, str]:
         var: BaseVariant = self.variant.base_variant
         return (
             self.variant.vcf_alias,
             self.variant.vcf_variant_id,
             var.type.value,
             var.genomic_position.position,
-            getattr(var, 'ref', None),
-            getattr(var, 'alt', None),
-            self.sequence
+            self.ref,
+            self.alt,
+            self.sequence,
+            sgrna_ids_to_string(self.sgrna_ids) if self.sgrna_ids else ''
         )
 
 
@@ -86,7 +104,8 @@ class CustomVariantMutationCollection(BaseMutationCollection):
             'mut_position',
             'ref',
             'new',
-            'mseq'
+            'mseq',
+            META_PAM_MUT_SGRNA_ID
         ])
 
         # Compress table
@@ -97,5 +116,6 @@ class CustomVariantMutationCollection(BaseMutationCollection):
         df.ref = df.ref.astype('category')
         df.new = df.new.astype('category')
         df.mseq = df.mseq.astype('string')
+        df[META_PAM_MUT_SGRNA_ID] = df[META_PAM_MUT_SGRNA_ID].astype('string')
 
         return cls(df=df)

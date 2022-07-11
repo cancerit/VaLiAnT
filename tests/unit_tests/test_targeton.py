@@ -19,6 +19,7 @@
 from contextlib import nullcontext
 import pandas as pd
 import pytest
+from valiant.constants import META_PAM_MUT_SGRNA_ID, META_MUT_POSITION
 from valiant.enums import MutationType, TargetonMutator
 from valiant.models.annotated_sequence import CDSAnnotatedSequencePair
 from valiant.models.base import GenomicPosition, GenomicRange
@@ -72,7 +73,7 @@ def test_pam_prot_targeton_get_pam_variant_annotations(alt, mut_type):
 def test_pam_prot_targeton_compute_mutations(pam_variant_clash):
     chromosome = TEST_CHROMOSOME
     ref_seq = 'ACGTCAGCG'
-    genomic_range =  GenomicRange(chromosome, 500, 500 + len(ref_seq) - 1, '+')
+    genomic_range = GenomicRange(chromosome, 500, 500 + len(ref_seq) - 1, '+')
     mutator = TargetonMutator.SNV
     pam_variant_pos = 501 if pam_variant_clash else 507
     sgrna_id_1 = 'sgrna-a'
@@ -100,14 +101,13 @@ def test_pam_prot_targeton_compute_mutations(pam_variant_clash):
 
         assert len(mutation_collections) == 1
 
-        # Verify the temporay field was dropped
+        # Verify the temporary field was dropped
 
         df = mutation_collections[mutator].df
-        assert '_codon_index' not in df.columns
 
         # Validate the sgRNA ID field
-        df['codon_index'] = (df['mut_position'] + frame) // 3
+        df['codon_index'] = (df[META_MUT_POSITION] + frame) // 3
         mask = df['codon_index'].mod(2).ne(0)
-        assert pd.isna(df.loc[mask, 'meta_pam_mut_sgrna_id'].unique())
-        assert df.loc[df.codon_index == 0, 'meta_pam_mut_sgrna_id'].unique() == sgrna_id_1
-        assert df.loc[df.codon_index == 2, 'meta_pam_mut_sgrna_id'].unique() == sgrna_id_2
+        assert df.loc[mask, META_PAM_MUT_SGRNA_ID].unique() == ''
+        assert df.loc[df.codon_index == 0, META_PAM_MUT_SGRNA_ID].unique() == sgrna_id_1
+        assert df.loc[df.codon_index == 2, META_PAM_MUT_SGRNA_ID].unique() == sgrna_id_2
