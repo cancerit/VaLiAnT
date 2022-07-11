@@ -73,7 +73,7 @@ def test_pam_prot_targeton_get_pam_variant_annotations(alt, mut_type):
 def test_pam_prot_targeton_compute_mutations(pam_variant_clash):
     chromosome = TEST_CHROMOSOME
     ref_seq = 'ACGTCAGCG'
-    genomic_range =  GenomicRange(chromosome, 500, 500 + len(ref_seq) - 1, '+')
+    genomic_range = GenomicRange(chromosome, 500, 500 + len(ref_seq) - 1, '+')
     mutator = TargetonMutator.SNV
     pam_variant_pos = 501 if pam_variant_clash else 507
     sgrna_id_1 = 'sgrna-a'

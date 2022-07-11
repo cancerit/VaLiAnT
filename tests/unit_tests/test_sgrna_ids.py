@@ -90,9 +90,9 @@ def test_oligo_template_get_custom_variant_sgrna_ids(variant, non_cds_region):
     # Get sgRNA of the PAM variants in codons that are included in the custom mutation
     sgrna_ids = ot._get_custom_variant_sgrna_ids(custom_variant)
 
-    sgrna_ids_exp = (
-        frozenset(all_sgrna_ids if not isinstance(variant, InsertionVariant) and not non_cds_region else
-        [all_sgrna_ids[EXON_REGION_INDEX]])
+    sgrna_ids_exp = frozenset(
+        all_sgrna_ids if not isinstance(variant, InsertionVariant) and not non_cds_region else
+        [all_sgrna_ids[EXON_REGION_INDEX]]
     )
 
     assert sgrna_ids == sgrna_ids_exp
