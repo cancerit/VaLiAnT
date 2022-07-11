@@ -17,11 +17,9 @@
 #############################
 
 from __future__ import annotations
-import abc
 from dataclasses import dataclass
-from functools import partial
 from itertools import chain
-from typing import Callable, Dict, Iterable, List, Optional, Set, FrozenSet, Tuple
+from typing import Dict, Iterable, List, Optional, Set, FrozenSet, Tuple
 import numpy as np
 import pandas as pd
 from valiant.models.codon_table import CodonTable
@@ -29,12 +27,12 @@ from valiant.models.codon_table import CodonTable
 from valiant.models.oligo_segment import OligoSegment, TargetonOligoSegment
 from .base import GenomicRange, TranscriptInfo
 from .custom_variants import CustomVariantMutation, CustomVariantMutationCollection, CustomVariantOligoRenderer
-from .mutated_sequences import MutatedSequence, MutationCollection
+from .mutated_sequences import MutationCollection
 from .oligo_renderer import BaseOligoRenderer
 from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
 from .snv_table import AuxiliaryTables
-from .variant import BaseVariant, CustomVariant
+from .variant import CustomVariant
 from ..constants import (
     CUSTOM_MUTATOR,
     META_OLIGO_NAME,
