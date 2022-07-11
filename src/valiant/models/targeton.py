@@ -272,14 +272,19 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
         """Get the indices of the codons spanned by the input range, if any"""
 
         # Check an intersection exists
-        if spr not in self.annotated_seq.pos_range:
-            # Fail on incorrect strand (pathological state)
-            if spr.strand != self.annotated_seq.pos_range.strand:
-                raise ValueError("Failed to retrieve codon indices: incorrect strand!")
-            return []
+        # NOTE: `pos_range` may be a GenomicRange, in which case __contains__
+        # would fail due to the absence of the chromosome attribute in `spr`
+
+        # Fail on incorrect strand (pathological state)
+        if spr.strand != self.annotated_seq.pos_range.strand:
+            raise ValueError("Failed to retrieve codon indices: incorrect strand!")
 
         start: int = self.annotated_seq.pos_range.start
         end: int = self.annotated_seq.pos_range.end
+
+        # NOTE: in a `PositionRange`, `end` is guaranteed to be larger than `start`
+        if spr.end < start or spr.start > end:
+            return []
 
         # Get first and last codon indices
         codon_start: int = 0 if spr.start <= start else (spr.start - start) // 3
