@@ -34,6 +34,7 @@ from .pam_protection import PamProtectedReferenceSequence
 from .snv_table import AuxiliaryTables
 from .variant import CustomVariant
 from ..constants import (
+    ARRAY_SEPARATOR,
     CUSTOM_MUTATOR,
     META_OLIGO_NAME,
     META_PAM_MUT_ANNOT,
@@ -89,7 +90,7 @@ def get_empty_mutation_table() -> pd.DataFrame:
 
 
 def encode_pam_mutation_types(mutation_types: Iterable[Optional[MutationType]]) -> str:
-    return ';'.join([
+    return ARRAY_SEPARATOR.join([
         MUTATION_TYPE_LABELS[x.value] if x is not None else MUTATION_TYPE_NON_CDS
         for x in mutation_types
     ])
