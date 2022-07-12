@@ -27,7 +27,6 @@ from valiant.models.codon_table import CodonTable
 from valiant.models.mutated_sequences import MutationCollection
 from valiant.models.snv_table import AuxiliaryTables
 from valiant.models.targeton import CDSTargeton, ITargeton, Targeton, TargetonT, PamProtected
-from valiant.models.custom_variants import CustomVariant
 
 
 @dataclass

@@ -509,10 +509,6 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     def has_pam_variants(self) -> bool:
         return self.variant_count > 0
 
-    @classmethod
-    def from_annotated_sequence(cls, annotated_sequence: CDSAnnotatedSequencePair) -> PamProtCDSTargeton:
-        return cls(annotated_sequence, codon_to_sgrna_id)
-
     def set_metadata_sgrna_ids(self, mutations: MutationCollection) -> None:
         return set_metadata_sgrna_ids(self.frame, self._codon_to_sgrna_id, mutations.df)
 
