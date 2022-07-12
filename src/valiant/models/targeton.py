@@ -261,12 +261,20 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
         return self.pos_range.start
 
     @property
+    def end(self) -> int:
+        return self.pos_range.end
+
+    @property
     def frame(self) -> int:
         return self.annotated_seq.frame
 
     @property
     def cds_sequence_start(self) -> int:
         return self.start - self.frame
+
+    @property
+    def cds_sequence_end(self) -> int:
+        return self.end + self.cds_suffix_length
 
     def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
         """Get the indices of the codons spanned by the input range, if any"""
@@ -286,11 +294,16 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
         if spr.end < start or spr.start > end:
             return []
 
-        # Get first and last codon indices
-        codon_start: int = 0 if spr.start <= start else (spr.start - start) // 3
+        # Get first codon index
+        codon_start: int = 0 if spr.start <= start else (spr.start - self.cds_sequence_start) // 3
+
+        if spr.end == spr.start:
+            return [codon_start]
+
+        # Get last codon index
         codon_end: int = (
             self.annotated_seq.last_codon_index if spr.end >= end else
-            self.annotated_seq.last_codon_index - ((end - spr.end) // 3)
+            self.annotated_seq.last_codon_index - ((self.cds_sequence_end - spr.end) // 3)
         )
 
         # Generate full codon index range
