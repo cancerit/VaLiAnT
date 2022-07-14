@@ -26,6 +26,7 @@ from valiant.models.base import GenomicPosition, StrandedPositionRange
 from valiant.enums import MutationType
 from valiant.models.codon_table import CodonTable
 from valiant.models.variant import SubstitutionVariant
+from valiant.sgrna_utils import get_codon_index, get_codon_indices_in_range
 from valiant.utils import has_duplicates
 
 
@@ -70,40 +71,6 @@ class BaseAnnotatedSequencePair(abc.ABC, Sized, Generic[RangeT, VariantT]):
     @property
     def variant_positions(self) -> List[GenomicPosition]:
         return [x.genomic_position for x in self.variants]
-
-    @property
-    def _ext_offset(self) -> int:
-        """Offset converting genomic positions into extended sequence indices"""
-        return -self.pos_range.start
-
-    def _get_codon_index(self, position: int) -> int:
-        """Convert a genomic position into a codon index"""
-
-        return (position + self._ext_offset) // 3
-
-    def _get_codon_indices(self, positions: List[GenomicPosition]) -> List[int]:
-        return [self._get_codon_index(x.position) for x in positions]
-
-    def get_codon_indices(self, positions: List[GenomicPosition], **kwargs) -> List[int]:
-        return self._get_codon_indices(positions)
-
-    def get_codon_mutation_types_at_codons(self, codon_table: CodonTable, codon_indices: List[int]) -> List[MutationType]:
-        return codon_table.get_mutation_types_at(
-            self.pos_range.strand,
-            self.ext_ref_seq,
-            self.ext_alt_seq,
-            codon_indices)
-
-    def get_codon_mutation_types_at(self, codon_table: CodonTable, positions: List[GenomicPosition], **kwargs) -> List[MutationType]:
-        return self.get_codon_mutation_types_at_codons(
-            codon_table, self.get_codon_indices(positions, **kwargs))
-
-    def get_variant_codon_indices(self, **kwargs) -> List[int]:
-        return self.get_codon_indices(self.variant_positions, **kwargs)
-
-    def get_variant_mutation_types(self, codon_table: CodonTable, **kwargs) -> List[MutationType]:
-        return self.get_codon_mutation_types_at(
-            codon_table, self.variant_positions, **kwargs)
 
 
 @dataclass(frozen=True)
@@ -213,17 +180,10 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair, Generic[VariantT]):
     def cds_sequence_end(self) -> int:
         return self.end + self.cds_suffix_length
 
-    @property
-    def _ext_offset(self) -> int:
-        """Offset converting genomic positions into extended sequence indices"""
-
-        return self.frame + super()._ext_offset
-
     def log_same_codon_variants(self) -> None:
-        offset = self._ext_offset
 
         def get_variant_codon(variant: VariantT) -> int:
-            return (variant.genomic_position.position - offset) // 3
+            return self._get_codon_index(variant.genomic_position.position)
 
         def sort_key(t: Tuple[int, VariantT]) -> int:
             return t[0]
@@ -237,13 +197,23 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair, Generic[VariantT]):
                     ', '.join([str(x.genomic_position) for _, x in variants]),
                     codon_index + 1))
 
+    def _get_codon_index(self, position: int) -> int:
+        """Convert a genomic position into a codon index"""
+
+        return get_codon_index(self.frame, self.start, position)
+
+    def _get_codon_indices(self, positions: List[GenomicPosition]) -> List[int]:
+        return [self._get_codon_index(x.position) for x in positions]
+
     @property
     def contains_same_codon_variants(self) -> bool:
-        codon_indices = super().get_codon_indices(self.variant_positions)
+        # codon_indices = super().get_codon_indices(self.variant_positions)
+        codon_indices = self._get_codon_indices(self.variant_positions)
         return has_duplicates(codon_indices)
 
     def get_codon_indices(self, positions: List[GenomicPosition], **kwargs) -> List[int]:
-        codon_indices = super().get_codon_indices(positions)
+        # codon_indices = super().get_codon_indices(positions)
+        codon_indices = self._get_codon_indices(positions)
         no_duplicate_codons = kwargs.get('no_duplicate_codons', False)
 
         # Verify no two variants affect the same codon
@@ -256,35 +226,27 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair, Generic[VariantT]):
     def get_codon_indices_in_range(self, spr: StrandedPositionRange) -> List[int]:
         """Get the indices of the codons spanned by the input range, if any"""
 
-        # Check an intersection exists
-        # NOTE: `pos_range` may be a GenomicRange, in which case __contains__
-        # would fail due to the absence of the chromosome attribute in `spr`
+        return get_codon_indices_in_range(
+            self.frame,
+            self.pos_range.start,
+            self.pos_range.end,
+            spr.start,
+            spr.end)
 
-        # Fail on incorrect strand (pathological state)
-        if spr.strand != self.pos_range.strand:
-            raise ValueError("Failed to retrieve codon indices: incorrect strand!")
+    def get_codon_mutation_types_at_codons(self, codon_table: CodonTable, codon_indices: List[int]) -> List[MutationType]:
+        return codon_table.get_mutation_types_at(
+            self.pos_range.strand,
+            self.ext_ref_seq,
+            self.ext_alt_seq,
+            codon_indices)
 
-        start: int = self.pos_range.start
-        end: int = self.pos_range.end
+    def get_codon_mutation_types_at(self, codon_table: CodonTable, positions: List[GenomicPosition], **kwargs) -> List[MutationType]:
+        return self.get_codon_mutation_types_at_codons(
+            codon_table, self.get_codon_indices(positions, **kwargs))
 
-        # NOTE: in a `PositionRange`, `end` is guaranteed to be larger than `start`
-        if spr.end < start or spr.start > end:
-            return []
+    def get_variant_codon_indices(self, **kwargs) -> List[int]:
+        return self.get_codon_indices(self.variant_positions, **kwargs)
 
-        # Get first codon index
-        codon_start: int = 0 if spr.start <= start else self._get_codon_index(spr.start)  # (spr.start + self._ext_offset) // 3  # (spr.start - self.cds_sequence_start) // 3
-
-        if spr.end == spr.start:
-            return [codon_start]
-
-        # Get last codon index
-        codon_end: int = (
-            self.last_codon_index if spr.end >= end else
-            self._get_codon_index(spr.end)
-        )
-
-        # Generate full codon index range
-        return (
-            [codon_start] if codon_end == codon_start else
-            list(range(codon_start, codon_end + 1))
-        )
+    def get_variant_mutation_types(self, codon_table: CodonTable, **kwargs) -> List[MutationType]:
+        return self.get_codon_mutation_types_at(
+            codon_table, self.variant_positions, **kwargs)
