@@ -76,9 +76,13 @@ class BaseAnnotatedSequencePair(abc.ABC, Sized, Generic[RangeT, VariantT]):
         """Offset converting genomic positions into extended sequence indices"""
         return -self.pos_range.start
 
+    def _get_codon_index(self, position: int) -> int:
+        """Convert a genomic position into a codon index"""
+
+        return (position + self._ext_offset) // 3
+
     def _get_codon_indices(self, positions: List[GenomicPosition]) -> List[int]:
-        offset = self._ext_offset
-        return [(x.position + offset) // 3 for x in positions]
+        return [self._get_codon_index(x.position) for x in positions]
 
     def get_codon_indices(self, positions: List[GenomicPosition], **kwargs) -> List[int]:
         return self._get_codon_indices(positions)
@@ -112,7 +116,10 @@ class AnnotatedSequencePair(BaseAnnotatedSequencePair, Generic[VariantT]):
     _variants: List[VariantT]
 
     def __post_init__(self) -> None:
-        if len(self.ref_seq) != len(self.alt_seq):
+        n: int = len(self.ref_seq)
+        if n != len(self.pos_range):
+            raise ValueError("Mismatching position range and sequence length!")
+        if n != len(self.alt_seq):
             raise ValueError("Mismatching paired sequence lengths!")
 
     @property
@@ -191,6 +198,22 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair, Generic[VariantT]):
         return len(self.cds_prefix)
 
     @property
+    def start(self) -> int:
+        return self.pos_range.start
+
+    @property
+    def end(self) -> int:
+        return self.pos_range.end
+
+    @property
+    def cds_sequence_start(self) -> int:
+        return self.start - self.frame
+
+    @property
+    def cds_sequence_end(self) -> int:
+        return self.end + self.cds_suffix_length
+
+    @property
     def _ext_offset(self) -> int:
         """Offset converting genomic positions into extended sequence indices"""
 
@@ -229,3 +252,39 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair, Generic[VariantT]):
             raise ValueError("Variant affecting the same codon!")
 
         return codon_indices
+
+    def get_codon_indices_in_range(self, spr: StrandedPositionRange) -> List[int]:
+        """Get the indices of the codons spanned by the input range, if any"""
+
+        # Check an intersection exists
+        # NOTE: `pos_range` may be a GenomicRange, in which case __contains__
+        # would fail due to the absence of the chromosome attribute in `spr`
+
+        # Fail on incorrect strand (pathological state)
+        if spr.strand != self.pos_range.strand:
+            raise ValueError("Failed to retrieve codon indices: incorrect strand!")
+
+        start: int = self.pos_range.start
+        end: int = self.pos_range.end
+
+        # NOTE: in a `PositionRange`, `end` is guaranteed to be larger than `start`
+        if spr.end < start or spr.start > end:
+            return []
+
+        # Get first codon index
+        codon_start: int = 0 if spr.start <= start else self._get_codon_index(spr.start)  # (spr.start + self._ext_offset) // 3  # (spr.start - self.cds_sequence_start) // 3
+
+        if spr.end == spr.start:
+            return [codon_start]
+
+        # Get last codon index
+        codon_end: int = (
+            self.last_codon_index if spr.end >= end else
+            self._get_codon_index(spr.end)
+        )
+
+        # Generate full codon index range
+        return (
+            [codon_start] if codon_end == codon_start else
+            list(range(codon_start, codon_end + 1))
+        )

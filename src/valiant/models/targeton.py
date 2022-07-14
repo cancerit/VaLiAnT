@@ -258,11 +258,11 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
 
     @property
     def start(self) -> int:
-        return self.pos_range.start
+        return self.annotated_seq.start
 
     @property
     def end(self) -> int:
-        return self.pos_range.end
+        return self.annotated_seq.end
 
     @property
     def frame(self) -> int:
@@ -270,44 +270,14 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
 
     @property
     def cds_sequence_start(self) -> int:
-        return self.start - self.frame
+        return self.annotated_seq.cds_sequence_start
 
     @property
     def cds_sequence_end(self) -> int:
-        return self.end + self.cds_suffix_length
+        return self.annotated_seq.cds_sequence_end
 
     def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
-        """Get the indices of the codons spanned by the input range, if any"""
-
-        # Check an intersection exists
-        # NOTE: `pos_range` may be a GenomicRange, in which case __contains__
-        # would fail due to the absence of the chromosome attribute in `spr`
-
-        # Fail on incorrect strand (pathological state)
-        if spr.strand != self.annotated_seq.pos_range.strand:
-            raise ValueError("Failed to retrieve codon indices: incorrect strand!")
-
-        start: int = self.annotated_seq.pos_range.start
-        end: int = self.annotated_seq.pos_range.end
-
-        # NOTE: in a `PositionRange`, `end` is guaranteed to be larger than `start`
-        if spr.end < start or spr.start > end:
-            return []
-
-        # Get first codon index
-        codon_start: int = 0 if spr.start <= start else (spr.start - self.cds_sequence_start) // 3
-
-        if spr.end == spr.start:
-            return [codon_start]
-
-        # Get last codon index
-        codon_end: int = (
-            self.annotated_seq.last_codon_index if spr.end >= end else
-            self.annotated_seq.last_codon_index - ((self.cds_sequence_end - spr.end) // 3)
-        )
-
-        # Generate full codon index range
-        return list(range(codon_start, codon_end + 1))
+        return self.annotated_seq.get_codon_indices_in_range(spr)
 
     def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
         return frozenset()
