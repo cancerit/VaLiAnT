@@ -23,7 +23,7 @@ Ref.: https://www.mavedb.org/docs/mavehgvs/spec.html#sequence-prefixes-and-seque
 """
 
 from enum import Enum
-from typing import Optional
+from typing import NoReturn, Optional
 from .enums import VariantType
 
 
@@ -74,13 +74,20 @@ def _get_insertion_mave_nt_suffix(start: int, alt: Optional[str]) -> str:
     return f"{start}ins{alt}"
 
 
+def _raise_invalid_deletion() -> NoReturn:
+    raise ValueError("Invalid deletion: missing reference!")
+
+
 def _get_deletion_mave_nt_suffix(start: int, ref: Optional[str]) -> str:
     """Generate MAVE-HGVS name for a deletion"""
 
-    if ref is None or len(ref) == 0:
-        raise ValueError("Invalid deletion: missing reference!")
+    if ref is None:
+        _raise_invalid_deletion()
 
     n: int = len(ref)
+
+    if n == 0:
+        _raise_invalid_deletion()
 
     return f"{start}del" if n == 1 else f"{start}_{start + n - 1}del"
 
