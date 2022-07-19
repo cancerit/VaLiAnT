@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 import abc
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable, ClassVar, Dict, Generic, List, FrozenSet, Optional, Type, TypeVar
 import numpy as np
@@ -28,7 +28,7 @@ from valiant.models.annotated_sequence import AnnotatedSequencePair, AnnotatedSe
 from valiant.models.base import GenomicRange, StrandedPositionRange
 from valiant.models.pam_protection import PamProtectedReferenceSequence, PamVariant
 from .codon_table import CodonTable, STOP_CODE
-from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS, META_MUT_POSITION, META_PAM_MUT_SGRNA_ID, META_REF, ARRAY_SEPARATOR
+from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS
 from .mutated_sequences import (
     DeletionMutatedSequence,
     Deletion1MutatedSequence,
