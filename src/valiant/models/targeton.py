@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 import abc
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import partial
 from typing import Any, Callable, ClassVar, Dict, Generic, List, FrozenSet, Optional, Type, TypeVar
 import numpy as np
@@ -28,7 +28,7 @@ from valiant.models.annotated_sequence import AnnotatedSequencePair, AnnotatedSe
 from valiant.models.base import GenomicRange, StrandedPositionRange
 from valiant.models.pam_protection import PamProtectedReferenceSequence, PamVariant
 from .codon_table import CodonTable, STOP_CODE
-from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS, META_MUT_POSITION, META_PAM_MUT_SGRNA_ID, META_REF, ARRAY_SEPARATOR
+from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS
 from .mutated_sequences import (
     DeletionMutatedSequence,
     Deletion1MutatedSequence,
@@ -258,7 +258,11 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
 
     @property
     def start(self) -> int:
-        return self.pos_range.start
+        return self.annotated_seq.start
+
+    @property
+    def end(self) -> int:
+        return self.annotated_seq.end
 
     @property
     def frame(self) -> int:
@@ -266,35 +270,14 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
 
     @property
     def cds_sequence_start(self) -> int:
-        return self.start - self.frame
+        return self.annotated_seq.cds_sequence_start
+
+    @property
+    def cds_sequence_end(self) -> int:
+        return self.annotated_seq.cds_sequence_end
 
     def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
-        """Get the indices of the codons spanned by the input range, if any"""
-
-        # Check an intersection exists
-        # NOTE: `pos_range` may be a GenomicRange, in which case __contains__
-        # would fail due to the absence of the chromosome attribute in `spr`
-
-        # Fail on incorrect strand (pathological state)
-        if spr.strand != self.annotated_seq.pos_range.strand:
-            raise ValueError("Failed to retrieve codon indices: incorrect strand!")
-
-        start: int = self.annotated_seq.pos_range.start
-        end: int = self.annotated_seq.pos_range.end
-
-        # NOTE: in a `PositionRange`, `end` is guaranteed to be larger than `start`
-        if spr.end < start or spr.start > end:
-            return []
-
-        # Get first and last codon indices
-        codon_start: int = 0 if spr.start <= start else (spr.start - start) // 3
-        codon_end: int = (
-            self.annotated_seq.last_codon_index if spr.end >= end else
-            self.annotated_seq.last_codon_index - ((end - spr.end) // 3)
-        )
-
-        # Generate full codon index range
-        return list(range(codon_start, codon_end + 1))
+        return self.annotated_seq.get_codon_indices_in_range(spr)
 
     def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
         return frozenset()
@@ -508,10 +491,6 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     @property
     def has_pam_variants(self) -> bool:
         return self.variant_count > 0
-
-    @classmethod
-    def from_annotated_sequence(cls, annotated_sequence: CDSAnnotatedSequencePair) -> PamProtCDSTargeton:
-        return cls(annotated_sequence, codon_to_sgrna_id)
 
     def set_metadata_sgrna_ids(self, mutations: MutationCollection) -> None:
         return set_metadata_sgrna_ids(self.frame, self._codon_to_sgrna_id, mutations.df)

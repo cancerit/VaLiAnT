@@ -127,7 +127,8 @@ class CodonTable:
         tr = self.get_translate_f(strand)
 
         def get_mutation_type(codon_index: int) -> MutationType:
-            sl = slice(codon_index, codon_index + 3)
+            start: int = codon_index * 3
+            sl = slice(start, start + 3)
             return get_codon_mutation_type(tr, ref_seq[sl], alt_seq[sl])
 
         return list(map(get_mutation_type, codon_indices))

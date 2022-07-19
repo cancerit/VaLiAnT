@@ -21,17 +21,27 @@ import pandas as pd
 from .constants import META_MUT_POSITION, META_REF, META_PAM_MUT_SGRNA_ID, ARRAY_SEPARATOR
 
 
+def get_codon_index_range(codon_start: int, codon_end: int) -> List[int]:
+    return (
+        [codon_start] if codon_end == codon_start else
+        list(range(codon_start, codon_end + 1))
+    )
+
+
 def get_sgrna_ids(frame: int, codon_to_sgrna_ids: Dict[int, str], mut_pos: int, mut_ref: Optional[str]) -> Set[str]:
     """List the identifiers of the sgRNA's whose variants map to codons altered by the mutation"""
 
-    start: int = mut_pos + frame
-    codon_start: int = start // 3
+    def _get_codon_index(x: int) -> int:
+        # Assuming the positions are relative indices
+        return get_codon_index(frame, 0, x)
+
+    codon_start: int = _get_codon_index(mut_pos)
     ref_length: int = len(mut_ref) if mut_ref else 0
 
     return (
         {
             codon_to_sgrna_ids[codon_index]
-            for codon_index in range(codon_start, ((start + ref_length) // 3) + 1)
+            for codon_index in get_codon_index_range(codon_start, _get_codon_index(mut_pos + ref_length - 1))
             if codon_index in codon_to_sgrna_ids
         } if ref_length > 1 else
         {codon_to_sgrna_ids[codon_start]} if codon_start in codon_to_sgrna_ids else
@@ -71,3 +81,41 @@ def set_metadata_sgrna_ids(frame: int, codon_to_sgrna_ids: Dict[int, str], metad
 
     metadata[META_PAM_MUT_SGRNA_ID] = metadata.apply(
         get_sgrna_id_str, axis=1).astype('string')
+
+
+def get_codon_index(seq_frame: int, seq_start: int, x: int) -> int:
+    return (x + seq_frame - seq_start) // 3
+
+
+def get_codon_indices_in_range(
+    seq_frame: int,
+    seq_start: int,
+    seq_end: int,
+    target_start: int,
+    target_end: int
+) -> List[int]:
+    """Get the indices of the codons spanned by the target range, if any"""
+
+    def _get_codon_index(x: int) -> int:
+        return get_codon_index(seq_frame, seq_start, x)
+
+    # NOTE: in a `PositionRange`, `end` is guaranteed to be larger than `start`
+    assert seq_end >= seq_start and target_end >= target_start
+
+    if target_end < seq_start or target_start > seq_end:
+        return []
+
+    # Get first codon index
+    codon_start: int = 0 if target_start <= seq_start else _get_codon_index(target_start)
+
+    if target_end == target_start:
+        return [codon_start]
+
+    # Get last codon index
+    codon_end: int = (
+        _get_codon_index(seq_end) if target_end >= seq_end else
+        _get_codon_index(target_end)
+    )
+
+    # Generate full codon index range
+    return get_codon_index_range(codon_start, codon_end)

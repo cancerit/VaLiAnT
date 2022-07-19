@@ -27,33 +27,11 @@ from .utils import load_codon_table
 codon_table = load_codon_table()
 
 
-def test_get_variant_mutation_types():
-
-    # Generate annotated sequence pair
+def get_default_cds_annotate_sequence_pair():
+    spr = StrandedPositionRange(100, 106, '+')
     genomic_positions = [100, 101]
-    sp = AnnotatedSequencePair(
-        StrandedPositionRange(100, 105, '+'),
-        'AAGTACG',
-        'CCGTACG', [
-            SubstitutionVariant(GenomicPosition('X', pos), 'A', 'C')
-            for pos in genomic_positions
-        ])
-
-    print(sp)
-
-    # Retrieve mutation types
-    mutation_types = sp.get_variant_mutation_types(codon_table)
-
-    assert len(mutation_types) == len(genomic_positions)
-
-
-@pytest.mark.parametrize('no_duplicate_codons', [True, False])
-def test_cds_get_variant_mutation_types(no_duplicate_codons):
-
-    # Generate annotated sequence pair
-    genomic_positions = [100, 101]
-    sp = CDSAnnotatedSequencePair(
-        StrandedPositionRange(100, 105, '+'),
+    return CDSAnnotatedSequencePair(
+        spr,
         'AAGTACG',
         'CCGTACG', [
             SubstitutionVariant(GenomicPosition('X', pos), 'A', 'C')
@@ -62,9 +40,72 @@ def test_cds_get_variant_mutation_types(no_duplicate_codons):
         'T',
         'C')
 
+
+cds_sequence_pair = get_default_cds_annotate_sequence_pair()
+last_codon_index = (cds_sequence_pair.ext_seq_length // 3) - 1
+
+
+def test_get_variant_mutation_types():
+
+    # Retrieve mutation types
+    mutation_types = cds_sequence_pair.get_variant_mutation_types(codon_table)
+
+    assert len(mutation_types) == cds_sequence_pair.variant_count
+
+
+@pytest.mark.parametrize('no_duplicate_codons', [True, False])
+def test_cds_get_variant_mutation_types(no_duplicate_codons):
+
     # Retrieve mutation types
     with pytest.raises(ValueError) if no_duplicate_codons else nullcontext():
-        mutation_types = sp.get_variant_mutation_types(
+        mutation_types = cds_sequence_pair.get_variant_mutation_types(
             codon_table, no_duplicate_codons=no_duplicate_codons)
 
-        assert len(mutation_types) == len(genomic_positions)
+        assert len(mutation_types) == cds_sequence_pair.variant_count
+
+
+# Position ranges assuming the reading frame is one
+@pytest.mark.parametrize('spr,codon_indices', [
+    (StrandedPositionRange(start, end, '+'), codon_indices)
+    for start, end, codon_indices in [
+        (
+            cds_sequence_pair.pos_range.start,
+            cds_sequence_pair.pos_range.end,
+            list(range(cds_sequence_pair.ext_seq_length // 3))
+        ),
+        (
+            cds_sequence_pair.pos_range.start,
+            cds_sequence_pair.pos_range.start,
+            [0]
+        ),
+        (
+            cds_sequence_pair.pos_range.start,
+            cds_sequence_pair.pos_range.start + 1,
+            [0]
+        ),
+        (
+            cds_sequence_pair.pos_range.start,
+            cds_sequence_pair.pos_range.start + 2,
+            [0, 1]
+        ),
+        (
+            cds_sequence_pair.pos_range.end,
+            cds_sequence_pair.pos_range.end,
+            [last_codon_index]
+        ),
+        (
+            cds_sequence_pair.pos_range.end - 1,
+            cds_sequence_pair.pos_range.end,
+            [last_codon_index]
+        ),
+        (
+            cds_sequence_pair.pos_range.end - 2,
+            cds_sequence_pair.pos_range.end,
+            [last_codon_index - 1, last_codon_index]
+        )
+    ]
+])
+def test_get_codon_indices_in_range(spr, codon_indices):
+
+    # Generate annotated sequence pair
+    assert cds_sequence_pair.get_codon_indices_in_range(spr) == codon_indices
