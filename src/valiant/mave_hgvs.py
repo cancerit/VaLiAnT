@@ -66,12 +66,14 @@ def _get_substitution_mave_nt_suffix(start: int, ref: Optional[str], alt: Option
     )
 
 
+# TODO: add special rules for 5' and 3' end insertions
 def _get_insertion_mave_nt_suffix(start: int, alt: Optional[str]) -> str:
     """Generate MAVE-HGVS name for an insertion"""
 
     if alt is None or len(alt) == 0:
         raise ValueError("Invalid insertion: missing alternate!")
-    return f"{start}ins{alt}"
+
+    return f"{start - 1}_{start}ins{alt}"
 
 
 def _raise_invalid_deletion() -> NoReturn:
