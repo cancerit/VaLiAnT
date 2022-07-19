@@ -74,11 +74,15 @@ def _get_insertion_mave_nt_suffix(start: int, alt: Optional[str]) -> str:
     return f"{start}ins{alt}"
 
 
-def _get_deletion_mave_nt_suffix(start: int) -> str:
+def _get_deletion_mave_nt_suffix(start: int, ref: Optional[str]) -> str:
     """Generate MAVE-HGVS name for a deletion"""
 
-    # TODO: verify format for multi-nucleotide deletions...
-    return f"{start}del"
+    if ref is None or len(ref) == 0:
+        raise ValueError("Invalid deletion: missing reference!")
+
+    n: int = len(ref)
+
+    return f"{start}del" if n == 1 else f"{start}_{start + n - 1}del"
 
 
 def get_mave_nt(
@@ -99,7 +103,7 @@ def get_mave_nt(
     suffix: Optional[str] = (
         _get_substitution_mave_nt_suffix(start, ref, alt) if var_type == var_type_sub else
         _get_insertion_mave_nt_suffix(start, alt) if var_type == var_type_ins else
-        _get_deletion_mave_nt_suffix(start) if var_type == var_type_del else
+        _get_deletion_mave_nt_suffix(start, ref) if var_type == var_type_del else
         None
     )
 
