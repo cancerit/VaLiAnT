@@ -21,17 +21,27 @@ import pandas as pd
 from .constants import META_MUT_POSITION, META_REF, META_PAM_MUT_SGRNA_ID, ARRAY_SEPARATOR
 
 
+def get_codon_index_range(codon_start: int, codon_end: int) -> List[int]:
+    return (
+        [codon_start] if codon_end == codon_start else
+        list(range(codon_start, codon_end + 1))
+    )
+
+
 def get_sgrna_ids(frame: int, codon_to_sgrna_ids: Dict[int, str], mut_pos: int, mut_ref: Optional[str]) -> Set[str]:
     """List the identifiers of the sgRNA's whose variants map to codons altered by the mutation"""
 
-    start: int = mut_pos + frame
-    codon_start: int = start // 3
+    def _get_codon_index(x: int) -> int:
+        # Assuming the positions are relative indices
+        return get_codon_index(frame, 0, x)
+
+    codon_start: int = _get_codon_index(mut_pos)
     ref_length: int = len(mut_ref) if mut_ref else 0
 
     return (
         {
             codon_to_sgrna_ids[codon_index]
-            for codon_index in range(codon_start, ((start + ref_length) // 3) + 1)
+            for codon_index in get_codon_index_range(codon_start, _get_codon_index(mut_pos + ref_length - 1))
             if codon_index in codon_to_sgrna_ids
         } if ref_length > 1 else
         {codon_to_sgrna_ids[codon_start]} if codon_start in codon_to_sgrna_ids else
@@ -108,7 +118,4 @@ def get_codon_indices_in_range(
     )
 
     # Generate full codon index range
-    return (
-        [codon_start] if codon_end == codon_start else
-        list(range(codon_start, codon_end + 1))
-    )
+    return get_codon_index_range(codon_start, codon_end)
