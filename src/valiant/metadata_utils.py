@@ -25,21 +25,13 @@ from .mave_hgvs import MAVEPrefix, get_mave_nt
 META_CDS_PROBE_FIELD = META_REF_AA
 
 
-def is_metadata_row_cds(r) -> bool:
+def is_metadata_row_cds(r: pd.Series) -> bool:
     return META_CDS_PROBE_FIELD in r and not pd.isna(r[META_CDS_PROBE_FIELD])
 
 
-def get_mave_nt_prefix_from_metadata_row(has_cds_annot: bool, r) -> MAVEPrefix:
-    return (
-        MAVEPrefix.CODING if is_metadata_row_cds(r) else
-        MAVEPrefix.NON_CODING
-    ) if has_cds_annot else MAVEPrefix.LINEAR_GENOMIC
-
-
-def get_mave_nt_from_row(has_cds_annot: bool, r) -> str:
-    prefix = get_mave_nt_prefix_from_metadata_row(has_cds_annot, r)
+def get_mave_nt_from_row(r: pd.Series) -> str:
     return get_mave_nt(
-        prefix,
+        MAVEPrefix.LINEAR_GENOMIC,
         r.var_type,
         r.mutator,
         r.mut_position,

@@ -28,9 +28,7 @@ from .enums import VariantType
 
 
 class MAVEPrefix(Enum):
-    CODING = 'c'
     LINEAR_GENOMIC = 'g'
-    NON_CODING = 'n'
 
 
 # Encoded variant types

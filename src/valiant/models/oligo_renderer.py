@@ -25,7 +25,6 @@ from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
 from ..constants import REVCOMP_OLIGO_NAME_SUFFIX, META_MAVE_NT, META_REF_AA
 from ..enums import VariantType
-from ..mave_hgvs import MAVEPrefix, get_mave_nt
 from ..metadata_utils import get_mave_nt_from_row
 from ..utils import get_constant_category, reverse_complement, get_source_type_column
 
@@ -205,7 +204,6 @@ class BaseOligoRenderer:
         df['src_type'] = get_source_type_column('ref', rown)
 
         # Add mutation MAVE-HGVS code
-        f = partial(get_mave_nt_from_row, options.is_annotation_available)
-        df[META_MAVE_NT] = pd.Series(df.apply(f, axis=1), dtype='string')
+        df[META_MAVE_NT] = pd.Series(df.apply(get_mave_nt_from_row, axis=1), dtype='string')
 
         return df

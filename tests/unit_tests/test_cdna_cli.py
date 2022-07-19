@@ -62,7 +62,8 @@ targeton_metadata_table_fields = set([
     'revc',
     'oligo_length',
     'oligo_name',
-    'src_type'
+    'src_type',
+    'mave_nt'
 ])
 
 codon_table = load_codon_table()

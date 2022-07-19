@@ -19,10 +19,9 @@
 from contextlib import nullcontext
 import pandas as pd
 import pytest
+from valiant.enums import VariantType
 from valiant.enums import VariantType, TargetonMutator
-from valiant.models.base import GenomicRange
 from valiant.models.options import Options
-from valiant.models.pam_protection import PamProtectedReferenceSequence
 from valiant.models.oligo_renderer import BaseOligoRenderer
 from .utils import get_pam_protected_sequence
 
@@ -128,8 +127,8 @@ def test_base_oligo_renderer_get_metadata_table(rc):
     pam_seq = get_pam_protected_sequence(SEQ, None, strand='-')
 
     df = pd.DataFrame.from_records([
-        ('OLIGO_1', 100, 'A', 'C', 'snv', 'AAACGGG')
-    ], columns=['oligo_name', 'mut_position', 'ref', 'new', 'mutator', 'mseq'])
+        ('OLIGO_1', 100, 'A', 'C', 'snv', 'AAACGGG', VariantType.SUBSTITUTION.value)
+    ], columns=['oligo_name', 'mut_position', 'ref', 'new', 'mutator', 'mseq', 'var_type'])
 
     # Initialise renderer
     renderer = BaseOligoRenderer(pam_seq, GENE_ID, TRANSCRIPT_ID, '', '')
