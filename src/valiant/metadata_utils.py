@@ -33,7 +33,6 @@ def get_mave_nt_from_row(r: pd.Series) -> str:
     return get_mave_nt(
         MAVEPrefix.LINEAR_GENOMIC,
         r.var_type,
-        r.mutator,
         r.mut_position,
         r.ref,
         r.new)

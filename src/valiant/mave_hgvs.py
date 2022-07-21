@@ -97,7 +97,6 @@ def _get_deletion_mave_nt_suffix(start: int, ref: Optional[str]) -> str:
 def get_mave_nt(
     prefix: MAVEPrefix,
     var_type: int,
-    source: str,
     start: int,
     ref: Optional[str],
     alt: Optional[str]
