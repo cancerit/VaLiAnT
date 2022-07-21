@@ -19,7 +19,9 @@
 """
 MAVE-HGVS mutation names
 
-Ref.: https://www.mavedb.org/docs/mavehgvs/spec.html#sequence-prefixes-and-sequence-types
+Ref.:
+- https://www.mavedb.org/docs/mavehgvs/spec.html
+- http://varnomen.hgvs.org
 """
 
 from enum import Enum
