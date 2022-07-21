@@ -37,10 +37,14 @@ var_type_del: int = VariantType.DELETION.value
 var_type_ins: int = VariantType.INSERTION.value
 
 
-def _get_delin_mave_nt_suffix(start: int, alt: str) -> str:
+def _get_del_position(start: int, ref_length: int) -> str:
+    return str(start) if ref_length == 1 else f"{start}_{start + ref_length - 1}"
+
+
+def _get_delin_mave_nt_suffix(start: int, ref_length: int, alt: str) -> str:
     """Generate MAVE-HGVS name for a deletion-insertion"""
 
-    return f"{start}delins{alt}"
+    return f"{_get_del_position(start, ref_length)}delins{alt}"
 
 
 def _get_snv_mave_nt_suffix(start: int, ref: str, alt: str) -> str:
@@ -62,7 +66,7 @@ def _get_substitution_mave_nt_suffix(start: int, ref: Optional[str], alt: Option
 
     return (
         _get_snv_mave_nt_suffix(start, ref, alt) if is_snv else
-        _get_delin_mave_nt_suffix(start, alt)
+        _get_delin_mave_nt_suffix(start, ref_length, alt)
     )
 
 
@@ -91,7 +95,7 @@ def _get_deletion_mave_nt_suffix(start: int, ref: Optional[str]) -> str:
     if n == 0:
         _raise_invalid_deletion()
 
-    return f"{start}del" if n == 1 else f"{start}_{start + n - 1}del"
+    return _get_del_position(start, n) + 'del'
 
 
 def get_mave_nt(
