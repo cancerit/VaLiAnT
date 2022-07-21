@@ -19,6 +19,10 @@
 """
 MAVE-HGVS mutation names
 
+Limitations:
+
+- liminal insertions are not recognised as exceptions (see HGVS 3' rule)
+
 Ref.:
 - https://www.mavedb.org/docs/mavehgvs/spec.html
 - http://varnomen.hgvs.org

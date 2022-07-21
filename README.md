@@ -603,6 +603,8 @@ Comma-separated values (CSV) file containing name, label, and all metadata of th
 
 For cDNA targets, the reference chromosome (`ref_chr`) and strand (`ref_strand`) will be missing and all positions will be relative to the cDNA sequence. All fields related to PAM protection (`pam_seq`) and custom VCF variants (`vcf_alias` and `vcf_var_id`), features unavailable for this target type, will also be empty.
 
+The [MAVE-HGVS](https://www.mavedb.org/docs/mavehgvs/) strings are all **linear genomic** and **do not include the reference**. Because in HGVS insertion positions are described by the flanking nucleotides, those occurring at either end of the reference sequence should be treated differently (see the 3' rule in the relevant [HGVS documentation](http://varnomen.hgvs.org/recommendations/DNA/variant/insertion/)); for consistency between SGE and cDNA mode, simplicity, and given the limited usefulness of liminal insertions, this is not the case in the current implementation, and therefore the invalid **position zero** might be found in insertion names.
+
 Array fields use the semicolon as separator.
 
 |Field|Format|Description|
@@ -631,8 +633,9 @@ Array fields use the semicolon as separator.
 |`mutator`|type of mutator|Label of the [type of mutator](#mutation-types) that generated the oligonucleotide.|
 |`oligo_length`|integer|Oligonucleotide length.|
 |`mseq`|DNA sequence|Full oligonucleotide sequence (with adaptors, if any).|
-|`pam_mut_annot`|Array of `syn`\|`mis`\|`non`\|`ncd`|Applied PAM protection variant [mutation types](#mutation-types) (or `ncd` if affecting a noncoding region)|
-|`pam_mut_sgrna_id`|Array of sgRNA ID's|sgRNA ID's bound to the PAM protection variants affecting the same codons as the mutation, if any (CDS only)|
+|`pam_mut_annot`|Array of `syn`\|`mis`\|`non`\|`ncd`|Applied PAM protection variant [mutation types](#mutation-types) (or `ncd` if affecting a noncoding region).|
+|`pam_mut_sgrna_id`|Array of sgRNA ID's|sgRNA ID's bound to the PAM protection variants affecting the same codons as the mutation, if any (CDS only).|
+|`mave_nt`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation.|
 
 Example:
 
