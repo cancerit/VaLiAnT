@@ -23,10 +23,10 @@ import numpy as np
 import pandas as pd
 from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
-from ..constants import REVCOMP_OLIGO_NAME_SUFFIX, META_MAVE_NT, META_REF_AA
+from ..constants import META_MSEQ, META_MSEQ_NO_ADAPT, REVCOMP_OLIGO_NAME_SUFFIX, META_MAVE_NT, META_REF_AA
 from ..enums import VariantType
 from ..metadata_utils import get_mave_nt_from_row
-from ..utils import get_constant_category, reverse_complement, get_source_type_column
+from ..utils import get_constant_category, is_strand, reverse_complement, get_source_type_column, validate_strand
 
 
 var_type_sub: int = VariantType.SUBSTITUTION.value
@@ -145,6 +145,10 @@ class BaseOligoRenderer:
         return self.ref_seq.genomic_range.strand
 
     @property
+    def has_adaptors(self) -> bool:
+        return bool(self.adaptor_5) or bool(self.adaptor_3)
+
+    @property
     def _constant_fields(self) -> List[Tuple[str, Any]]:
         return [
             ('gene_id', self.gene_id),
@@ -155,19 +159,16 @@ class BaseOligoRenderer:
             ('pam_seq', self.ref_seq.pam_protected_sequence)
         ]
 
-    def _render_mutated_sequence(self, mseq: str) -> str:
+    def _add_adaptors(self, mseq: str) -> str:
         return f"{self.adaptor_5}{mseq}{self.adaptor_3}"
 
-    def _render_mutated_sequence_rc(self, mseq: str) -> str:
-        return f"{self.adaptor_5}{reverse_complement(mseq)}{self.adaptor_3}"
+    def _should_apply_reverse_complement(self, reverse_complement: bool) -> bool:
+        validate_strand(self.strand)
 
-    def _get_renderer(self, reverse_complement: bool) -> Callable[[str], str]:
-        if reverse_complement:
-            if self.strand != '-':
-                raise ValueError("Attempted reverse complement of plus strand sequence!")
-            return self._render_mutated_sequence_rc
-        else:
-            return self._render_mutated_sequence
+        if reverse_complement and self.strand != '-':
+            raise ValueError("Attempted reverse complement of plus strand sequence!")
+
+        return reverse_complement
 
     def _get_oligo_name(self, var_type: int, source: str, start: int, ref: Optional[str], alt: Optional[str]) -> str:
         return get_oligo_name(self._oligo_name_prefix, var_type, source, start, ref, alt)
@@ -192,13 +193,22 @@ class BaseOligoRenderer:
             df[col_name] = get_constant_category(col_value, rown)
 
         # Add reverse complement information to the metadata
-        rc: bool = self.ref_seq.genomic_range.strand == '-' and options.revcomp_minus_strand
+        rc: bool = self._should_apply_reverse_complement(options.revcomp_minus_strand)
         df['revc'] = np.repeat(rc, rown).astype(np.int8)
         if rc:
             df.oligo_name = df.oligo_name + REVCOMP_OLIGO_NAME_SUFFIX
 
+        # Apply reverse complement to the mutated sequence, if required
+        df[META_MSEQ_NO_ADAPT] = (
+            df[META_MSEQ].apply(reverse_complement) if rc else
+            df[META_MSEQ]
+        ).astype('string')
+
         # Render full oligonucleotide sequences
-        df.mseq = df.mseq.apply(self._get_renderer(rc)).astype('string')
+        df[META_MSEQ] = (
+            df[META_MSEQ_NO_ADAPT].apply(self._add_adaptors).astype('string') if self.has_adaptors else
+            df[META_MSEQ_NO_ADAPT]
+        )
 
         # Set sequence source type
         df['src_type'] = get_source_type_column('ref', rown)
