@@ -18,6 +18,7 @@
 
 import pytest
 from valiant.enums import TargetonMutator
+from valiant.models.base import PositionRange
 from valiant.models.refseq_ranges import ReferenceSequenceRanges, ReferenceSequenceRangeCollection
 
 
@@ -133,3 +134,37 @@ def test_reference_sequence_range_collection_init():
     # Check range tables
     assert len(rsrc._ref_ranges) == 1
     assert len(rsrc._region_ranges) == 4
+
+
+def get_reference_sequence_ranges(ref_start, ref_end, r2_start, r2_end):
+    return ReferenceSequenceRanges(
+        'X',
+        '+',
+        ref_start,
+        ref_end,
+        r2_start,
+        r2_end,
+        (0, 0),
+        (frozenset(), frozenset(), frozenset()),
+        frozenset())
+
+
+# Region 2 and both constant regions
+rsr_c1r2c2 = get_reference_sequence_ranges(100, 400, 200, 299)
+
+
+@pytest.mark.parametrize('gr,exp', [
+    (PositionRange(start, end), exp)
+    for start, end, exp in [
+        (105, 190, True),  # C1
+        (105, 250, True),  # C1 + R2
+        (105, 400, True),  # C1 + R2 + C2
+        (305, 350, True),  # C2,
+        (250, 350, True),  # R2 + C2
+        (250, 260, False)  # R2
+    ]
+])
+def test_reference_sequence_ranges_is_range_in_constant_region(gr, exp):
+
+    # Check for overlap with either constant region
+    assert rsr_c1r2c2.is_range_in_constant_region(gr) is exp
