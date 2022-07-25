@@ -110,7 +110,7 @@ def test_get_record(ref_repository, var_type, pos, ref, alt, pos_vcf, ref_vcf, a
         OLIGO_NAME)
 
     variant = get_record(
-        ref_repository, meta.itertuples(index=False).__next__())
+        ref_repository, True, meta.itertuples(index=False).__next__())
 
     stop = (pos_vcf + len(ref_vcf)) if ref is not None else (pos_vcf + 1)
 

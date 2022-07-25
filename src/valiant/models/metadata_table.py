@@ -94,7 +94,7 @@ class MetadataTable:
             ).drop_duplicates(subset=['mseq'], keep='first'),
             fp)
 
-    def write_vcf_file(self, fp: str, ref_repository: ReferenceSequenceRepository) -> None:
+    def write_vcf_file(self, fp: str, ref_repository: ReferenceSequenceRepository, pam_ref: bool) -> None:
         metadata = (
             self.metadata[self.oligo_length_mask] if self.long_oligo_n > 0 else
             self.metadata
@@ -102,7 +102,7 @@ class MetadataTable:
         write_vcf(
             fp,
             list(metadata.ref_chr.cat.categories.values),
-            get_records(ref_repository, metadata))
+            get_records(ref_repository, pam_ref, metadata))
 
     def write_common_files(self, out_dir: str, base_fn: str) -> None:
         if self.short_oligo_n > 0:
@@ -133,7 +133,10 @@ class MetadataTable:
 
             # Save variants to file (VCF format)
             vcf_fn = base_fn + '.vcf'
-            self.write_vcf_file(os.path.join(out_dir, vcf_fn), ref_repository)
+            self.write_vcf_file(os.path.join(out_dir, vcf_fn), ref_repository, True)
+
+            vcf_fn = base_fn + '_no_pam.vcf'
+            self.write_vcf_file(os.path.join(out_dir, vcf_fn), ref_repository, False)
 
     def get_info(self) -> OligoGenerationInfo:
         return OligoGenerationInfo(self.long_oligo_n)

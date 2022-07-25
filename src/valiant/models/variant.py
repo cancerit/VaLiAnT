@@ -27,7 +27,7 @@ from pysam import VariantRecord
 from .base import GenomicPosition, GenomicRange, StrandedPositionRange
 from .refseq_repository import ReferenceSequenceRepository
 from .sequences import ReferenceSequence
-from ..enums import VariantType, VariantClassification
+from ..enums import VariantType
 from ..loaders.vcf import load_vcf_manifest, var_type_sub, var_type_del, var_type_ins, var_class_unclass, var_class_mono
 from ..string_mutators import delete_nucleotides, insert_nucleotides, replace_nucleotides
 from ..utils import get_id_column, is_dna, get_var_types
@@ -489,7 +489,18 @@ def _get_deletion_record(
     return prev_pos, end, pam_slice, shared_nt, (ref_slice if pam_slice != ref_slice else None)
 
 
-def get_record(ref_repository: ReferenceSequenceRepository, meta) -> Dict[str, Any]:
+def get_record(
+    ref_repository: ReferenceSequenceRepository,
+    pam_ref: bool,
+    meta: pd.Series
+) -> Dict[str, Any]:
+    """
+    Convert a row of the metadata table into a VCF record
+
+    If pam_ref is true, use the PAM-protected sequence as reference;
+    the original reference otherwise.
+    """
+
     # TODO: include PAM protection positions in the metadata...?
     pos: int = meta.mut_position
     pam_seq: str = meta.pam_seq
@@ -503,7 +514,7 @@ def get_record(ref_repository: ReferenceSequenceRepository, meta) -> Dict[str, A
     ref: str
     alt: str
     end: int
-    pre_pam: Optional[str]
+    pre_pam: Optional[str]  # Reference before PAM protection (only set if it differs from ref)
 
     # TODO: verify stop position for variants at position 1... might need correcting here as well
     if var_type == var_type_del:
@@ -523,7 +534,7 @@ def get_record(ref_repository: ReferenceSequenceRepository, meta) -> Dict[str, A
         'SGE_SRC': meta.mutator,
         'SGE_OLIGO': meta.oligo_name
     }
-    if pre_pam:
+    if pam_ref and pre_pam:
         info['SGE_REF'] = pre_pam
 
     if not pd.isna(meta.vcf_var_id):
@@ -532,7 +543,7 @@ def get_record(ref_repository: ReferenceSequenceRepository, meta) -> Dict[str, A
 
     # Set VCF record fields
     return {
-        'alleles': (ref, alt),
+        'alleles': (ref if pam_ref else (pre_pam or ref), alt),
         'contig': chromosome,
         'start': pos - 1,  # zero-based representation
         'stop': end - 1,  # zero-based representation
@@ -540,6 +551,10 @@ def get_record(ref_repository: ReferenceSequenceRepository, meta) -> Dict[str, A
     }
 
 
-def get_records(ref_repository: ReferenceSequenceRepository, meta: pd.DataFrame) -> List[Dict[str, Any]]:
-    f = partial(get_record, ref_repository)
+def get_records(
+    ref_repository: ReferenceSequenceRepository,
+    pam_ref: bool,
+    meta: pd.DataFrame
+) -> List[Dict[str, Any]]:
+    f = partial(get_record, ref_repository, pam_ref)
     return list(map(f, meta[VCF_RECORD_METADATA_FIELDS].itertuples(index=False)))
