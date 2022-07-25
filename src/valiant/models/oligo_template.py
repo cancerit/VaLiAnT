@@ -137,6 +137,14 @@ class RegionOligoRenderer(BaseOligoRenderer):
         return super()._render_mutated_sequence_rc(
             self._render_mutated_ref_sequence(mseq))
 
+    def _render_mutated_sequence_no_adaptors(self, mseq: str) -> str:
+        return super()._render_mutated_sequence_no_adaptors(
+            self._render_mutated_ref_sequence(mseq))
+
+    def _render_mutated_sequence_rc_no_adaptors(self, mseq: str) -> str:
+        return super()._render_mutated_sequence_rc_no_adaptors(
+            self._render_mutated_ref_sequence(mseq))
+
 
 @dataclass
 class OligoMutationCollection:
