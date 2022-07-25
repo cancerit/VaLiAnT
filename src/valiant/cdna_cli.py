@@ -37,7 +37,7 @@ from .models.codon_table import CodonTable
 from .models.metadata_table import MetadataTable
 from .models.mutated_sequences import MutationCollection
 from .models.oligo_generation_info import OligoGenerationInfo
-from .models.oligo_renderer import get_oligo_name, get_oligo_names_from_dataframe
+from .models.oligo_renderer import get_oligo_names_from_dataframe
 from .models.oligo_template import MUTATION_TYPE_CATEGORIES_T, decode_mut_types_cat
 from .models.snv_table import AuxiliaryTables
 from .models.targeton import Targeton, CDSTargeton
