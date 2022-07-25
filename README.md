@@ -637,6 +637,7 @@ Array fields use the semicolon as separator.
 |`pam_mut_annot`|Array of `syn`\|`mis`\|`non`\|`ncd`|Applied PAM protection variant [mutation types](#mutation-types) (or `ncd` if affecting a noncoding region).|
 |`pam_mut_sgrna_id`|Array of sgRNA ID's|sgRNA ID's bound to the PAM protection variants affecting the same codons as the mutation, if any (CDS only).|
 |`mave_nt`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation.|
+|`vcf_var_in_const`|0\|1|Whether the variant is in a region defined as constant (custom variants only).|
 
 Example:
 

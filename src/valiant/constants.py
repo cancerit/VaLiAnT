@@ -59,6 +59,7 @@ META_PAM_MUT_ANNOT = 'pam_mut_annot'
 META_PAM_MUT_SGRNA_ID = 'pam_mut_sgrna_id'
 META_MAVE_NT = 'mave_nt'
 META_MSEQ_NO_ADAPT = 'mseq_no_adapt'
+META_VCF_VAR_IN_CONST = 'vcf_var_in_const'
 
 # Temporary field names (not included in the final table)
 META_VAR_TYPE = 'var_type'
@@ -91,7 +92,8 @@ METADATA_FIELDS = [
     META_MSEQ_NO_ADAPT,
     META_PAM_MUT_ANNOT,
     META_PAM_MUT_SGRNA_ID,
-    META_MAVE_NT
+    META_MAVE_NT,
+    META_VCF_VAR_IN_CONST
 ]
 
 METADATA_FIELDS_SET = set(METADATA_FIELDS)

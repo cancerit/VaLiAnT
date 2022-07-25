@@ -19,6 +19,7 @@
 import pytest
 
 from valiant.models.base import GenomicRange, GenomicPosition
+from valiant.models.refseq_ranges import ReferenceSequenceRanges
 from valiant.models.sequences import ReferenceSequence
 from valiant.models.oligo_segment import InvariantOligoSegment, TargetonOligoSegment
 from valiant.models.custom_variants import CustomVariant
@@ -84,8 +85,12 @@ def test_oligo_template_get_custom_variant_sgrna_ids(variant, non_cds_region):
         for i, region in enumerate(regions)
     ]
 
+    empty = frozenset()
+    rsr = ReferenceSequenceRanges(
+        'X', '+', 1, seq_length, 1, seq_length, (0, 0), (empty, empty, empty), empty)
+
     ot = OligoTemplate(
-        None, pam_seq, frozenset(all_sgrna_ids), {custom_variant}, None, None, segments)
+        rsr, None, pam_seq, frozenset(all_sgrna_ids), {custom_variant}, None, None, segments)
 
     # Get sgRNA of the PAM variants in codons that are included in the custom mutation
     sgrna_ids = ot._get_custom_variant_sgrna_ids(custom_variant)

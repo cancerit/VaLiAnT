@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, FrozenSet
 import numpy as np
 import pandas as pd
-from ..constants import META_PAM_MUT_SGRNA_ID
+from ..constants import META_PAM_MUT_SGRNA_ID, META_VCF_VAR_IN_CONST
 from ..sgrna_utils import sgrna_ids_to_string
 from .mutated_sequences import BaseMutationCollection
 from .oligo_renderer import BaseOligoRenderer
@@ -56,10 +56,11 @@ class CustomVariantOligoRenderer(BaseOligoRenderer):
 
 @dataclass(frozen=True)
 class CustomVariantMutation:
-    __slots__ = ['variant', 'sequence', 'sgrna_ids']
+    __slots__ = ['variant', 'sequence', 'overlaps_constant_region', 'sgrna_ids']
 
     variant: CustomVariant
     sequence: str
+    overlaps_constant_region: bool
     sgrna_ids: FrozenSet[str]
 
     @property
@@ -84,7 +85,8 @@ class CustomVariantMutation:
             self.ref,
             self.alt,
             self.sequence,
-            sgrna_ids_to_string(self.sgrna_ids) if self.sgrna_ids else ''
+            sgrna_ids_to_string(self.sgrna_ids) if self.sgrna_ids else '',
+            1 if self.overlaps_constant_region else 0
         )
 
 
@@ -105,7 +107,8 @@ class CustomVariantMutationCollection(BaseMutationCollection):
             'ref',
             'new',
             'mseq',
-            META_PAM_MUT_SGRNA_ID
+            META_PAM_MUT_SGRNA_ID,
+            META_VCF_VAR_IN_CONST
         ])
 
         # Compress table
@@ -117,5 +120,6 @@ class CustomVariantMutationCollection(BaseMutationCollection):
         df.new = df.new.astype('category')
         df.mseq = df.mseq.astype('string')
         df[META_PAM_MUT_SGRNA_ID] = df[META_PAM_MUT_SGRNA_ID].astype('string')
+        df[META_VCF_VAR_IN_CONST] = df[META_VCF_VAR_IN_CONST].astype(pd.Int8Dtype())
 
         return cls(df=df)

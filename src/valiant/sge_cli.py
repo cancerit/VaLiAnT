@@ -178,6 +178,7 @@ def get_oligo_template(
         segment.genomic_range for segment in segments)
 
     return OligoTemplate(
+        rsr,
         transcript_info,
         pam_ref_seq,
         rsr.sgrna_ids,

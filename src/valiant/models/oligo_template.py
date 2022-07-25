@@ -25,6 +25,7 @@ import pandas as pd
 from valiant.models.codon_table import CodonTable
 
 from valiant.models.oligo_segment import OligoSegment, TargetonOligoSegment
+from valiant.models.refseq_ranges import ReferenceSequenceRanges
 from .base import GenomicRange, TranscriptInfo
 from .custom_variants import CustomVariantMutation, CustomVariantMutationCollection, CustomVariantOligoRenderer
 from .mutated_sequences import MutationCollection
@@ -160,6 +161,7 @@ class OligoMutationCollection:
 @dataclass
 class OligoTemplate:
     __slots__ = {
+        'ref_ranges',
         'transcript_info',
         'ref_seq',
         'sgrna_ids',
@@ -169,6 +171,7 @@ class OligoTemplate:
         'segments'
     }
 
+    ref_ranges: ReferenceSequenceRanges
     transcript_info: Optional[TranscriptInfo]
     ref_seq: PamProtectedReferenceSequence
     sgrna_ids: FrozenSet[str]
@@ -233,6 +236,8 @@ class OligoTemplate:
                 variant,
                 self.ref_seq.apply_variant(
                     variant.base_variant, ref_check=False),
+                self.ref_ranges.is_range_in_constant_region(
+                    variant.get_ref_range(self.strand)),
                 self._get_custom_variant_sgrna_ids(variant))
             for variant in self.custom_variants
         ])

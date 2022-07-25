@@ -46,7 +46,7 @@ def test_custom_variant_mutation_init(variant):
     custom_variant = CustomVariant(variant, 'vcf_alias', 'VARIANT_ID')
 
     # Initialise custom variant mutation
-    CustomVariantMutation(custom_variant, seq, frozenset())
+    CustomVariantMutation(custom_variant, seq, False, frozenset())
 
 
 @pytest.mark.parametrize('variant', variants)
@@ -56,15 +56,16 @@ def test_custom_variant_mutation_to_row(variant):
     custom_variant = CustomVariant(variant, 'vcf_alias', 'VARIANT_ID')
 
     # Initialise custom variant mutation
-    cvm = CustomVariantMutation(custom_variant, seq, frozenset())
+    cvm = CustomVariantMutation(custom_variant, seq, False, frozenset())
 
     # Check custom variant mutation
-    vcf_alias, vcf_variant_id, var_type_, pos, ref, alt, seq_, sgrna_ids = cvm.to_row()
+    vcf_alias, vcf_variant_id, var_type_, pos, ref, alt, seq_, sgrna_ids, in_const = cvm.to_row()
     assert vcf_alias == custom_variant.vcf_alias
     assert vcf_variant_id == custom_variant.vcf_variant_id
     assert var_type_ == var_type.value
     assert pos == custom_variant.base_variant.genomic_position.position
     assert sgrna_ids == ''
+    assert in_const == 0
 
     if var_type != VariantType.INSERTION:
         assert ref == custom_variant.base_variant.ref
@@ -102,7 +103,7 @@ def test_custom_variant_mutation_collection_from_variants(variant, mseq):
     vcf_var_id = 'VARIANT_ID'
     var_type = variant.type
     custom_variant = CustomVariant(variant, vcf_alias, vcf_var_id)
-    cvm = CustomVariantMutation(custom_variant, mseq, frozenset())
+    cvm = CustomVariantMutation(custom_variant, mseq, False, frozenset())
 
     # Initialise mutation collection
     cvmc = CustomVariantMutationCollection.from_variants([cvm])

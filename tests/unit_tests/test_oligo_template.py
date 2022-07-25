@@ -22,6 +22,7 @@ from valiant.models.base import GenomicRange, TranscriptInfo
 from valiant.models.codon_table import CodonTable
 from valiant.models.oligo_template import OligoTemplate, TargetonOligoSegment
 from valiant.models.pam_protection import PamProtectedReferenceSequence
+from valiant.models.refseq_ranges import ReferenceSequenceRanges
 from valiant.models.sequences import Sequence, ReferenceSequence
 from valiant.models.targeton import Targeton
 from .constants import CODON_TABLE_FP, DUMMY_PAM_PROTECTION_NT
@@ -51,7 +52,11 @@ def test_oligo_compute_mutations(targetons, mutator, pam_protection):
     adaptor_3 = 'AAAAAA'
     segments = list(map(get_segment, targetons))
 
-    ot = OligoTemplate(TRANSCRIPT_INFO, pam_ref_seq, set(), set(), adaptor_5, adaptor_3, segments)
+    empty = frozenset()
+    rsr = ReferenceSequenceRanges(
+        'X', '+', 1, 22, 1, 22, (0, 0), (empty, empty, empty), empty)
+
+    ot = OligoTemplate(rsr, TRANSCRIPT_INFO, pam_ref_seq, set(), set(), adaptor_5, adaptor_3, segments)
     for _, target_segment in ot.target_segments:
         mutation_collections = target_segment.compute_mutations(ct)
         df = mutation_collections[mutator].df
