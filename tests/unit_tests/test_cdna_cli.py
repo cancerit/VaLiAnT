@@ -52,6 +52,7 @@ targeton_metadata_table_fields = set([
     'ref',
     'new',
     'mseq',
+    'mseq_no_adapt',
     'mutator',
     'ref_aa',
     'alt_aa',
@@ -195,6 +196,9 @@ def test_get_targeton_metadata_table(annotated):
     # Check oligonucleotide sequence
     assert df.mseq.str.startswith(adaptor_5).all()
     assert df.mseq.str.endswith(adaptor_3).all()
+
+    # Check oligonucleotide sequence (no adaptors)
+    assert df.mseq.str.slice(len(adaptor_5), -len(adaptor_3)).equals(df.mseq_no_adapt)
 
     # Check source type
     assert list(df.src_type.unique()) == ['cdna']

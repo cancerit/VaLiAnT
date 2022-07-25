@@ -23,7 +23,7 @@ from typing import Callable, Dict, Optional, NoReturn
 import click
 import numpy as np
 import pandas as pd
-from .constants import CDS_ONLY_MUTATORS, META_MAVE_NT, META_OLIGO_NAME, MUTATOR_CATEGORIES
+from .constants import CDS_ONLY_MUTATORS, META_MAVE_NT, META_MSEQ, META_MSEQ_NO_ADAPT, META_OLIGO_NAME, MUTATOR_CATEGORIES
 from .cli_utils import load_codon_table, validate_adaptor, set_logger
 from .common_cli import common_params, existing_file
 from .enums import TargetonMutator
@@ -200,12 +200,19 @@ def get_targeton_metadata_table(
     df['revc'] = np.int8(0)
 
     # Add constant sequences (if any)
-    prefix = (adaptor_5 or '') + c1
-    if prefix:
-        df.mseq = prefix + df.mseq
-    suffix = c2 + (adaptor_3 or '')
-    if suffix:
-        df.mseq = df.mseq + suffix
+    if c1:
+        df[META_MSEQ] = c1 + df[META_MSEQ]
+    if c2:
+        df[META_MSEQ] = df[META_MSEQ] + c2
+
+    df[META_MSEQ_NO_ADAPT] = df[META_MSEQ]
+
+    # Add adaptors (if any)
+    if adaptor_5:
+        df[META_MSEQ] = adaptor_5 + df[META_MSEQ]
+
+    if adaptor_3:
+        df[META_MSEQ] = df[META_MSEQ] + adaptor_3
 
     # Add oligonucleotide lengths
     df['oligo_length'] = df.mseq.str.len().astype(np.int32)
