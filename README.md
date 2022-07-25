@@ -633,6 +633,7 @@ Array fields use the semicolon as separator.
 |`mutator`|type of mutator|Label of the [type of mutator](#mutation-types) that generated the oligonucleotide.|
 |`oligo_length`|integer|Oligonucleotide length.|
 |`mseq`|DNA sequence|Full oligonucleotide sequence (with adaptors, if any).|
+|`mseq_no_adapt`|DNA sequence|Oligonucleotide sequence excluding adaptors.|
 |`pam_mut_annot`|Array of `syn`\|`mis`\|`non`\|`ncd`|Applied PAM protection variant [mutation types](#mutation-types) (or `ncd` if affecting a noncoding region).|
 |`pam_mut_sgrna_id`|Array of sgRNA ID's|sgRNA ID's bound to the PAM protection variants affecting the same codons as the mutation, if any (CDS only).|
 |`mave_nt`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation.|
