@@ -176,23 +176,14 @@ class BaseOligoRenderer:
     def get_oligo_names_from_dataframe(self, df: pd.DataFrame) -> pd.Series:
         return get_oligo_names_from_dataframe(self._oligo_name_prefix, df)
 
-    def _render_mutated_sequence(self, mseq: str) -> str:
-        return f"{self.adaptor_5}{mseq}{self.adaptor_3}"
-
-    def _render_mutated_sequence_rc(self, mseq: str) -> str:
-        return f"{self.adaptor_5}{reverse_complement(mseq)}{self.adaptor_3}"
-
-    def _render_mutated_sequence_no_adaptors(self, mseq: str) -> str:
+    def _get_mutated_sequence(self, mseq: str) -> str:
         return mseq
 
-    def _render_mutated_sequence_rc_no_adaptors(self, mseq: str) -> str:
-        return reverse_complement(mseq)
+    def _render_mutated_sequence_no_adaptors(self, mseq: str) -> str:
+        return self._get_mutated_sequence(mseq)
 
-    def _get_renderer(self, apply_reverse_complement: bool) -> Callable[[str], str]:
-        return (
-            self._render_mutated_sequence_rc if apply_reverse_complement else
-            self._render_mutated_sequence
-        )
+    def _render_mutated_sequence_rc_no_adaptors(self, mseq: str) -> str:
+        return reverse_complement(self._get_mutated_sequence(mseq))
 
     def _get_renderer_no_adaptors(self, apply_reverse_complement: bool) -> Callable[[str], str]:
         return (
@@ -222,9 +213,15 @@ class BaseOligoRenderer:
         if rc:
             df.oligo_name = df.oligo_name + REVCOMP_OLIGO_NAME_SUFFIX
 
+        # Render oligonucleotide sequences without adapters
+        df[META_MSEQ_NO_ADAPT] = df[META_MSEQ].apply(
+            self._get_renderer_no_adaptors(rc)).astype('string')
+
         # Render full oligonucleotide sequences
-        df[META_MSEQ_NO_ADAPT] = df[META_MSEQ].apply(self._get_renderer_no_adaptors(rc)).astype('string')
-        df[META_MSEQ] = df[META_MSEQ].apply(self._get_renderer(rc)).astype('string')
+        df[META_MSEQ] = (
+            df[META_MSEQ_NO_ADAPT].apply(self._add_adaptors).astype('string') if self.has_adaptors else
+            df[META_MSEQ_NO_ADAPT]
+        )
 
         # Set sequence source type
         df['src_type'] = get_source_type_column('ref', rown)

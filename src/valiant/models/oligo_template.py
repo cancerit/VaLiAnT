@@ -126,24 +126,8 @@ class RegionOligoRenderer(BaseOligoRenderer):
         self.prefix = prefix
         self.suffix = suffix
 
-    def _render_mutated_ref_sequence(self, mseq: str) -> str:
+    def _get_mutated_sequence(self, mseq: str) -> str:
         return f"{self.prefix}{mseq}{self.suffix}"
-
-    def _render_mutated_sequence(self, mseq: str) -> str:
-        return super()._render_mutated_sequence(
-            self._render_mutated_ref_sequence(mseq))
-
-    def _render_mutated_sequence_rc(self, mseq: str) -> str:
-        return super()._render_mutated_sequence_rc(
-            self._render_mutated_ref_sequence(mseq))
-
-    def _render_mutated_sequence_no_adaptors(self, mseq: str) -> str:
-        return super()._render_mutated_sequence_no_adaptors(
-            self._render_mutated_ref_sequence(mseq))
-
-    def _render_mutated_sequence_rc_no_adaptors(self, mseq: str) -> str:
-        return super()._render_mutated_sequence_rc_no_adaptors(
-            self._render_mutated_ref_sequence(mseq))
 
 
 @dataclass
