@@ -95,6 +95,10 @@ class MetadataTable:
             fp)
 
     def write_vcf_file(self, fp: str, ref_repository: ReferenceSequenceRepository, pam_ref: bool) -> None:
+        """
+        Generate a VCF using either the original or the PAM-protected reference as REF
+        """
+
         metadata = (
             self.metadata[self.oligo_length_mask] if self.long_oligo_n > 0 else
             self.metadata
