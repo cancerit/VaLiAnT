@@ -489,6 +489,30 @@ def _get_deletion_record(
     return prev_pos, end, pam_slice, shared_nt, (ref_slice if pam_slice != ref_slice else None)
 
 
+def _get_slices(ref_seq: str, pam_seq: str, offset: int, mut_len: int) -> Tuple[str, str]:
+    sl = slice(offset, offset + mut_len + 1)
+    ref_slice = ref_seq[sl]
+    pam_slice = pam_seq[sl]
+    return ref_slice, pam_slice
+
+
+def _get_substitution_record(
+    pos: int,
+    ref: str,
+    alt: str,
+    seq_start: int,
+    ref_seq: str,
+    pam_seq: str
+) -> Tuple[int, int, str, str, Optional[str]]:
+    mut_len: int = len(ref)
+    end: int = pos + mut_len
+
+    # Retrieve reference sequence before and after PAM protection
+    offset: int = pos - seq_start
+    ref_slice, pam_slice = _get_slices(ref_seq, pam_seq, offset, mut_len)
+    return pos, end, ref, alt, (ref_slice if pam_slice != ref_slice else None)
+
+
 def get_record(
     ref_repository: ReferenceSequenceRepository,
     pam_ref: bool,
@@ -524,10 +548,8 @@ def get_record(
         pos, end, ref, alt, pre_pam = _get_insertion_record(
             ref_repository, chromosome, pos, meta_alt, ref_start, ref_seq, pam_seq)  # type: ignore
     else:
-        ref = meta_ref  # type: ignore
-        alt = meta_alt  # type: ignore
-        end = pos + len(ref)
-        pre_pam = None
+        pos, end, ref, alt, pre_pam = _get_substitution_record(
+            pos, meta_ref, meta_alt, ref_start, ref_seq, pam_seq)  # type: ignore
 
     # Set INFO tags
     info: Dict[str, Any] = {
