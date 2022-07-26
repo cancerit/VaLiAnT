@@ -60,6 +60,10 @@ class MetadataTable:
     def oligo_length_mask(self) -> pd.Series:
         return self._oligo_length_mask
 
+    @property
+    def has_excluded_oligos(self) -> bool:
+        return self.long_oligo_n > 0 or self.too_short_oligo_n > 0
+
     def _setattr(self, attr: str, value: Any) -> None:
         object.__setattr__(self, attr, value)
 
@@ -96,7 +100,7 @@ class MetadataTable:
 
     def write_metadata_file(self, fp: str) -> None:
         write_oligo_metadata((
-            self.metadata.loc[self.oligo_length_mask, METADATA_FIELDS] if self.long_oligo_n > 0 else
+            self.metadata.loc[self.oligo_length_mask, METADATA_FIELDS] if self.has_excluded_oligos else
             self.metadata[METADATA_FIELDS]
         ), fp)
 
@@ -121,7 +125,7 @@ class MetadataTable:
         """
 
         metadata = (
-            self.metadata[self.oligo_length_mask] if self.long_oligo_n > 0 else
+            self.metadata[self.oligo_length_mask] if self.has_excluded_oligos else
             self.metadata
         )
         write_vcf(
@@ -140,7 +144,7 @@ class MetadataTable:
             unique_oligos_fn = base_fn + '_unique.csv'
             self.write_unique_file(os.path.join(out_dir, unique_oligos_fn))
 
-        if self.long_oligo_n > 0:
+        if self.has_excluded_oligos:
 
             # Save discarded metadata to file
             excluded_metadata_fn = base_fn + '_meta_excluded.csv'
