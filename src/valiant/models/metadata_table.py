@@ -132,10 +132,10 @@ class MetadataTable:
         if self.short_oligo_n > 0:
 
             # Save variants to file (VCF format)
-            vcf_fn = base_fn + '.vcf'
+            vcf_fn = base_fn + '_pam.vcf'
             self.write_vcf_file(os.path.join(out_dir, vcf_fn), ref_repository, True)
 
-            vcf_fn = base_fn + '_no_pam.vcf'
+            vcf_fn = base_fn + '_ref.vcf'
             self.write_vcf_file(os.path.join(out_dir, vcf_fn), ref_repository, False)
 
     def get_info(self) -> OligoGenerationInfo:
