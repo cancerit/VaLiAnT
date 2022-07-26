@@ -335,6 +335,7 @@ def generate_oligos(output: str, ref_repository: ReferenceSequenceRepository, au
         species,
         assembly,
         ot.get_mutation_table(aux, options),
+        options.oligo_min_length,
         options.oligo_max_length)
 
     # Generate file name prefix
@@ -400,6 +401,7 @@ def sge(
     sequences_only: bool,
     revcomp_minus_strand: bool,
     max_length: int,
+    min_length: int,
 
     # Extra
     log: str
@@ -416,6 +418,11 @@ def sge(
     ASSEMBLY will be included in the metadata
     """
 
+    options = Options(
+        oligo_max_length=max_length,
+        oligo_min_length=min_length,
+        revcomp_minus_strand=revcomp_minus_strand)
+
     # Set logging up
     set_logger(log)
 
@@ -429,7 +436,6 @@ def sge(
     # Load CDS, stop codon, and UTR features from GTF/GFF2 file (if any)
     annotation: Optional[AnnotationRepository] = _load_gff_file(gff)
     is_annotation_available: bool = annotation is not None
-    options: Options = Options(revcomp_minus_strand, max_length)
     exons: Optional[CDSContextRepository] = annotation.cds if is_annotation_available else None
 
     # Load oligonucleotide templates

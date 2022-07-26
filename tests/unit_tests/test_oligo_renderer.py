@@ -132,7 +132,11 @@ def test_base_oligo_renderer_get_metadata_table(rc):
     # Initialise renderer
     renderer = BaseOligoRenderer(pam_seq, GENE_ID, TRANSCRIPT_ID, '', '')
 
-    meta = renderer.get_metadata_table(df, Options(rc, 300))
+    options = Options(
+        oligo_max_length=300,
+        oligo_min_length=1,
+        revcomp_minus_strand=rc)
+    meta = renderer.get_metadata_table(df, options)
     meta_cols = set(meta.columns)
     assert META_COLUMNS <= meta_cols
 

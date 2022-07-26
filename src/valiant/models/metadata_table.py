@@ -19,6 +19,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import os
+from typing import Any
 import pandas as pd
 from ..constants import METADATA_FIELDS_SET, METADATA_FIELDS
 from ..loaders.vcf import write_vcf
@@ -45,21 +46,39 @@ def _fill_metadata(species: str, assembly: str, metadata: pd.DataFrame) -> pd.Da
 
 @dataclass(frozen=True)
 class MetadataTable:
-    __slots__ = {'metadata', 'oligo_length_mask', 'short_oligo_n', 'long_oligo_n'}
+    __slots__ = {'metadata', '_oligo_length_mask', '_oligo_min_length_mask', '_oligo_max_length_mask', 'too_short_oligo_n', 'short_oligo_n', 'long_oligo_n'}
 
     metadata: pd.DataFrame
-    oligo_length_mask: pd.Series
+    _oligo_length_mask: pd.Series
+    _oligo_min_length_mask: pd.Series
+    _oligo_max_length_mask: pd.Series
+    too_short_oligo_n: int
     short_oligo_n: int
     long_oligo_n: int
 
-    def __init__(self, metadata: pd.DataFrame, oligo_max_length: int) -> None:
+    @property
+    def oligo_length_mask(self) -> pd.Series:
+        return self._oligo_length_mask
+
+    def _setattr(self, attr: str, value: Any) -> None:
+        object.__setattr__(self, attr, value)
+
+    def __init__(self, metadata: pd.DataFrame, oligo_min_length: int, oligo_max_length: int) -> None:
         if oligo_max_length < 1:
             raise ValueError("Invalid maximum oligonucleotide length!")
 
-        object.__setattr__(self, 'metadata', metadata)
-        object.__setattr__(self, 'oligo_length_mask', metadata.oligo_length <= oligo_max_length)
-        object.__setattr__(self, 'short_oligo_n', self.oligo_length_mask.sum())
-        object.__setattr__(self, 'long_oligo_n', len(self.oligo_length_mask) - self.short_oligo_n)
+        self._setattr('metadata', metadata)
+
+        # Create olignonucleotide length masks
+        self._setattr('_oligo_min_length_mask', metadata.oligo_length >= oligo_min_length)
+        self._setattr('_oligo_max_length_mask', metadata.oligo_length <= oligo_max_length)
+        self._setattr('_oligo_length_mask', self._oligo_min_length_mask & self._oligo_max_length_mask)
+
+        # Count the oligonucleotides per length range
+        n: int = len(self.oligo_length_mask)
+        self._setattr('too_short_oligo_n', n - self._oligo_min_length_mask.sum())
+        self._setattr('long_oligo_n', n - self._oligo_max_length_mask.sum())
+        self._setattr('short_oligo_n', n - self.too_short_oligo_n - self.long_oligo_n)
 
     @classmethod
     def from_partial(
@@ -67,10 +86,12 @@ class MetadataTable:
         species: str,
         assembly: str,
         metadata: pd.DataFrame,
+        oligo_min_length: int,
         oligo_max_length: int
     ) -> MetadataTable:
         return cls(
             _fill_metadata(species, assembly, metadata),
+            oligo_min_length,
             oligo_max_length)
 
     def write_metadata_file(self, fp: str) -> None:
