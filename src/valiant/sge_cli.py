@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from dataclasses import dataclass
 from itertools import chain
 import logging
 import os
@@ -27,6 +28,7 @@ from pyranges import PyRanges
 from .enums import TargetonMutator
 from .models.base import GenomicRange
 from .models.codon_table import CodonTable
+from .models.config import BaseConfig
 from .models.exon import AnnotationRepository, CDSContextRepository, GenomicRangePair, TranscriptInfo
 from .models.metadata_table import MetadataTable
 from .models.oligo_generation_info import OligoGenerationInfo
@@ -41,8 +43,22 @@ from .models.snv_table import AuxiliaryTables
 from .models.targeton import ITargeton, PamProtCDSTargeton, PamProtTargeton
 from .models.variant import CustomVariant, VariantRepository
 from .common_cli import common_params, existing_file
-from .cli_utils import load_codon_table, log_excluded_oligo_counts, validate_adaptor, set_logger
+from .cli_utils import load_codon_table, log_excluded_oligo_counts
 from .writers import write_reference_sequences
+
+
+@dataclass
+class SGEConfig(BaseConfig):
+    revcomp_minus_strand: bool
+    gff_fp: Optional[str]
+    pam_fp: Optional[str]
+    vcf_fp: Optional[str]
+
+    def get_options(self) -> Options:
+        return Options(
+            revcomp_minus_strand=self.revcomp_minus_strand,
+            oligo_max_length=self.max_length,
+            oligo_min_length=self.min_length)
 
 
 def _load_gff_file(fp: Optional[str]) -> Optional[AnnotationRepository]:
@@ -363,6 +379,117 @@ def generate_oligos(output: str, ref_repository: ReferenceSequenceRepository, au
     return metadata.get_info()
 
 
+def run_sge(config: SGEConfig, sequences_only: bool) -> None:
+    options = config.get_options()
+
+    # Load codon table
+    ct: CodonTable = load_codon_table(config.codon_table_fp)
+
+    # Load CDS, stop codon, and UTR features from GTF/GFF2 file (if any)
+    annotation: Optional[AnnotationRepository] = _load_gff_file(config.gff_fp)
+    is_annotation_available: bool = annotation is not None
+    exons: Optional[CDSContextRepository] = annotation.cds if is_annotation_available else None
+
+    # Load oligonucleotide templates
+    rsrs: ReferenceSequenceRangeCollection = _load_oligo_templates(config.oligo_info_fp)
+
+    # Load PAM protection variants
+    pam_repository: PamProtectionVariantRepository = _load_pam_protection_vcf(rsrs.sgrna_ids, config.pam_fp)
+
+    # Collect all genomic ranges for which reference sequences have to be fetched
+    ref_ranges = rsrs.ref_ranges
+
+    # Load custom variants
+    variant_repository: Optional[VariantRepository] = None
+    if config.vcf_fp:
+        logging.debug("Loading custom variants...")
+        try:
+            variant_repository = VariantRepository.load(config.vcf_fp, rsrs._ref_ranges)
+        except ValueError as ex:
+            logging.critical(ex.args[0])
+            logging.critical("Failed to load custom variants!")
+            sys.exit(1)
+        except FileNotFoundError as ex:
+            logging.critical(ex.args[0])
+            logging.critical("Failed to load custom variants!")
+            sys.exit(1)
+
+    if exons:
+        exons.register_target_ranges(rsrs.target_ranges)
+
+        # Retrieve CDS context (if any) for target regions
+        # Only exonic sequences will have a CDS context
+        try:
+            exons.compute_cds_contexts()
+        except ValueError as ex:
+            logging.critical(ex.args[0])
+            logging.critical("Failed to match the CDS context!")
+            sys.exit(1)
+        except NotImplementedError as ex:
+            logging.critical(ex.args[0])
+            sys.exit(1)
+
+        # Add CDS prefix and suffix ranges to ranges to fetch from reference
+        ref_ranges |= exons.get_all_cds_extensions()
+
+    # Initialise auxiliary tables
+    all_mutators = rsrs.mutarors
+    aux: AuxiliaryTables = AuxiliaryTables(
+        ct,
+        rsrs.strands,
+        TargetonMutator.SNV in all_mutators,
+        TargetonMutator.SNV_RE in all_mutators,
+        TargetonMutator.AA in all_mutators)
+    del all_mutators
+
+    # Fetch reference sequences
+    try:
+        ref: ReferenceSequenceRepository = fetch_reference_sequences(config.ref_fasta_fp, ref_ranges)
+    except ValueError as ex:
+        logging.critical(ex.args[0])
+        logging.critical("Failed to retrieve reference sequences!")
+        sys.exit(1)
+
+    # Prepare oligonucleotides
+    oligo_templates: List[OligoTemplate] = get_oligo_templates(
+        rsrs,
+        ref,
+        pam_repository,
+        variant_repository,
+        annotation,
+        adaptor_5=config.adaptor_5,
+        adaptor_3=config.adaptor_3)
+
+    def get_qc_row(ot: OligoTemplate) -> List[str]:
+        return get_oligo_template_qc_info(ref, ot)
+
+    write_reference_sequences(
+        map(get_qc_row, oligo_templates),
+        os.path.join(config.output_dir, "ref_sequences.csv"))
+
+    if sequences_only:
+        sys.exit(0)
+
+    # Long oligonucleotides counter
+    short_oligo_n: int = 0
+    long_oligo_n: int = 0
+
+    info: OligoGenerationInfo
+    for ot in oligo_templates:
+        try:
+            # Generate all oligonucleotides and write to file
+            info = generate_oligos(config.output_dir, ref, aux, ot, config.species, config.assembly, options)
+        except ValueError as ex:
+            logging.critical(ex.args[0])
+            logging.critical("Failed to generate oligonucleotides!")
+            sys.exit(1)
+
+        short_oligo_n += info.short_oligo_n
+        long_oligo_n += info.long_oligo_n
+
+    log_excluded_oligo_counts(options, short_oligo_n, long_oligo_n)
+
+
 @click.command()
 @common_params
 @click.option('--gff', type=existing_file, help="Annotation GFF file path")
@@ -415,118 +542,20 @@ def sge(
     ASSEMBLY will be included in the metadata
     """
 
-    options = Options(
-        oligo_max_length=max_length,
-        oligo_min_length=min_length,
-        revcomp_minus_strand=revcomp_minus_strand)
-
-    # Validate adaptor sequences
-    validate_adaptor(adaptor_5)
-    validate_adaptor(adaptor_3)
-
-    # Load codon table
-    ct: CodonTable = load_codon_table(codon_table)
-
-    # Load CDS, stop codon, and UTR features from GTF/GFF2 file (if any)
-    annotation: Optional[AnnotationRepository] = _load_gff_file(gff)
-    is_annotation_available: bool = annotation is not None
-    exons: Optional[CDSContextRepository] = annotation.cds if is_annotation_available else None
-
-    # Load oligonucleotide templates
-    rsrs: ReferenceSequenceRangeCollection = _load_oligo_templates(oligo_info)
-
-    # Load PAM protection variants
-    pam_repository: PamProtectionVariantRepository = _load_pam_protection_vcf(rsrs.sgrna_ids, pam)
-
-    # Collect all genomic ranges for which reference sequences have to be fetched
-    ref_ranges = rsrs.ref_ranges
-
-    # Load custom variants
-    variant_repository: Optional[VariantRepository] = None
-    if vcf:
-        logging.debug("Loading custom variants...")
-        try:
-            variant_repository = VariantRepository.load(vcf, rsrs._ref_ranges)
-        except ValueError as ex:
-            logging.critical(ex.args[0])
-            logging.critical("Failed to load custom variants!")
-            sys.exit(1)
-        except FileNotFoundError as ex:
-            logging.critical(ex.args[0])
-            logging.critical("Failed to load custom variants!")
-            sys.exit(1)
-
-    if exons:
-        exons.register_target_ranges(rsrs.target_ranges)
-
-        # Retrieve CDS context (if any) for target regions
-        # Only exonic sequences will have a CDS context
-        try:
-            exons.compute_cds_contexts()
-        except ValueError as ex:
-            logging.critical(ex.args[0])
-            logging.critical("Failed to match the CDS context!")
-            sys.exit(1)
-        except NotImplementedError as ex:
-            logging.critical(ex.args[0])
-            sys.exit(1)
-
-        # Add CDS prefix and suffix ranges to ranges to fetch from reference
-        ref_ranges |= exons.get_all_cds_extensions()
-
-    # Initialise auxiliary tables
-    all_mutators = rsrs.mutarors
-    aux: AuxiliaryTables = AuxiliaryTables(
-        ct,
-        rsrs.strands,
-        TargetonMutator.SNV in all_mutators,
-        TargetonMutator.SNV_RE in all_mutators,
-        TargetonMutator.AA in all_mutators)
-    del all_mutators
-
-    # Fetch reference sequences
-    try:
-        ref: ReferenceSequenceRepository = fetch_reference_sequences(ref_fasta, ref_ranges)
-    except ValueError as ex:
-        logging.critical(ex.args[0])
-        logging.critical("Failed to retrieve reference sequences!")
-        sys.exit(1)
-
-    # Prepare oligonucleotides
-    oligo_templates: List[OligoTemplate] = get_oligo_templates(
-        rsrs,
-        ref,
-        pam_repository,
-        variant_repository,
-        annotation,
-        adaptor_5=adaptor_5,
-        adaptor_3=adaptor_3)
-
-    def get_qc_row(ot: OligoTemplate) -> List[str]:
-        return get_oligo_template_qc_info(ref, ot)
-
-    write_reference_sequences(
-        map(get_qc_row, oligo_templates),
-        os.path.join(output, "ref_sequences.csv"))
-
-    if sequences_only:
-        sys.exit(0)
-
-    # Long oligonucleotides counter
-    short_oligo_n: int = 0
-    long_oligo_n: int = 0
-
-    info: OligoGenerationInfo
-    for ot in oligo_templates:
-        try:
-            # Generate all oligonucleotides and write to file
-            info = generate_oligos(output, ref, aux, ot, species, assembly, options)
-        except ValueError as ex:
-            logging.critical(ex.args[0])
-            logging.critical("Failed to generate oligonucleotides!")
-            sys.exit(1)
-
-        short_oligo_n += info.short_oligo_n
-        long_oligo_n += info.long_oligo_n
-
-    log_excluded_oligo_counts(options, short_oligo_n, long_oligo_n)
+    run_sge(
+        SGEConfig(
+            species=species,
+            assembly=assembly,
+            adaptor_5=adaptor_5,
+            adaptor_3=adaptor_3,
+            min_length=min_length,
+            max_length=max_length,
+            codon_table_fp=codon_table,
+            oligo_info_fp=oligo_info,
+            ref_fasta_fp=ref_fasta,
+            output_dir=output,
+            revcomp_minus_strand=revcomp_minus_strand,
+            gff_fp=gff,
+            pam_fp=pam,
+            vcf_fp=vcf),
+        sequences_only)

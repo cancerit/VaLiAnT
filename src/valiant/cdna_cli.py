@@ -25,7 +25,7 @@ import click
 import numpy as np
 import pandas as pd
 
-from .cli_utils import load_codon_table, log_excluded_oligo_counts, validate_adaptor, set_logger
+from .cli_utils import load_codon_table, log_excluded_oligo_counts
 from .common_cli import common_params, existing_file
 from .constants import CDS_ONLY_MUTATORS, META_MAVE_NT, META_MSEQ, META_MSEQ_NO_ADAPT, META_OLIGO_NAME, MUTATOR_CATEGORIES
 from .enums import TargetonMutator
