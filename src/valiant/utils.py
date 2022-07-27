@@ -21,7 +21,7 @@ from functools import lru_cache
 import os
 import pathlib
 import re
-from typing import List, Type, Tuple, FrozenSet, Iterable
+from typing import List, Optional, Type, Tuple, FrozenSet, Iterable
 import numpy as np
 import pandas as pd
 from .constants import SRC_TYPES
@@ -144,3 +144,7 @@ def repr_enum_list(enums: Iterable[Enum]) -> str:
 
 def has_duplicates(items: List[int]) -> bool:
     return len(set(items)) != len(items)
+
+
+def is_adaptor_valid(adaptor: Optional[str]) -> None:
+    return adaptor is None or is_dna(adaptor)

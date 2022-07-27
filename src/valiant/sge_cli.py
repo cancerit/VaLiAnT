@@ -403,9 +403,6 @@ def sge(
     max_length: int,
     min_length: int,
 
-    # Extra
-    log: str
-
 ) -> None:
     """
     SGE oligonucleotide generation tool
@@ -422,9 +419,6 @@ def sge(
         oligo_max_length=max_length,
         oligo_min_length=min_length,
         revcomp_minus_strand=revcomp_minus_strand)
-
-    # Set logging up
-    set_logger(log)
 
     # Validate adaptor sequences
     validate_adaptor(adaptor_5)

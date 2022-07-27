@@ -23,3 +23,7 @@ class SequenceNotFound(Exception):
 
 class InvalidMutatorForTarget(ValueError):
     pass
+
+
+class InvalidConfig(Exception):
+    pass

@@ -17,12 +17,20 @@
 #############################
 
 from functools import wraps
+import logging
+import sys
 import click
+
 from .constants import DEFAULT_OLIGO_MAX_LENGTH, DEFAULT_OLIGO_MIN_LENGTH
+from .errors import InvalidConfig
 
 
 existing_file = click.Path(exists=True, file_okay=True, dir_okay=False)
 writable_dir = click.Path(exists=True, file_okay=False, dir_okay=True, writable=True)
+
+
+def set_logger(ctx: click.Context, param: click.Parameter, value: str) -> None:
+    logging.basicConfig(level=logging._nameToLevel[value.upper()])
 
 
 # See discussion: https://github.com/pallets/click/issues/108
@@ -35,7 +43,12 @@ def common_params(f):
     @click.option('--codon-table', type=existing_file, help="Codon table file path")
     @click.option('--adaptor-5', help="5' adaptor sequence")
     @click.option('--adaptor-3', help="3' adaptor sequence")
-    @click.option('--log', default='WARNING', help="Logging level")
+    @click.option(
+        '--log',
+        default='WARNING',
+        type=click.Choice(list(logging._nameToLevel.keys()), case_sensitive=False),
+        callback=set_logger,
+        help="Logging level")
     @click.option(
         '--max-length',
         type=int,
@@ -48,5 +61,12 @@ def common_params(f):
         help="Minimum oligonucleotide length")
     @wraps(f)
     def wrapper(*args, **kwargs):
-        return f(*args, **kwargs)
+        kwargs.pop('log', None)
+
+        try:
+            return f(*args, **kwargs)
+        except InvalidConfig:
+            logging.critical("Invalid configuration!")
+            sys.exit(1)
+
     return wrapper

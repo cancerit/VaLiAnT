@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from dataclasses import dataclass
 from functools import partial
 import logging
 import sys
@@ -35,6 +36,7 @@ from .models.cdna import CDNA, AnnotatedCDNA
 from .models.cdna_seq_repository import CDNASequenceRepository
 from .models.cdna_targeton_configs import CDNATargetonConfig, CDNATargetonConfigCollection
 from .models.codon_table import CodonTable
+from .models.config import BaseConfig
 from .models.metadata_table import MetadataTable
 from .models.mutated_sequences import MutationCollection
 from .models.oligo_generation_info import OligoGenerationInfo
@@ -44,6 +46,17 @@ from .models.options import Options
 from .models.snv_table import AuxiliaryTables
 from .models.targeton import Targeton, CDSTargeton
 from .utils import get_constant_category, get_empty_category_column, get_source_type_column, repr_enum_list
+
+
+@dataclass
+class CDNAConfig(BaseConfig):
+    annot_fp: Optional[str]
+
+    def get_options(self) -> Options:
+        return Options(
+            revcomp_minus_strand=False,
+            oligo_max_length=self.max_length,
+            oligo_min_length=self.min_length)
 
 
 def exit_on_critical_exception(ex: Exception, msg: str) -> NoReturn:
@@ -286,6 +299,57 @@ def process_targeton(
     return metadata.get_info()
 
 
+def run_cdna(config: CDNAConfig) -> None:
+    options = config.get_options()
+
+    # Load targeton configurations
+    try:
+        targetons = CDNATargetonConfigCollection.load(config.oligo_info_fp)
+    except ValueError as ex:
+        exit_on_critical_exception(ex, "Failed to load cDNA targeton file!")
+
+    # Load cDNA sequences
+    try:
+        seq_repo = CDNASequenceRepository.load(
+            targetons.sequence_ids, config.ref_fasta_fp, annot_fp=config.annot_fp)
+    except SequenceNotFound:
+        sys.exit(1)
+    except ValueError as ex:
+        exit_on_critical_exception(ex, "Failed to load cDNA annotation file!")
+
+    # Get auxiliary tables
+    aux: AuxiliaryTables = get_auxiliary_tables(
+        targetons, load_codon_table(config.codon_table_fp))
+
+    # Long oligonucleotides counter
+    short_oligo_n: int = 0
+    long_oligo_n: int = 0
+
+    get_cdna_f = partial(get_cdna, seq_repo)
+    process_targeton_f = partial(
+        process_targeton,
+        config.species,
+        config.assembly,
+        aux,
+        config.adaptor_5,
+        config.adaptor_3,
+        get_cdna_f,
+        options,
+        config.output_dir)
+
+    info: OligoGenerationInfo
+    for targeton_cfg in targetons.cts:
+        try:
+            info = process_targeton_f(targeton_cfg)
+            short_oligo_n += info.short_oligo_n
+            long_oligo_n += info.long_oligo_n
+
+        except ValueError as ex:
+            exit_on_critical_exception(ex, "Failed to generate oligonucleotides!")
+
+    log_excluded_oligo_counts(options, short_oligo_n, long_oligo_n)
+
+
 @click.command()
 @common_params
 @click.option('--annot', type=existing_file, help="cDNA annotation file path")
@@ -312,9 +376,6 @@ def cdna(
     max_length: int,
     min_length: int,
 
-    # Extra
-    log: str
-
 ):
     """
     cDNA DMS oligonucleotide generation tool
@@ -327,61 +388,15 @@ def cdna(
     ASSEMBLY will be included in the metadata
     """
 
-    options = Options(
-        oligo_max_length=max_length,
-        oligo_min_length=min_length,
-        revcomp_minus_strand=False)
-
-    # Set logging up
-    set_logger(log)
-
-    # Validate adaptor sequences
-    validate_adaptor(adaptor_5)
-    validate_adaptor(adaptor_3)
-
-    # Load targeton configurations
-    try:
-        targetons = CDNATargetonConfigCollection.load(oligo_info)
-    except ValueError as ex:
-        exit_on_critical_exception(ex, "Failed to load cDNA targeton file!")
-
-    # Load cDNA sequences
-    try:
-        seq_repo = CDNASequenceRepository.load(
-            targetons.sequence_ids, ref_fasta, annot_fp=annot)
-    except SequenceNotFound:
-        sys.exit(1)
-    except ValueError as ex:
-        exit_on_critical_exception(ex, "Failed to load cDNA annotation file!")
-
-    # Get auxiliary tables
-    aux: AuxiliaryTables = get_auxiliary_tables(
-        targetons, load_codon_table(codon_table))
-
-    # Long oligonucleotides counter
-    short_oligo_n: int = 0
-    long_oligo_n: int = 0
-
-    get_cdna_f = partial(get_cdna, seq_repo)
-    process_targeton_f = partial(
-        process_targeton,
-        species,
-        assembly,
-        aux,
-        adaptor_5,
-        adaptor_3,
-        get_cdna_f,
-        options,
-        output)
-
-    info: OligoGenerationInfo
-    for targeton_cfg in targetons.cts:
-        try:
-            info = process_targeton_f(targeton_cfg)
-            short_oligo_n += info.short_oligo_n
-            long_oligo_n += info.long_oligo_n
-
-        except ValueError as ex:
-            exit_on_critical_exception(ex, "Failed to generate oligonucleotides!")
-
-    log_excluded_oligo_counts(options, short_oligo_n, long_oligo_n)
+    run_cdna(CDNAConfig(
+        species=species,
+        assembly=assembly,
+        adaptor_5=adaptor_5,
+        adaptor_3=adaptor_3,
+        min_length=min_length,
+        max_length=max_length,
+        codon_table_fp=codon_table,
+        oligo_info_fp=oligo_info,
+        ref_fasta_fp=ref_fasta,
+        output_dir=output,
+        annot_fp=annot))
