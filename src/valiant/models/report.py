@@ -26,12 +26,14 @@ from .options import Options
 
 @dataclass
 class Report:
+    min_length: int
     max_length: int
     rc: bool
 
     @classmethod
     def from_options(cls, options: Options) -> Report:
         return cls(
+            min_length=options.oligo_min_length,
             max_length=options.oligo_max_length,
             rc=options.revcomp_minus_strand
         )
@@ -41,6 +43,7 @@ class Report:
             'appName': PACKAGE_NAME,
             'appVersion': APP_VERSION,
             'reverseComplementOnMinus': self.rc,
+            'minOligoLength': self.min_length,
             'maxOligoLength': self.max_length
         }
 
