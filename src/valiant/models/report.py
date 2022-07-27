@@ -42,7 +42,7 @@ class Report:
         return {
             'appName': PACKAGE_NAME,
             'appVersion': APP_VERSION,
-            'reverseComplementOnMinus': self.rc,
+            'reverseComplementOnMinusStrand': self.rc,
             'minOligoLength': self.min_length,
             'maxOligoLength': self.max_length
         }
