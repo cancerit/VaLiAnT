@@ -168,4 +168,4 @@ class MetadataTable:
             self.write_vcf_file(os.path.join(out_dir, vcf_fn), ref_repository, False)
 
     def get_info(self) -> OligoGenerationInfo:
-        return OligoGenerationInfo(self.long_oligo_n)
+        return OligoGenerationInfo(self.too_short_oligo_n, self.long_oligo_n)

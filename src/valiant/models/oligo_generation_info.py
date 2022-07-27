@@ -21,4 +21,7 @@ from dataclasses import dataclass
 
 @dataclass
 class OligoGenerationInfo:
+    __slots__ = ['short_oligo_n', 'long_oligo_n']
+
+    short_oligo_n: int
     long_oligo_n: int

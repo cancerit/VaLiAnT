@@ -23,6 +23,9 @@ Functions that may force the program to exit, meant to be called by the CLI comm
 import logging
 import sys
 from typing import Optional
+
+from .models.options import Options
+from .models.oligo_generation_info import OligoGenerationInfo
 from .constants import DEFAULT_CODON_TABLE_FILE_NAME
 from .models.codon_table import CodonTable
 from .utils import is_dna, get_data_file_path
@@ -56,3 +59,18 @@ def load_codon_table(fp: Optional[str]) -> CodonTable:
         logging.critical(ex.args[0])
         logging.critical("Failed to load codon table!")
         sys.exit(1)
+
+
+def log_excluded_oligo_counts(options: Options, short_oligo_n: int, long_oligo_n: int) -> None:
+
+    # Log number of oligonucleotides discarded due to insufficient length
+    if short_oligo_n > 0:
+        logging.warning(
+            "%d oligonucleotides shorter than %d bases were discarded!" %
+            (short_oligo_n, options.oligo_min_length))
+
+    # Log number of oligonucleotides discarded due to excessive length
+    if long_oligo_n > 0:
+        logging.warning(
+            "%d oligonucleotides longer than %d bases were discarded!" %
+            (long_oligo_n, options.oligo_max_length))

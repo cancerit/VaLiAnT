@@ -41,7 +41,7 @@ from .models.snv_table import AuxiliaryTables
 from .models.targeton import ITargeton, PamProtCDSTargeton, PamProtTargeton
 from .models.variant import CustomVariant, VariantRepository
 from .common_cli import common_params, existing_file
-from .cli_utils import load_codon_table, validate_adaptor, set_logger
+from .cli_utils import load_codon_table, log_excluded_oligo_counts, validate_adaptor, set_logger
 from .writers import write_reference_sequences
 
 
@@ -519,8 +519,10 @@ def sge(
         sys.exit(0)
 
     # Long oligonucleotides counter
+    short_oligo_n: int = 0
     long_oligo_n: int = 0
 
+    info: OligoGenerationInfo
     for ot in oligo_templates:
         try:
             # Generate all oligonucleotides and write to file
@@ -530,10 +532,7 @@ def sge(
             logging.critical("Failed to generate oligonucleotides!")
             sys.exit(1)
 
+        short_oligo_n += info.short_oligo_n
         long_oligo_n += info.long_oligo_n
 
-    # Log number of oligonucleotides discarded due to excessive length
-    if long_oligo_n:
-        logging.warning(
-            "%d oligonucleotides longer than %d bases were discarded!" %
-            (long_oligo_n, options.oligo_max_length))
+    log_excluded_oligo_counts(options, short_oligo_n, long_oligo_n)

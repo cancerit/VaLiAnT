@@ -24,7 +24,7 @@ import click
 import numpy as np
 import pandas as pd
 
-from .cli_utils import load_codon_table, validate_adaptor, set_logger
+from .cli_utils import load_codon_table, log_excluded_oligo_counts, validate_adaptor, set_logger
 from .common_cli import common_params, existing_file
 from .constants import CDS_ONLY_MUTATORS, META_MAVE_NT, META_MSEQ, META_MSEQ_NO_ADAPT, META_OLIGO_NAME, MUTATOR_CATEGORIES
 from .enums import TargetonMutator
@@ -359,6 +359,7 @@ def cdna(
         targetons, load_codon_table(codon_table))
 
     # Long oligonucleotides counter
+    short_oligo_n: int = 0
     long_oligo_n: int = 0
 
     get_cdna_f = partial(get_cdna, seq_repo)
@@ -373,15 +374,14 @@ def cdna(
         options,
         output)
 
+    info: OligoGenerationInfo
     for targeton_cfg in targetons.cts:
         try:
-            long_oligo_n += process_targeton_f(targeton_cfg).long_oligo_n
+            info = process_targeton_f(targeton_cfg)
+            short_oligo_n += info.short_oligo_n
+            long_oligo_n += info.long_oligo_n
 
         except ValueError as ex:
             exit_on_critical_exception(ex, "Failed to generate oligonucleotides!")
 
-    # Log number of oligonucleotides discarded due to excessive length
-    if long_oligo_n:
-        logging.warning(
-            "%d oligonucleotides longer than %d bases were discarded!" %
-            (long_oligo_n, max_length))
+    log_excluded_oligo_counts(options, short_oligo_n, long_oligo_n)
