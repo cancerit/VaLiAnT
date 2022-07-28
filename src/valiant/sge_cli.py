@@ -28,7 +28,7 @@ from pyranges import PyRanges
 from .enums import TargetonMutator
 from .models.base import GenomicRange
 from .models.codon_table import CodonTable
-from .models.config import BaseConfig
+from .models.sge_config import SGEConfig
 from .models.exon import AnnotationRepository, CDSContextRepository, GenomicRangePair, TranscriptInfo
 from .models.metadata_table import MetadataTable
 from .models.oligo_generation_info import OligoGenerationInfo
@@ -45,20 +45,6 @@ from .models.variant import CustomVariant, VariantRepository
 from .common_cli import common_params, existing_file
 from .cli_utils import load_codon_table, log_excluded_oligo_counts
 from .writers import write_reference_sequences
-
-
-@dataclass
-class SGEConfig(BaseConfig):
-    revcomp_minus_strand: bool
-    gff_fp: Optional[str]
-    pam_fp: Optional[str]
-    vcf_fp: Optional[str]
-
-    def get_options(self) -> Options:
-        return Options(
-            revcomp_minus_strand=self.revcomp_minus_strand,
-            oligo_max_length=self.max_length,
-            oligo_min_length=self.min_length)
 
 
 def _load_gff_file(fp: Optional[str]) -> Optional[AnnotationRepository]:

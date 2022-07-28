@@ -36,7 +36,7 @@ from .models.cdna import CDNA, AnnotatedCDNA
 from .models.cdna_seq_repository import CDNASequenceRepository
 from .models.cdna_targeton_configs import CDNATargetonConfig, CDNATargetonConfigCollection
 from .models.codon_table import CodonTable
-from .models.config import BaseConfig
+from .models.cdna_config import CDNAConfig
 from .models.metadata_table import MetadataTable
 from .models.mutated_sequences import MutationCollection
 from .models.oligo_generation_info import OligoGenerationInfo
@@ -46,17 +46,6 @@ from .models.options import Options
 from .models.snv_table import AuxiliaryTables
 from .models.targeton import Targeton, CDSTargeton
 from .utils import get_constant_category, get_empty_category_column, get_source_type_column, repr_enum_list
-
-
-@dataclass
-class CDNAConfig(BaseConfig):
-    annot_fp: Optional[str]
-
-    def get_options(self) -> Options:
-        return Options(
-            revcomp_minus_strand=False,
-            oligo_max_length=self.max_length,
-            oligo_min_length=self.min_length)
 
 
 def exit_on_critical_exception(ex: Exception, msg: str) -> NoReturn:
