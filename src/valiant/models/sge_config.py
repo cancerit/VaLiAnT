@@ -17,13 +17,16 @@
 #############################
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar, Dict, Optional
+from ..enums import ExecMode
 from .config import BaseConfig
 from .options import Options
 
 
 @dataclass
 class SGEConfig(BaseConfig):
+    mode: ClassVar[ExecMode] = ExecMode.SGE
+
     revcomp_minus_strand: bool
     gff_fp: Optional[str]
     pam_fp: Optional[str]

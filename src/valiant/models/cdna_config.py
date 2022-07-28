@@ -17,13 +17,16 @@
 #############################
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar, Dict, Optional
+from ..enums import ExecMode
 from .config import BaseConfig
 from .options import Options
 
 
 @dataclass
 class CDNAConfig(BaseConfig):
+    mode: ClassVar[ExecMode] = ExecMode.CDNA
+
     annot_fp: Optional[str]
 
     def get_options(self) -> Options:

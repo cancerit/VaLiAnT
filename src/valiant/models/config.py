@@ -20,8 +20,9 @@ import abc
 from dataclasses import dataclass
 import json
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar, Dict, Optional
 
+from ..enums import ExecMode
 from ..errors import InvalidConfig
 from ..utils import is_adaptor_valid
 from .options import Options
@@ -29,6 +30,8 @@ from .options import Options
 
 @dataclass
 class BaseConfig(abc.ABC):
+
+    mode: ClassVar[ExecMode]
 
     # Metadata
     species: str
@@ -58,6 +61,7 @@ class BaseConfig(abc.ABC):
 
     def to_dict(self) -> Dict[str, Any]:
         return {
+            'mode': self.mode.value,
             'species': self.species,
             'assembly': self.assembly,
             'adaptor5': self.adaptor_5,
