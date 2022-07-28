@@ -513,7 +513,7 @@ def sge(
     sequences_only: bool,
     revcomp_minus_strand: bool,
     max_length: int,
-    min_length: int,
+    min_length: int
 
 ) -> None:
     """

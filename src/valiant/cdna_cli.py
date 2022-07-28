@@ -360,7 +360,7 @@ def cdna(
 
     # Actions
     max_length: int,
-    min_length: int,
+    min_length: int
 
 ):
     """
