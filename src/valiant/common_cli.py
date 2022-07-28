@@ -95,6 +95,12 @@ def finalise(config: BaseConfig, short_oligo_n: int, long_oligo_n: int) -> None:
     # Log the count of oligonucleotides excluded by the length filter
     log_excluded_oligo_counts(config, short_oligo_n, long_oligo_n)
 
-    # Serialise the configuration to file for reproducibility
     config_fp: str = os.path.join(config.output_dir, OUTPUT_CONFIG_FILE_NAME)
-    config.write(config_fp)
+
+    try:
+
+        # Write configuration to file
+        config.write(config_fp)
+
+    except (PermissionError, IsADirectoryError):
+        logging.error("Failed to write configuration to '%s'!" % config_fp)
