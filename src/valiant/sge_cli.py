@@ -479,7 +479,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 @common_params
 @click.option('--gff', type=existing_file, help="Annotation GFF file path")
 @click.option('--pam', type=existing_file, help="PAM protection VCF file path")
-@click.option('--vcf', type=existing_file, help="Custom variant VCF file path")
+@click.option('--vcf', type=existing_file, help="Custom variant VCF manifest file path")
 @click.option(
     '--sequences-only',
     is_flag=True,
