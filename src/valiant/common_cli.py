@@ -18,11 +18,13 @@
 
 from functools import wraps
 import logging
+import os
 import sys
 import click
 
-from .constants import DEFAULT_OLIGO_MAX_LENGTH, DEFAULT_OLIGO_MIN_LENGTH
+from .constants import DEFAULT_OLIGO_MAX_LENGTH, DEFAULT_OLIGO_MIN_LENGTH, OUTPUT_CONFIG_FILE_NAME
 from .errors import InvalidConfig
+from .models.config import BaseConfig
 
 
 existing_file = click.Path(exists=True, file_okay=True, dir_okay=False)
@@ -70,3 +72,29 @@ def common_params(f):
             sys.exit(1)
 
     return wrapper
+
+
+def log_excluded_oligo_counts(config: BaseConfig, short_oligo_n: int, long_oligo_n: int) -> None:
+
+    # Log number of oligonucleotides discarded due to insufficient length
+    if short_oligo_n > 0:
+        logging.warning(
+            "%d oligonucleotides shorter than %d bases were discarded!" %
+            (short_oligo_n, config.min_length))
+
+    # Log number of oligonucleotides discarded due to excessive length
+    if long_oligo_n > 0:
+        logging.warning(
+            "%d oligonucleotides longer than %d bases were discarded!" %
+            (long_oligo_n, config.max_length))
+
+
+def finalise(config: BaseConfig, short_oligo_n: int, long_oligo_n: int) -> None:
+    """Common operations to be performed at the end independently of the execution mode"""
+
+    # Log the count of oligonucleotides excluded by the length filter
+    log_excluded_oligo_counts(config, short_oligo_n, long_oligo_n)
+
+    # Serialise the configuration to file for reproducibility
+    config_fp: str = os.path.join(config.output_dir, OUTPUT_CONFIG_FILE_NAME)
+    config.write(config_fp)

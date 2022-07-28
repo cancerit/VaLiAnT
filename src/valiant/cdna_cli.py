@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from dataclasses import dataclass
 from functools import partial
 import logging
 import sys
@@ -25,8 +24,8 @@ import click
 import numpy as np
 import pandas as pd
 
-from .cli_utils import load_codon_table, log_excluded_oligo_counts
-from .common_cli import common_params, existing_file
+from .cli_utils import load_codon_table
+from .common_cli import common_params, existing_file, finalise
 from .constants import CDS_ONLY_MUTATORS, META_MAVE_NT, META_MSEQ, META_MSEQ_NO_ADAPT, META_OLIGO_NAME, MUTATOR_CATEGORIES
 from .enums import TargetonMutator
 from .errors import SequenceNotFound, InvalidMutatorForTarget
@@ -336,7 +335,7 @@ def run_cdna(config: CDNAConfig) -> None:
         except ValueError as ex:
             exit_on_critical_exception(ex, "Failed to generate oligonucleotides!")
 
-    log_excluded_oligo_counts(options, short_oligo_n, long_oligo_n)
+    finalise(config, short_oligo_n, long_oligo_n)
 
 
 @click.command()

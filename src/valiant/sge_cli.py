@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from dataclasses import dataclass
 from itertools import chain
 import logging
 import os
@@ -42,8 +41,8 @@ from .models.sequences import ReferenceSequence
 from .models.snv_table import AuxiliaryTables
 from .models.targeton import ITargeton, PamProtCDSTargeton, PamProtTargeton
 from .models.variant import CustomVariant, VariantRepository
-from .common_cli import common_params, existing_file
-from .cli_utils import load_codon_table, log_excluded_oligo_counts
+from .common_cli import common_params, existing_file, finalise
+from .cli_utils import load_codon_table
 from .writers import write_reference_sequences
 
 
@@ -473,7 +472,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         short_oligo_n += info.short_oligo_n
         long_oligo_n += info.long_oligo_n
 
-    log_excluded_oligo_counts(options, short_oligo_n, long_oligo_n)
+    finalise(config, short_oligo_n, long_oligo_n)
 
 
 @click.command()

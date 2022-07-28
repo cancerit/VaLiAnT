@@ -17,7 +17,7 @@
 #############################
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Dict, Optional
 from .config import BaseConfig
 from .options import Options
 
@@ -34,3 +34,11 @@ class SGEConfig(BaseConfig):
             revcomp_minus_strand=self.revcomp_minus_strand,
             oligo_max_length=self.max_length,
             oligo_min_length=self.min_length)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            **super().to_dict(),
+            'GFFFilePath': self.gff_fp,
+            'PAMProtectionVCFFilePath': self.pam_fp,
+            'CustomVCFFilePath': self.vcf_fp
+        }
