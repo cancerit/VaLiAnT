@@ -43,6 +43,7 @@ from .models.oligo_renderer import get_oligo_names_from_dataframe
 from .models.oligo_template import MUTATION_TYPE_CATEGORIES_T, decode_mut_types_cat
 from .models.options import Options
 from .models.snv_table import AuxiliaryTables
+from .models.stats import Stats
 from .models.targeton import Targeton, CDSTargeton
 from .utils import get_constant_category, get_empty_category_column, get_source_type_column, repr_enum_list
 
@@ -309,10 +310,6 @@ def run_cdna(config: CDNAConfig) -> None:
     aux: AuxiliaryTables = get_auxiliary_tables(
         targetons, load_codon_table(config.codon_table_fp))
 
-    # Long oligonucleotides counter
-    short_oligo_n: int = 0
-    long_oligo_n: int = 0
-
     get_cdna_f = partial(get_cdna, seq_repo)
     process_targeton_f = partial(
         process_targeton,
@@ -325,17 +322,18 @@ def run_cdna(config: CDNAConfig) -> None:
         options,
         config.output_dir)
 
+    stats = Stats()
     info: OligoGenerationInfo
     for targeton_cfg in targetons.cts:
         try:
             info = process_targeton_f(targeton_cfg)
-            short_oligo_n += info.short_oligo_n
-            long_oligo_n += info.long_oligo_n
 
         except ValueError as ex:
             exit_on_critical_exception(ex, "Failed to generate oligonucleotides!")
 
-    finalise(config, short_oligo_n, long_oligo_n)
+        stats.update(info)
+
+    finalise(config, stats)
 
 
 @click.command()

@@ -39,6 +39,7 @@ from .models.refseq_ranges import genomic_ranges_to_pyranges, ReferenceSequenceR
 from .models.refseq_repository import fetch_reference_sequences, ReferenceSequenceRepository
 from .models.sequences import ReferenceSequence
 from .models.snv_table import AuxiliaryTables
+from .models.stats import Stats
 from .models.targeton import ITargeton, PamProtCDSTargeton, PamProtTargeton
 from .models.variant import CustomVariant, VariantRepository
 from .common_cli import common_params, existing_file, finalise
@@ -455,24 +456,23 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     if sequences_only:
         sys.exit(0)
 
-    # Long oligonucleotides counter
-    short_oligo_n: int = 0
-    long_oligo_n: int = 0
-
+    stats = Stats()
     info: OligoGenerationInfo
     for ot in oligo_templates:
         try:
+
             # Generate all oligonucleotides and write to file
-            info = generate_oligos(config.output_dir, ref, aux, ot, config.species, config.assembly, options)
+            info = generate_oligos(
+                config.output_dir, ref, aux, ot, config.species, config.assembly, options)
+
         except ValueError as ex:
             logging.critical(ex.args[0])
             logging.critical("Failed to generate oligonucleotides!")
             sys.exit(1)
 
-        short_oligo_n += info.short_oligo_n
-        long_oligo_n += info.long_oligo_n
+        stats.update(info)
 
-    finalise(config, short_oligo_n, long_oligo_n)
+    finalise(config, stats)
 
 
 @click.command()
