@@ -40,5 +40,5 @@ class SGEConfig(BaseConfig):
             **super().to_dict(),
             'GFFFilePath': self.gff_fp,
             'PAMProtectionVCFFilePath': self.pam_fp,
-            'CustomVCFFilePath': self.vcf_fp
+            'customVCFManifestFilePath': self.vcf_fp
         }
