@@ -19,6 +19,11 @@
 from enum import Enum
 
 
+class ExecMode(str, Enum):
+    SGE = 'sge'
+    CDNA = 'cdna'
+
+
 class TargetonMutator(Enum):
     DEL1 = '1del'
     DEL2_0 = '2del0'

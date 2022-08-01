@@ -17,21 +17,16 @@
 #############################
 
 import abc
-from dataclasses import dataclass
-import json
 import logging
-from typing import Any, ClassVar, Dict, Optional
+from typing import Optional
 
-from ..enums import ExecMode
 from ..errors import InvalidConfig
 from ..utils import is_adaptor_valid
 from .options import Options
+from pydantic import BaseModel
 
 
-@dataclass
-class BaseConfig(abc.ABC):
-
-    mode: ClassVar[ExecMode]
+class BaseConfig(BaseModel, abc.ABC):
 
     # Metadata
     species: str
@@ -51,6 +46,21 @@ class BaseConfig(abc.ABC):
     ref_fasta_fp: str
     output_dir: str
 
+    class Config:
+        allow_population_by_field_name = True
+        fields = {
+            'species': 'species',
+            'assembly': 'assembly',
+            'adaptor_5': 'adaptor5',
+            'adaptor_3': 'adaptor3',
+            'min_length': 'minOligoLength',
+            'max_length': 'maxOligoLength',
+            'codon_table_fp': 'codonTableFilePath',
+            'oligo_info_fp': 'oligoInfoFilePath',
+            'ref_fasta_fp': 'refFASTAFilePath',
+            'output_dir': 'outputDirPath'
+        }
+
     def __post_init__(self) -> None:
         if not self.is_valid():
             raise InvalidConfig()
@@ -59,24 +69,9 @@ class BaseConfig(abc.ABC):
     def get_options(self) -> Options:
         pass
 
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            'mode': self.mode.value,
-            'species': self.species,
-            'assembly': self.assembly,
-            'adaptor5': self.adaptor_5,
-            'adaptor3': self.adaptor_3,
-            'minOligoLength': self.min_length,
-            'maxOligoLength': self.max_length,
-            'codonTableFilePath': self.codon_table_fp,
-            'oligoInfoFilePath': self.oligo_info_fp,
-            'refFASTAFilePath': self.ref_fasta_fp,
-            'outputDirPath': self.output_dir
-        }
-
     def write(self, fp: str) -> None:
         with open(fp, 'w') as fh:
-            json.dump(self.to_dict(), fh)
+            fh.write(self.json(by_alias=True, separators=(',', ':')))
 
     def is_valid(self) -> bool:
         success: bool = True

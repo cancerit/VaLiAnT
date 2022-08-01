@@ -18,25 +18,22 @@
 
 from dataclasses import dataclass
 from typing import Any, ClassVar, Dict, Optional
+from typing_extensions import Literal
 from ..enums import ExecMode
 from .config import BaseConfig
 from .options import Options
 
 
-@dataclass
 class CDNAConfig(BaseConfig):
-    mode: ClassVar[ExecMode] = ExecMode.CDNA
+    # mode: Literal[ExecMode] = ExecMode.CDNA
 
     annot_fp: Optional[str]
+
+    class Config:
+        fields = {'annot_fp': 'annotationFilePath'}
 
     def get_options(self) -> Options:
         return Options(
             revcomp_minus_strand=False,
             oligo_max_length=self.max_length,
             oligo_min_length=self.min_length)
-
-    def to_dict(self) -> Dict[str, Any]:
-        return {
-            **super().to_dict(),
-            'annotationFilePath': self.annot_fp
-        }

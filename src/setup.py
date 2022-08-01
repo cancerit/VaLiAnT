@@ -35,6 +35,7 @@ config = {
         'click',
         'cython',
         'pandas>=1.1,<1.2',
+        'pydantic',
         'pyranges',
         'pysam'
     ],

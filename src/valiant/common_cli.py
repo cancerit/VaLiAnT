@@ -25,6 +25,7 @@ import click
 from .constants import DEFAULT_OLIGO_MAX_LENGTH, DEFAULT_OLIGO_MIN_LENGTH, OUTPUT_CONFIG_FILE_NAME
 from .errors import InvalidConfig
 from .models.config import BaseConfig
+from .models.main_config import get_main_config_from_config
 from .models.stats import Stats
 
 
@@ -100,8 +101,14 @@ def finalise(config: BaseConfig, stats: Stats) -> None:
 
     try:
 
+        # Generate full configuration
+        main_config = get_main_config_from_config(config)
+
         # Write configuration to file
-        config.write(config_fp)
+        main_config.write(config_fp)
+
+    except InvalidConfig:
+        logging.error("Failed to generate configuration!")
 
     except (PermissionError, IsADirectoryError):
         logging.error("Failed to write configuration to '%s'!" % config_fp)
