@@ -510,7 +510,7 @@ def _get_substitution_record(
     # Retrieve reference sequence before and after PAM protection
     offset: int = pos - seq_start
     ref_slice, pam_slice = _get_slices(ref_seq, pam_seq, offset, mut_len)
-    return pos, end, ref, alt, (ref_slice if pam_slice != ref_slice else None)
+    return pos, end, pam_slice, alt, (ref_slice if pam_slice != ref_slice else None)
 
 
 def get_record(
@@ -547,9 +547,11 @@ def get_record(
     elif var_type == var_type_ins:
         pos, end, ref, alt, pre_pam = _get_insertion_record(
             ref_repository, chromosome, pos, meta_alt, ref_start, ref_seq, pam_seq)  # type: ignore
-    else:
+    elif var_type == var_type_sub:
         pos, end, ref, alt, pre_pam = _get_substitution_record(
             pos, meta_ref, meta_alt, ref_start, ref_seq, pam_seq)  # type: ignore
+    else:
+        raise RuntimeError("Invalid variant type!")
 
     # Set INFO tags
     info: Dict[str, Any] = {
