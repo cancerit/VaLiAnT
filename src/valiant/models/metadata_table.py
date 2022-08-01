@@ -21,7 +21,7 @@ from dataclasses import dataclass
 import os
 from typing import Any
 import pandas as pd
-from ..constants import METADATA_FIELDS_SET, METADATA_FIELDS
+from ..constants import METADATA_FIELDS_SET, METADATA_FIELDS, VCF_PAM_SUFFIX, VCF_REF_SUFFIX
 from ..loaders.vcf import write_vcf
 from ..utils import get_constant_category
 from ..writers import write_oligo_metadata, write_oligo_unique
@@ -157,15 +157,21 @@ class MetadataTable:
         base_fn: str,
         ref_repository: ReferenceSequenceRepository
     ) -> None:
+
+        # Write metadata and unique oligonucleotides
         self.write_common_files(out_dir, base_fn)
+
         if self.short_oligo_n > 0:
 
-            # Save variants to file (VCF format)
-            vcf_fn = base_fn + '_pam.vcf'
-            self.write_vcf_file(os.path.join(out_dir, vcf_fn), ref_repository, True)
+            # Write mutations in VCF format
+            for pam_as_ref, suffix in [
+                (True, VCF_PAM_SUFFIX),
+                (False, VCF_REF_SUFFIX)
+            ]:
+                fn = f"{base_fn}_{suffix}.vcf"
+                fp = os.path.join(out_dir, fn)
+                self.write_vcf_file(fp, ref_repository, pam_as_ref)
 
-            vcf_fn = base_fn + '_ref.vcf'
-            self.write_vcf_file(os.path.join(out_dir, vcf_fn), ref_repository, False)
 
     def get_info(self) -> OligoGenerationInfo:
         return OligoGenerationInfo(self.too_short_oligo_n, self.long_oligo_n)

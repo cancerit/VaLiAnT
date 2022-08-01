@@ -24,6 +24,9 @@ DNA_ALPHABET_SET = set(DNA_ALPHABET)
 DEFAULT_CODON_TABLE_FILE_NAME = 'default_codon_table.csv'
 OUTPUT_CONFIG_FILE_NAME = 'config.json'
 
+VCF_PAM_SUFFIX = 'pam'
+VCF_REF_SUFFIX = 'ref'
+
 REVCOMP_OLIGO_NAME_SUFFIX = '_rc'
 CUSTOM_MUTATOR = 'custom'
 
