@@ -490,9 +490,13 @@ def _get_deletion_record(
 
 
 def _get_slices(ref_seq: str, pam_seq: str, offset: int, mut_len: int) -> Tuple[str, str]:
-    sl = slice(offset, offset + mut_len + 1)
-    ref_slice = ref_seq[sl]
-    pam_slice = pam_seq[sl]
+    if mut_len > 1:
+        sl = slice(offset, offset + mut_len)
+        ref_slice = ref_seq[sl]
+        pam_slice = pam_seq[sl]
+    else:
+        ref_slice = ref_seq[offset]
+        pam_slice = pam_seq[offset]
     return ref_slice, pam_slice
 
 
