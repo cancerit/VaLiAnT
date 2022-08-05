@@ -77,6 +77,14 @@ class BaseVariant:
 
     type: ClassVar[VariantType]
 
+    def get_ref(self) -> Optional[str]:
+        return self.ref if hasattr(self, 'ref') else None
+
+    @property
+    def ref_length(self) -> int:
+        ref = self.get_ref()
+        return len(ref) if ref is not None else 0
+
     def get_ref_offset(self, ref_seq: ReferenceSequence) -> int:
         if not ref_seq.genomic_range.contains_position(self.genomic_position):
             raise ValueError(
@@ -85,14 +93,28 @@ class BaseVariant:
 
         return self.genomic_position.position - ref_seq.genomic_range.start
 
+    def _get_relative_position(self, seq_start: int) -> int:
+        if seq_start < 1:
+            raise ValueError("Invalid sequence start position!")
+        return self.genomic_position.position - seq_start
+
+    def get_corrected_ref_from(self, seq: str, offset: int) -> Optional[str]:
+        return (
+            seq[offset] if self.ref_length == 1 else
+            seq[offset:offset + self.ref_length] if self.ref_length > 1 else
+            None
+        )
+
+    def get_corrected_ref(self, seq: str, seq_start: int) -> Optional[str]:
+        return self.get_corrected_ref_from(
+            seq, self._get_relative_position(seq_start))
+
     def mutate_from(self, seq: str, offset: int, ref_check: bool = False) -> str:
         raise NotImplementedError()
 
     def mutate(self, seq: str, seq_start: int, ref_check: bool = False) -> str:
-        if seq_start < 1:
-            raise ValueError("Invalid sequence start position!")
         return self.mutate_from(
-            seq, self.genomic_position.position - seq_start, ref_check=ref_check)
+            seq, self._get_relative_position(seq_start), ref_check=ref_check)
 
 
 @dataclass(frozen=True)
@@ -163,6 +185,13 @@ class CustomVariant:
     base_variant: BaseVariant
     vcf_alias: Optional[str]
     vcf_variant_id: Optional[str]
+
+    def get_ref(self) -> Optional[str]:
+        return self.base_variant.get_ref()
+
+    @property
+    def ref_length(self) -> int:
+        return self.base_variant.ref_length
 
     def get_ref_range(self, strand: str) -> StrandedPositionRange:
         start: int = self.base_variant.genomic_position.position
@@ -492,7 +521,7 @@ def _get_substitution_record(
     alt: str,
     seq_start: int,
     ref_seq: str,
-    pam_seq: str
+    pam_seq: str, meta: pd.Series
 ) -> Tuple[int, int, str, str, Optional[str]]:
     mut_len: int = len(ref)
     end: int = pos + mut_len
@@ -500,6 +529,9 @@ def _get_substitution_record(
     # Retrieve reference sequence before and after PAM protection
     offset: int = pos - seq_start
     ref_slice, pam_slice = _get_slices(ref_seq, pam_seq, offset, mut_len)
+    if ref != pam_slice:
+        assert ref == ref_slice
+        print(f"({len(ref)}) {ref} -> {pam_slice} {ref_slice} ({meta.mutator})")
     return pos, end, pam_slice, alt, (ref_slice if pam_slice != ref_slice else None)
 
 
@@ -539,7 +571,7 @@ def get_record(
             ref_repository, chromosome, pos, meta_alt, ref_start, ref_seq, pam_seq)  # type: ignore
     elif var_type == var_type_sub:
         pos, end, ref, alt, pre_pam = _get_substitution_record(
-            pos, meta_ref, meta_alt, ref_start, ref_seq, pam_seq)  # type: ignore
+            pos, meta_ref, meta_alt, ref_start, ref_seq, pam_seq, meta)  # type: ignore
     else:
         raise RuntimeError("Invalid variant type!")
 

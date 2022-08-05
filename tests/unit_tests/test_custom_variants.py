@@ -40,13 +40,19 @@ variant_mseqs = [
 ]
 
 
+def get_custom_variant_mutation(seq, custom_variant):
+    return CustomVariantMutation(
+        custom_variant, custom_variant.get_ref(), seq, False, frozenset())
+
+
 @pytest.mark.parametrize('variant', variants)
 def test_custom_variant_mutation_init(variant):
     seq = 'AAAAAAAAAA'
     custom_variant = CustomVariant(variant, 'vcf_alias', 'VARIANT_ID')
 
     # Initialise custom variant mutation
-    CustomVariantMutation(custom_variant, seq, False, frozenset())
+    CustomVariantMutation(
+        custom_variant, custom_variant.get_ref(), seq, False, frozenset())
 
 
 @pytest.mark.parametrize('variant', variants)
@@ -56,7 +62,7 @@ def test_custom_variant_mutation_to_row(variant):
     custom_variant = CustomVariant(variant, 'vcf_alias', 'VARIANT_ID')
 
     # Initialise custom variant mutation
-    cvm = CustomVariantMutation(custom_variant, seq, False, frozenset())
+    cvm = get_custom_variant_mutation(seq, custom_variant)
 
     # Check custom variant mutation
     vcf_alias, vcf_variant_id, var_type_, pos, ref, alt, seq_, sgrna_ids, in_const = cvm.to_row()
@@ -103,7 +109,7 @@ def test_custom_variant_mutation_collection_from_variants(variant, mseq):
     vcf_var_id = 'VARIANT_ID'
     var_type = variant.type
     custom_variant = CustomVariant(variant, vcf_alias, vcf_var_id)
-    cvm = CustomVariantMutation(custom_variant, mseq, False, frozenset())
+    cvm = get_custom_variant_mutation(mseq, custom_variant)
 
     # Initialise mutation collection
     cvmc = CustomVariantMutationCollection.from_variants([cvm])

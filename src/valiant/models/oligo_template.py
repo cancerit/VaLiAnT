@@ -230,17 +230,20 @@ class OligoTemplate:
             for segment in self.segments
         ])
 
+    def _get_custom_variant_mutation(self, variant: CustomVariant) -> CustomVariantMutation:
+        return CustomVariantMutation(
+            variant,
+            self.ref_seq.get_variant_corrected_ref(
+                variant.base_variant),
+            self.ref_seq.apply_variant(
+                variant.base_variant, ref_check=False),
+            self.ref_ranges.is_range_in_constant_region(
+                variant.get_ref_range(self.strand)),
+            self._get_custom_variant_sgrna_ids(variant))
+
     def _compute_custom_variants(self) -> CustomVariantMutationCollection:
-        return CustomVariantMutationCollection.from_variants([
-            CustomVariantMutation(
-                variant,
-                self.ref_seq.apply_variant(
-                    variant.base_variant, ref_check=False),
-                self.ref_ranges.is_range_in_constant_region(
-                    variant.get_ref_range(self.strand)),
-                self._get_custom_variant_sgrna_ids(variant))
-            for variant in self.custom_variants
-        ])
+        return CustomVariantMutationCollection.from_variants(
+            list(map(self._get_custom_variant_mutation, self.custom_variants)))
 
     def _get_mutation_collection(
         self,

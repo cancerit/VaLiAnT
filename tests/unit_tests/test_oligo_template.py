@@ -18,13 +18,15 @@
 
 import pytest
 from valiant.enums import TargetonMutator
-from valiant.models.base import GenomicRange, TranscriptInfo
+from valiant.models.annotated_sequence import CDSAnnotatedSequencePair
+from valiant.models.base import GenomicPosition, GenomicRange, TranscriptInfo
 from valiant.models.codon_table import CodonTable
 from valiant.models.oligo_template import OligoTemplate, TargetonOligoSegment
-from valiant.models.pam_protection import PamProtectedReferenceSequence
+from valiant.models.pam_protection import PamProtectedReferenceSequence, PamVariant
 from valiant.models.refseq_ranges import ReferenceSequenceRanges
 from valiant.models.sequences import Sequence, ReferenceSequence
-from valiant.models.targeton import Targeton
+from valiant.models.targeton import PamProtCDSTargeton, Targeton
+from valiant.models.variant import CustomVariant, SubstitutionVariant
 from .constants import CODON_TABLE_FP, DUMMY_PAM_PROTECTION_NT
 from .utils import get_data_file_path, get_no_op_pam_protected_sequence, get_targeton
 
@@ -71,3 +73,39 @@ def test_oligo_compute_mutations(targetons, mutator, pam_protection):
                     set(m.mseq) - {m.new} == {DUMMY_PAM_PROTECTION_NT}
                     for m in df.itertuples()
                 )
+
+
+def test_oligo_template_get_custom_variant_mutation():
+    empty = frozenset()
+    rsr = ReferenceSequenceRanges(
+        'X', '+', 1, 22, 1, 22, (0, 0), (empty, empty, empty), empty)
+
+    ref = 'A'
+    pam_ref = 'C'
+    mut_alt = 'T'
+    pos = GenomicPosition('X', 3)
+    pam_variant = PamVariant(pos, ref, pam_ref, 'sgrna-a')
+    variant = SubstitutionVariant(pos, ref, mut_alt)
+
+    custom_variant = CustomVariant(variant, None, None)
+    pam_variants = {pam_variant}
+
+    ref_seq = ref * 6
+
+    gr = GenomicRange('X', 1, len(ref_seq), '+')
+    pam_ref_seq = PamProtectedReferenceSequence.from_reference_sequence(
+        ReferenceSequence(ref_seq, gr), pam_variants)
+
+    print(pam_ref_seq)
+
+    targeton = PamProtCDSTargeton.from_pam_seq(
+        pam_ref_seq, '', '')
+
+    sgrna_ids = {x.sgrna_id for x in pam_variants}
+    segment = TargetonOligoSegment(targeton, set())
+    ot = OligoTemplate(
+        rsr, TRANSCRIPT_INFO, pam_ref_seq, sgrna_ids, {custom_variant}, None, None, [segment])
+
+    cvm = ot._get_custom_variant_mutation(custom_variant)
+
+    assert cvm.pam_ref == pam_ref

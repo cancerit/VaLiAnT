@@ -22,7 +22,7 @@ import logging
 from typing import Dict, Iterable, List, Optional, Set, FrozenSet
 import pandas as pd
 from pyranges import PyRanges
-from .base import GenomicRange
+from .base import GenomicPosition, GenomicRange
 from .sequences import ReferenceSequence
 from .variant import BaseVariant, get_variant, SubstitutionVariant
 from ..loaders.vcf import get_vcf
@@ -76,11 +76,17 @@ class PamProtectedReferenceSequence(ReferenceSequence):
         ]
         return PamProtectedReferenceSequence.from_reference_sequence(ref_seq, pam_variants)
 
-    def apply_variant(self, variant: BaseVariant, ref_check: bool = False) -> str:
+    def _validate_variant_position(self, variant: BaseVariant) -> None:
         if not self.genomic_range.contains_position(variant.genomic_position):
             raise ValueError("Variant not in genomic range!")
-        # offset: int = variant.genomic_position.position - self.genomic_range.start
+
+    def apply_variant(self, variant: BaseVariant, ref_check: bool = False) -> str:
+        self._validate_variant_position(variant)
         return variant.mutate(self.pam_protected_sequence, self.genomic_range.start, ref_check=ref_check)
+
+    def get_variant_corrected_ref(self, variant: BaseVariant) -> Optional[str]:
+        self._validate_variant_position(variant)
+        return variant.get_corrected_ref(self.pam_protected_sequence, self.genomic_range.start)
 
 
 @dataclass(frozen=True)

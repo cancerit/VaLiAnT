@@ -56,16 +56,13 @@ class CustomVariantOligoRenderer(BaseOligoRenderer):
 
 @dataclass(frozen=True)
 class CustomVariantMutation:
-    __slots__ = ['variant', 'sequence', 'overlaps_constant_region', 'sgrna_ids']
+    __slots__ = ['variant', 'pam_ref', 'sequence', 'overlaps_constant_region', 'sgrna_ids']
 
     variant: CustomVariant
+    pam_ref: Optional[str]
     sequence: str
     overlaps_constant_region: bool
     sgrna_ids: FrozenSet[str]
-
-    @property
-    def ref(self) -> Optional[str]:
-        return getattr(self.variant.base_variant, 'ref', None)
 
     @property
     def alt(self) -> Optional[str]:
@@ -73,7 +70,7 @@ class CustomVariantMutation:
 
     @property
     def ref_length(self) -> int:
-        return len(self.ref) if self.ref else 0
+        return self.variant.ref_length
 
     def to_row(self) -> Tuple[Optional[str], Optional[str], int, int, Optional[str], Optional[str], str, str]:
         var: BaseVariant = self.variant.base_variant
@@ -82,7 +79,7 @@ class CustomVariantMutation:
             self.variant.vcf_variant_id,
             var.type.value,
             var.genomic_position.position,
-            self.ref,
+            self.pam_ref,
             self.alt,
             self.sequence,
             sgrna_ids_to_string(self.sgrna_ids) if self.sgrna_ids else '',
