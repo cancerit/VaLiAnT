@@ -346,20 +346,6 @@ def get_variant(r: VariantRecord) -> BaseVariant:
     return get_variant_from_tuple(r.contig, r.pos, r.ref, r.alts[0])
 
 
-def get_custom_variant(
-    vcf_alias: Optional[str],
-    vcf_variant_id: Optional[str],
-    chromosome: str,
-    position: int,
-    ref: str,
-    alt: str
-) -> CustomVariant:
-    return CustomVariant(
-        get_variant_from_tuple(chromosome, position, ref, alt),
-        vcf_alias,
-        vcf_variant_id)
-
-
 def _get_shared_nucleotide(
     ref_repository: ReferenceSequenceRepository,
     ref_seq: str,
