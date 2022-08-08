@@ -1,4 +1,4 @@
-FROM python:3.8-slim as builder
+FROM python:3.9-slim as builder
 
 ENV CYTHON_VERSION 0.29.22
 
@@ -15,7 +15,7 @@ COPY src/requirements.txt .
 RUN pip wheel --no-cache-dir -r requirements.txt && \
     rm requirements.txt
 
-FROM python:3.8-slim
+FROM python:3.9-slim
 
 WORKDIR /tmp
 
