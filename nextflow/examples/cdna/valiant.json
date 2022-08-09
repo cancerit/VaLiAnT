@@ -1,0 +1,18 @@
+{
+	"appName": "valiant",
+	"appVersion": "2.0.0",
+	"mode": "cdna",
+	"params": {
+		"species": "homo_sapiens",
+		"assembly": "pCW57.1",
+		"adaptor5": "AATGATACGGCGACCACCGA",
+		"adaptor3": "TCGTATGCCGTCTTCTGCTTG",
+    "minOligoLength": 1,
+    "maxOligoLength": 300,
+    "codonTableFilePath": null,
+		"outputDirPath": ".",
+    "oligoInfoFilePath": "/data/examples/cdna/input/cdna_targeton.tsv",
+    "refFASTAFilePath": "/data/examples/cdna/input/BRCA1_NP_009225_1_pCW57_1.fa",
+    "annotationFilePath": "/data/examples/cdna/input/cdna_annot.tsv"
+	}
+}

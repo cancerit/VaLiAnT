@@ -1,0 +1,21 @@
+{
+	"appName": "valiant",
+	"appVersion": "2.0.0",
+	"mode": "sge",
+	"params": {
+		"species": "homo_sapiens",
+		"assembly": "GRCh38",
+		"reverseComplementOnMinusStrand": false,
+    	"minOligoLength": 1,
+   		"maxOligoLength": 300,
+    	"codonTableFilePath": null,
+		"outputDirPath": ".",
+		"adaptor5": "AATGATACGGCGACCACCGA",
+		"adaptor3": "TCGTATGCCGTCTTCTGCTTG",
+		"oligoInfoFilePath": "/data/examples/sge/parameter_input_files/brca1_nuc_targeton_input.txt",
+		"refFASTAFilePath": "/data/examples/sge/reference_input_files/chr17.fa",
+		"PAMProtectionVCFFilePath": "/data/examples/sge/parameter_input_files/brca1_protection_edits.vcf",
+		"customVCFManifestFilePath": "/data/nextflow/examples/sge/brca1_custom_variants_manifest.csv",
+		"GFFFilePath": "/data/examples/sge/reference_input_files/ENST00000357654.9.gtf"
+	}
+}
