@@ -60,3 +60,13 @@ def test_get_region(genomic_range, region):
 ])
 def test_is_dna(seq, is_valid):
     assert utils.is_dna(seq) == is_valid
+
+
+@pytest.mark.parametrize('items,exp', [
+    ([], [[]]),
+    ([(7, 1)], [[1]]),
+    ([(0, 1), (1, 1), (8, 2), (9, 2), (12, 3)], [[1, 1], [2, 2], [3]]),
+    (list(enumerate(list('abc'))), [list('abc')])
+])
+def test_group_consecutive(items, exp):
+    assert utils.group_consecutive(items) == exp

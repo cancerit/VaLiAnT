@@ -21,11 +21,13 @@ from functools import lru_cache
 import os
 import pathlib
 import re
-from typing import List, Optional, Type, Tuple, FrozenSet, Iterable
+from typing import Any, List, Optional, Type, Tuple, FrozenSet, Iterable, TypeVar
 import numpy as np
 import pandas as pd
 from .constants import SRC_TYPES
 from .enums import TargetonMutator
+
+T = TypeVar('T')
 
 dna_complement_tr_table = str.maketrans('ACGT', 'TGCA')
 dna_re = re.compile('^[ACGT]+$')
@@ -148,3 +150,34 @@ def has_duplicates(items: List[int]) -> bool:
 
 def is_adaptor_valid(adaptor: Optional[str]) -> None:
     return adaptor is None or is_dna(adaptor)
+
+
+def get_not_none(it: Iterable) -> Any:
+    return [x for x in it if x is not None]
+
+
+def diff(a: List[int]) -> List[int]:
+    if len(a) < 2:
+        raise ValueError("Pairwise differences undefined for lists of less than two items!")
+    return [y - x for x, y in zip(a, a[1:])]
+
+
+def group_consecutive(items: List[Tuple[int, T]]) -> List[List[T]]:
+    n: int = len(items)
+    if n == 0:
+        return [[]]
+    if n == 1:
+        return [[items[0][1]]]
+
+    consecutive_items: List[List[T]] = []
+    diffs: List[int] = diff([i for i, _ in items])
+    start: int = 0
+    end: int
+    for i in range(n - 1):
+        if diffs[i] != 1:
+            end = i + 1
+            consecutive_items.append([x for _, x in items[start:end]])
+            start = end
+    consecutive_items.append([x for _, x in items[start:]])
+
+    return consecutive_items
