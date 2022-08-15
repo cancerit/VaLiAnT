@@ -119,3 +119,11 @@ def get_codon_indices_in_range(
 
     # Generate full codon index range
     return get_codon_index_range(codon_start, codon_end)
+
+
+def get_codon_start(codon_index: int) -> int:
+    return codon_index * 3
+
+
+def get_codon_end(codon_index: int) -> int:
+    return codon_index * 3 + 2

@@ -16,11 +16,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from __future__ import annotations
 import abc
 from dataclasses import dataclass
 from itertools import groupby
 import logging
-from typing import Generic, List, Sized, Tuple, TypeVar
+from typing import Dict, Generic, List, Sized, Tuple, TypeVar
 
 from valiant.models.base import GenomicPosition, StrandedPositionRange
 from valiant.enums import MutationType
@@ -202,6 +203,9 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair, Generic[VariantT]):
 
         return get_codon_index(self.frame, self.start, position)
 
+    def get_codon_index(self, position: int) -> int:
+        return self._get_codon_index(position)
+
     def _get_codon_indices(self, positions: List[GenomicPosition]) -> List[int]:
         return [self._get_codon_index(x.position) for x in positions]
 
@@ -250,3 +254,14 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair, Generic[VariantT]):
     def get_variant_mutation_types(self, codon_table: CodonTable, **kwargs) -> List[MutationType]:
         return self.get_codon_mutation_types_at(
             codon_table, self.variant_positions, **kwargs)
+
+    def get_indexed_alt_codons(self) -> Dict[int, str]:
+        d = {
+            i: self.ext_alt_seq[i * 3:i * 3 + 3]
+            for i in range(self.codon_count)
+        }
+        if self.frame > 0:
+            d[0] = d[0][self.frame:]
+        if self.cds_suffix_length > 0:
+            d[self.last_codon_index] = d[self.last_codon_index][:-self.cds_suffix_length]
+        return d

@@ -36,3 +36,60 @@ def get_mave_nt_from_row(r: pd.Series) -> str:
         r.mut_position,
         r.ref,
         r.new)
+
+
+def get_string_lengths(df: pd.DataFrame, mask: pd.Series, col_name: str) -> pd.Series:
+    return (
+        df.loc[mask, col_name]
+        .astype('string')
+        .str.len()
+        .fillna(0)
+        .astype(pd.Int32Dtype())
+    )
+
+
+def set_string_length_field(
+    df: pd.DataFrame,
+    mask: pd.Series,
+    string_col_name: str,
+    length_col_name: str
+) -> None:
+    df.loc[mask, length_col_name] = get_string_lengths(df, mask, string_col_name)
+
+
+def get_slice(s: str, a: int, b: int) -> str:
+    t = (
+        s[a] if a == b else
+        s[a:b + 1]
+    )
+    return t
+
+
+def slice_string_field(
+    df: pd.DataFrame,
+    mask: pd.Series,
+    string_col_name: str,
+    start_col_name: str,
+    end_col_name: str
+) -> pd.Series:
+    return [
+        get_slice(s, a, b)
+        for s, (a, b) in zip(
+            df.loc[mask, string_col_name],
+            zip(
+                df.loc[mask, start_col_name],
+                df.loc[mask, end_col_name]
+            ))
+    ]
+
+
+def set_slice_string_field(
+    df: pd.DataFrame,
+    mask: pd.Series,
+    string_col_name: str,
+    start_col_name: str,
+    end_col_name: str,
+    slice_col_name: str
+) -> None:
+    df.loc[mask, slice_col_name] = slice_string_field(
+        df, mask, string_col_name, start_col_name, end_col_name)

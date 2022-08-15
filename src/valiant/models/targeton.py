@@ -19,8 +19,7 @@
 from __future__ import annotations
 import abc
 from dataclasses import dataclass
-from functools import partial
-from typing import Any, Callable, ClassVar, Dict, Generic, List, FrozenSet, Optional, Type, TypeVar
+from typing import Any, Callable, ClassVar, Dict, Generic, List, FrozenSet, Optional, Tuple, Type, TypeVar
 import numpy as np
 import pandas as pd
 
@@ -40,9 +39,9 @@ from .mutated_sequences import (
 )
 from .snv_table import AuxiliaryTables
 from ..enums import MutationType, TargetonMutator, VariantType
-from ..sgrna_utils import set_metadata_sgrna_ids
+from ..sgrna_utils import get_codon_end, get_codon_start, set_metadata_sgrna_ids
 from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
-from ..utils import get_constant_category, get_out_of_frame_offset
+from ..utils import get_constant_category, get_out_of_frame_offset, is_dna
 
 
 TargetonT = TypeVar('TargetonT', bound='ITargeton')
@@ -279,6 +278,10 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
     def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
         return self.annotated_seq.get_codon_indices_in_range(spr)
 
+    def get_liminal_codon_indices(self, spr: StrandedPositionRange) -> Tuple[int, int]:
+        codon_indices = self.get_codon_indices(spr)
+        return codon_indices[0], codon_indices[-1]
+
     def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
         return frozenset()
 
@@ -456,30 +459,209 @@ class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
 
 @dataclass(frozen=True)
 class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
-    __slots__ = ['annotated_seq', '_codon_to_sgrna_id']
+    __slots__ = ['annotated_seq', '_codon_to_sgrna_id', '_codon_to_pam_codon']
 
     _SGRNA_IDS: ClassVar[str] = 'sgrna_ids'
 
-    def _get_codon_to_sgrna_id(self) -> Dict[int, str]:
+    @classmethod
+    def concat(cls, targetons: List[PamProtCDSTargeton]) -> PamProtCDSTargeton:
+        n: int = len(targetons)
+        if n == 0:
+            raise ValueError("No targetons to merge!")
+        if n == 1:
+            return targetons[0]
+
+        # Set variables based on the first targeton
+        targeton: PamProtCDSTargeton = targetons[0]
+        chromosome: str = targeton.pos_range.chromosome
+        strand: str = targeton.pos_range.strand
+        start: int = targeton.pos_range.start
+        cds_prefix: str = targeton.annotated_seq.cds_prefix
+        ref_seq: str = targeton.annotated_seq.ref_seq
+        alt_seq: str = targeton.annotated_seq.alt_seq
+        pam_variants: List[PamVariant] = targeton.annotated_seq.variants
+
+        prev_end: int = targeton.pos_range.end
+        prev_suffix: str = targeton.annotated_seq.cds_suffix
+
+        # Set variables based on the last targeton
+        targeton = targetons[-1]
+        end: int = targeton.pos_range.end
+        cds_suffix: str = targeton.annotated_seq.cds_suffix
+
+        pos_range: GenomicRange
+        for i in range(1, n):
+            targeton = targetons[i]
+            pos_range = targeton.pos_range
+            if (
+                pos_range.chromosome != chromosome
+                or pos_range.strand != strand
+                or pos_range.start != prev_end + 1
+                or targeton.annotated_seq.ref_seq[:len(prev_suffix)] != prev_suffix
+            ):
+                raise ValueError("Non-consecutive targetons!")
+
+            ref_seq += targeton.annotated_seq.ref_seq
+            alt_seq += targeton.annotated_seq.alt_seq
+            pam_variants += targeton.annotated_seq.variants
+
+            prev_end = pos_range.end
+            prev_suffix = targeton.annotated_seq.cds_suffix
+
+        return PamProtCDSTargeton(CDSAnnotatedSequencePair(
+            GenomicRange(chromosome, start, end, strand),
+            ref_seq,
+            alt_seq,
+            pam_variants,
+            cds_prefix,
+            cds_suffix))
+
+    def _get_codon_to_sgrna_id(self, codon_indices: List[int]) -> Dict[int, str]:
         """Create mapping of codon indices to sgRNA identifiers"""
 
         return {
             codon_index: variant.sgrna_id
             for variant, codon_index in zip(
                 self.annotated_seq.variants,
-                self.annotated_seq.get_variant_codon_indices())
-        } if self.has_pam_variants else {}
+                codon_indices)
+        }
+
+    def _get_codon_to_pam_codon(self, codon_indices: List[int]) -> Dict[int, str]:
+        """Create mapping of codon indices to PAM-protected codon sequences"""
+
+        return self.annotated_seq.get_indexed_alt_codons()
+
+    def _setattr(self, attr: str, value: Any) -> None:
+        object.__setattr__(self, attr, value)
 
     def __post_init__(self) -> None:
         if self.annotated_seq.contains_same_codon_variants:
             self.annotated_seq.log_same_codon_variants()
             raise ValueError("Multiple PAM protection variants in a single codon!")
 
-        object.__setattr__(self, '_codon_to_sgrna_id', self._get_codon_to_sgrna_id())
+        if self.has_pam_variants:
+            codon_indices = self.annotated_seq.get_variant_codon_indices()
+            self._setattr('_codon_to_sgrna_id', self._get_codon_to_sgrna_id(codon_indices))
+            self._setattr('_codon_to_pam_codon', self._get_codon_to_pam_codon(codon_indices))
 
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
         return self.annotated_seq.get_variant_mutation_types(
             codon_table, no_duplicate_codons=True)
+
+    def _get_pam_codon_length(self, codon_index: int) -> int:
+        return len(self._codon_to_pam_codon[codon_index])
+
+    def _get_pam_codon_position(self, codon_index: int, offset_f: Callable[[int], int]) -> int:
+        return (codon_index * 3) + self.pos_range.start + offset_f(
+            self._get_pam_codon_length(codon_index))
+
+    def _get_pam_codon_start(self, codon_index: int) -> int:
+        return self._get_pam_codon_position(
+            codon_index, lambda codon_length: 3 - codon_length)
+
+    def _get_pam_codon_end(self, codon_index: int) -> int:
+        return self._get_pam_codon_position(
+            codon_index, lambda codon_length: codon_length - 1)
+
+    def _is_codon_pam_protected(self, codon_index: int) -> bool:
+        return codon_index in self._codon_to_sgrna_id
+
+    def get_pam_ext_start(self, pos: int) -> int:
+        """Get genomic position at the start of the PAM-protected codon"""
+
+        codon_index: int = self.annotated_seq.get_codon_index(pos)
+        is_pam: bool = self._is_codon_pam_protected(codon_index)
+        return (
+            (self.start + self._get_pam_codon_start(codon_index)) if is_pam else
+            pos
+        )
+
+    def get_pam_ext_ref_end(self, pos: int) -> int:
+        """Get genomic position at the end of the PAM-protected codon"""
+
+        codon_index: int = self.annotated_seq.get_codon_index(pos)
+        is_pam: bool = self._is_codon_pam_protected(codon_index)
+        return (
+            (self.start + self._get_pam_codon_end(codon_index)) if is_pam else
+            pos
+        )
+
+    def get_pam_codon_extended_range(self, spr: StrandedPositionRange) -> StrandedPositionRange:
+        """
+        Get the genomic position range extended by the liminal PAM-protected codons
+        that it overlaps, if any (end-inclusive)
+        """
+        if self.strand != spr.strand:
+            raise ValueError("Incompatible strand!")
+
+        pos_range = StrandedPositionRange(self.start, self.end, self.strand)
+
+        # TODO: shortcut if it's only one...?
+        first_codon_index, last_codon_index = self.get_liminal_codon_indices(spr)
+
+        if self._is_codon_pam_protected(first_codon_index):
+
+            # Get first PAM-protected codon start
+            first_codon_start: int
+
+            if first_codon_index == 0 and self.frame != 0:
+                # Partial codon
+                pass
+
+            else:
+                pass
+
+            if first_codon_start < pos_range.start:
+                pos_range.start = first_codon_start
+
+        # Get range end
+        last_codon_end: int
+        if last_codon_index == first_codon_index:
+            last_codon_end = get_codon_end(last_codon_index)
+        elif (
+            self._is_codon_pam_protected(last_codon_index)
+        ):
+            if (
+                last_codon_index == self.annotated_seq.last_codon_index
+                and self.cds_suffix_length != 0
+            ):
+                # Partial codon
+                pass
+
+            else:
+                pass
+
+        pam_codon_indices = [
+            codon_index
+            for codon_index in self.get_codon_indices(spr)
+            if codon_index in self._codon_to_sgrna_id
+        ]
+
+        codon_index_count = len(pam_codon_indices)
+
+        if codon_index_count == 0:
+            return pos_range
+
+        # TODO: handle correctly
+        for x in [0, self.annotated_seq.last_codon_index]:
+            if (
+                first_codon_index == x
+                and last_codon_index == x
+                and self._get_pam_codon_length(x) != 3
+            ):
+                raise NotImplementedError()
+
+        # TODO: correct for single-codon partial at both ends...? Just assert?
+        first_codon_start = self._get_pam_codon_start(first_codon_index)
+        last_codon_end = self._get_pam_codon_end(last_codon_index)
+
+        if first_codon_start < pos_range.start:
+            pos_range.start = first_codon_start
+
+        if last_codon_end > pos_range.end:
+            pos_range.end = last_codon_end
+
+        return pos_range
 
     def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
         return frozenset({
@@ -492,14 +674,8 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     def has_pam_variants(self) -> bool:
         return self.variant_count > 0
 
-    def set_metadata_sgrna_ids(self, mutations: MutationCollection) -> None:
+    def _set_metadata_sgrna_ids(self, mutations: MutationCollection) -> None:
         return set_metadata_sgrna_ids(self.frame, self._codon_to_sgrna_id, mutations.df)
-
-    def _assign_pam_sgrna_ids_to_mutations(self, sgrna_ids: FrozenSet[str], mutations: MutationCollection) -> None:
-        if not self.has_pam_variants or mutations.is_empty:
-            return
-
-        self.set_metadata_sgrna_ids(mutations)
 
     def _get_sgrna_ids(self, d: Dict[str, Any]) -> FrozenSet[str]:
         sgrna_ids: Optional[FrozenSet[str]] = d.get(self._SGRNA_IDS, None)
@@ -524,14 +700,10 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         - {self._SGRNA_IDS}: FrozenSet[str]
         """
 
-        if self.has_pam_variants:
-            sgrna_ids = self._get_sgrna_ids(kwargs)
-
         mutations = super().compute_mutations(mutators, aux)
 
         if self.has_pam_variants:
-            f = partial(self._assign_pam_sgrna_ids_to_mutations, sgrna_ids)
             for mc in mutations.values():
-                f(mc)
-
+                if not mc.is_empty:
+                    self._set_metadata_sgrna_ids(mc)
         return mutations
