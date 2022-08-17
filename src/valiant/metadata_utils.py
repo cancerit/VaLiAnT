@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 from .models.targeton import PamProtCDSTargeton
-from .constants import META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_MUTATOR, META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_REF, META_PAM_MUT_SGRNA_ID, META_PAM_SEQ, META_REF, META_REF_AA, META_REF_START
+from .constants import META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_MUTATOR, META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_REF, META_PAM_MUT_SGRNA_ID, META_PAM_MUT_START, META_PAM_SEQ, META_REF, META_REF_AA, META_REF_START
 from .mave_hgvs import MAVEPrefix, get_mave_nt
 
 
@@ -123,6 +123,7 @@ def _init_pam_extended_fields(all_mutations: pd.DataFrame) -> None:
 
     # Initialise nullable integer fields
     for col_name in [
+        META_PAM_MUT_START,
         META_REF_LENGTH,
         META_ALT_LENGTH,
         META_ALT_REF_DIFF,
@@ -189,11 +190,12 @@ def set_pam_extended_ref_alt(
 
         targeton = get_targeton(df.name)
 
-        df[META_START_OFFSET] = (
+        df[META_PAM_MUT_START] = (
             df[META_MUT_POSITION].apply(
                 lambda x: targeton.get_pam_ext_start(x)) if targeton else
             df[META_MUT_POSITION]
-        ).sub(df[META_REF_START])
+        )
+        df[META_START_OFFSET] = df[META_PAM_MUT_START].sub(df[META_REF_START])
 
         return df
 
