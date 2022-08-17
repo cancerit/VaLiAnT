@@ -208,8 +208,6 @@ def set_pam_extended_ref_alt(
             df[META_REF_END_POS]
         ).sub(df[META_REF_START])
 
-        # TODO: the codon gets shifted... does it need to be fetched again?
-        # The targeton does not know of mseq, though.
         df[META_ALT_END_OFFSET] = df[META_REF_END_OFFSET].add(df[META_ALT_REF_DIFF])
 
         return df
