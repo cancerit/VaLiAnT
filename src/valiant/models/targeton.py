@@ -552,7 +552,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         return len(self._codon_to_pam_codon[codon_index])
 
     def _get_pam_codon_position(self, codon_index: int, offset_f: Callable[[int], int]) -> int:
-        return (codon_index * 3) + self.pos_range.start + offset_f(
+        return (codon_index * 3) + self.pos_range.start - self.frame + offset_f(
             self._get_pam_codon_length(codon_index))
 
     def _get_pam_codon_start(self, codon_index: int) -> int:
