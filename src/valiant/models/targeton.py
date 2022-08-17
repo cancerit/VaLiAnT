@@ -572,7 +572,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         codon_index: int = self.annotated_seq.get_codon_index(pos)
         is_pam: bool = self._is_codon_pam_protected(codon_index)
         return (
-            (self.start + self._get_pam_codon_start(codon_index)) if is_pam else
+            self._get_pam_codon_start(codon_index) if is_pam else
             pos
         )
 
@@ -582,7 +582,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         codon_index: int = self.annotated_seq.get_codon_index(pos)
         is_pam: bool = self._is_codon_pam_protected(codon_index)
         return (
-            (self.start + self._get_pam_codon_end(codon_index)) if is_pam else
+            self._get_pam_codon_end(codon_index) if is_pam else
             pos
         )
 
