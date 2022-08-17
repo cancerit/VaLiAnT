@@ -64,6 +64,7 @@ META_PAM_MUT_ANNOT = 'pam_mut_annot'
 META_PAM_MUT_SGRNA_ID = 'pam_mut_sgrna_id'
 META_MAVE_NT = 'mave_nt'
 META_MSEQ_NO_ADAPT = 'mseq_no_adapt'
+META_MSEQ_NO_ADAPT_NO_RC = 'mseq_no_adapt_no_rc'
 META_VCF_VAR_IN_CONST = 'vcf_var_in_const'
 
 # Temporary field names (not included in the final table)

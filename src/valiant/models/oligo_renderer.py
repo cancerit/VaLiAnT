@@ -18,12 +18,12 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import Callable, List, Optional, Tuple, Any
+from typing import List, Optional, Tuple, Any
 import numpy as np
 import pandas as pd
 from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
-from ..constants import META_MSEQ, META_MSEQ_NO_ADAPT, REVCOMP_OLIGO_NAME_SUFFIX, META_MAVE_NT, META_REF_AA
+from ..constants import META_MSEQ, META_MSEQ_NO_ADAPT, META_MSEQ_NO_ADAPT_NO_RC, REVCOMP_OLIGO_NAME_SUFFIX, META_MAVE_NT
 from ..enums import VariantType
 from ..metadata_utils import get_mave_nt_from_row
 from ..utils import get_constant_category, reverse_complement, get_source_type_column, validate_strand
@@ -182,15 +182,6 @@ class BaseOligoRenderer:
     def _render_mutated_sequence_no_adaptors(self, mseq: str) -> str:
         return self._get_mutated_sequence(mseq)
 
-    def _render_mutated_sequence_rc_no_adaptors(self, mseq: str) -> str:
-        return reverse_complement(self._get_mutated_sequence(mseq))
-
-    def _get_renderer_no_adaptors(self, apply_reverse_complement: bool) -> Callable[[str], str]:
-        return (
-            self._render_mutated_sequence_rc_no_adaptors if apply_reverse_complement else
-            self._render_mutated_sequence_no_adaptors
-        )
-
     def get_metadata_table(self, df: pd.DataFrame, options: Options) -> pd.DataFrame:
         if set(df.columns.array) < {'oligo_name', 'mut_position', 'ref', 'new', 'mutator', 'mseq'}:
             raise ValueError("Invalid mutation metadata data frame!")
@@ -213,9 +204,15 @@ class BaseOligoRenderer:
         if rc:
             df.oligo_name = df.oligo_name + REVCOMP_OLIGO_NAME_SUFFIX
 
-        # Render oligonucleotide sequences without adapters
-        df[META_MSEQ_NO_ADAPT] = df[META_MSEQ].apply(
-            self._get_renderer_no_adaptors(rc)).astype('string')
+        # Render oligonucleotide sequences without adaptors (never reverse complement)
+        df[META_MSEQ_NO_ADAPT_NO_RC] = df[META_MSEQ].apply(
+            self._render_mutated_sequence_no_adaptors).astype('string')
+
+        # Render oligonucleotide sequences without adaptors
+        df[META_MSEQ_NO_ADAPT] = (
+            df[META_MSEQ_NO_ADAPT_NO_RC].apply(reverse_complement).astype('string') if rc else
+            df[META_MSEQ_NO_ADAPT_NO_RC]
+        )
 
         # Render full oligonucleotide sequences
         df[META_MSEQ] = (
