@@ -23,7 +23,7 @@ import logging
 from typing import Dict, Iterable, List, Optional, Set, FrozenSet, Tuple
 import numpy as np
 import pandas as pd
-from valiant.metadata_utils import set_slice_string_field, set_string_length_field
+from valiant.metadata_utils import set_pam_extended_ref_alt, set_slice_string_field, set_string_length_field
 from valiant.models.codon_table import CodonTable
 
 from valiant.models.oligo_segment import OligoSegment, TargetonOligoSegment
@@ -40,14 +40,8 @@ from .variant import CustomVariant
 from ..constants import (
     ARRAY_SEPARATOR,
     CUSTOM_MUTATOR,
-    META_MSEQ_NO_ADAPT,
     META_OLIGO_NAME,
-    META_PAM_CODON_ALT,
-    META_PAM_CODON_REF,
     META_PAM_MUT_ANNOT,
-    META_PAM_MUT_SGRNA_ID,
-    META_PAM_SEQ,
-    META_REF_START,
     META_VAR_TYPE,
     META_MUT_POSITION,
     META_REF,
@@ -206,6 +200,10 @@ class OligoTemplate:
         return self.ref_range.strand
 
     @property
+    def ref_start(self) -> int:
+        return self.ref_range.start
+
+    @property
     def name(self) -> str:
         return '_'.join([
             self.ref_range.chromosome,
@@ -222,6 +220,8 @@ class OligoTemplate:
 
     @property
     def target_segments(self) -> List[Tuple[int, TargetonOligoSegment]]:
+        # TODO: check the fact these could be the constant regions has no consequence;
+        # probably not because they have no mutators assigned.
         return [
             (i, s)
             for i, s in enumerate(self.segments)
@@ -382,9 +382,6 @@ class OligoTemplate:
         # Remove duplications from the index
         all_mutations = all_mutations.reset_index(drop=True)
 
-        # Filter for mutations that overlap at least one PAM-protected codon
-        pam_codon_mask: pd.Series = all_mutations[META_PAM_MUT_SGRNA_ID].str.len() > 0
-
         # Concatenate consecutive CDS targetons and discard those unaffected by PAM variants
         pam_prot_cds_targetons = [
             targeton
@@ -392,146 +389,6 @@ class OligoTemplate:
             if targeton.variant_count > 0
         ]
 
-        # Temporary metadata fields
-        META_CDS_START = 'cds_start'
-        META_CDS_END = 'cds_end'
-        META_REF_END_POS = 'ref_end_pos'
-        META_REF_LENGTH = 'ref_length'
-        META_ALT_LENGTH = 'alt_length'
-        META_ALT_REF_DIFF = 'alt_ref_diff'
-        META_START_OFFSET = 'start_offset'
-        META_REF_END_OFFSET = 'ref_end_offset'
-        META_ALT_END_OFFSET = 'alt_end_offset'
-
-        pam_prot_cds_interval_index = pd.IntervalIndex.from_tuples([
-            targeton.pos_range.to_tuple()
-            for targeton in pam_prot_cds_targetons
-        ], closed='both')
-
-        all_mutations[META_CDS_START] = -1 * np.ones(rown, dtype=np.int8)
-        all_mutations[META_CDS_END] = all_mutations[META_CDS_START].copy()
-
-        # Initialise nullable integer fields
-        for col_name in [
-            META_REF_LENGTH,
-            META_ALT_LENGTH,
-            META_ALT_REF_DIFF,
-            META_START_OFFSET,
-            META_REF_END_OFFSET,
-            META_ALT_END_OFFSET
-        ]:
-            all_mutations[col_name] = np.empty(rown, dtype=pd.Int32Dtype)
-
-        for col_name in [
-            META_PAM_CODON_REF,
-            META_PAM_CODON_ALT
-        ]:
-            all_mutations[col_name] = None
-            all_mutations[col_name] = all_mutations[col_name].astype('string')
-
-        def get_targeton(targeton_index: int) -> Optional[PamProtCDSTargeton]:
-            if targeton_index == -1:
-                logging.debug("Targeton is none!")
-            return (
-                pam_prot_cds_targetons[targeton_index] if targeton_index != -1 else
-                None
-            )
-
-        def assign_pam_ref_alt_start(df: pd.DataFrame) -> pd.DataFrame:
-            """Given a dataframe grouped by the start targeton, set the REF and ALT start"""
-
-            targeton = get_targeton(df.name)
-
-            df[META_START_OFFSET] = (
-                df[META_MUT_POSITION].apply(
-                    lambda x: targeton.get_pam_ext_start(x)) if targeton else
-                df[META_MUT_POSITION]
-            ).sub(df[META_REF_START])
-
-            return df
-
-        def assign_pam_ref_alt_end(df: pd.DataFrame) -> pd.Series:
-            """Given a dataframe grouped by the end targeton, set the REF and ALT ends"""
-
-            targeton = get_targeton(df.name)
-
-            df[META_REF_END_OFFSET] = (
-            # return (
-                df[META_REF_END_POS].apply(
-                    lambda x: targeton.get_pam_ext_ref_end(x)) if targeton else
-                df[META_REF_END_POS]
-            ).sub(df[META_REF_START])
-
-            df[META_ALT_END_OFFSET] = df[META_REF_END_OFFSET].add(df[META_ALT_REF_DIFF])
-
-            return df
-
-        # Assign REF start CDS (if any)
-        all_mutations.loc[pam_codon_mask, META_CDS_START] = pd.cut(
-            all_mutations.loc[pam_codon_mask, META_MUT_POSITION],
-            pam_prot_cds_interval_index).cat.codes
-
-        def set_length_field(string_col_name: str, length_col_name: str) -> None:
-            set_string_length_field(
-                all_mutations, pam_codon_mask, string_col_name, length_col_name)
-
-        # Compute REF length
-        set_length_field(META_REF, META_REF_LENGTH)
-
-        # Compute ALT length
-        set_length_field(META_NEW, META_ALT_LENGTH)
-
-        logging.debug("Assigning targetons at REF and ALT starts...")
-        all_mutations.loc[pam_codon_mask, META_ALT_REF_DIFF] = (
-            all_mutations.loc[pam_codon_mask, META_ALT_LENGTH] -
-            all_mutations.loc[pam_codon_mask, META_REF_LENGTH]
-        )
-
-        # Compute REF end position
-        logging.debug("Assigning targetons at REF ends...")
-        all_mutations.loc[pam_codon_mask, META_REF_END_POS] = (
-            all_mutations.loc[pam_codon_mask, META_MUT_POSITION] +
-            all_mutations.loc[pam_codon_mask, META_REF_LENGTH]
-        )
-
-        # Assign REF end CDS (if any)
-        logging.debug("Assigning targetons at ALT ends...")
-        all_mutations.loc[pam_codon_mask, META_CDS_END] = pd.cut(
-            all_mutations.loc[pam_codon_mask, META_REF_END_POS],
-            pam_prot_cds_interval_index).cat.codes
-
-        # Assign extended REF and ALT start offsets
-        all_mutations.loc[pam_codon_mask,:] = (
-            all_mutations.loc[pam_codon_mask,:]
-            .groupby(META_CDS_START, group_keys=False)
-            .apply(assign_pam_ref_alt_start)
-        )
-
-        # Assign extended REF and ALT end offsets
-        all_mutations.loc[pam_codon_mask,:] = (
-            all_mutations.loc[pam_codon_mask,:]
-            .groupby(META_CDS_END, group_keys=False)
-            .apply(assign_pam_ref_alt_end)
-        )
-
-        logging.debug("Assigning extended REF and ALT slices...")
-        def set_slice(string_col_name: str, end_col_name: str, slice_col_name: str) -> None:
-            set_slice_string_field(
-                all_mutations,
-                pam_codon_mask,
-                string_col_name,
-                META_START_OFFSET,
-                end_col_name,
-                slice_col_name)
-
-        set_slice(
-            META_PAM_SEQ,
-            META_REF_END_OFFSET,
-            META_PAM_CODON_REF)
-
-        set_slice(
-            META_MSEQ_NO_ADAPT,
-            META_ALT_END_OFFSET,
-            META_PAM_CODON_ALT)
+        set_pam_extended_ref_alt(all_mutations, pam_prot_cds_targetons, debug_hash=h)
 
         return all_mutations
