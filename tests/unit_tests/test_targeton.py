@@ -111,3 +111,31 @@ def test_pam_prot_targeton_compute_mutations(pam_variant_clash):
         assert df.loc[mask, META_PAM_MUT_SGRNA_ID].unique() == ''
         assert df.loc[df.codon_index == 0, META_PAM_MUT_SGRNA_ID].unique() == sgrna_id_1
         assert df.loc[df.codon_index == 2, META_PAM_MUT_SGRNA_ID].unique() == sgrna_id_2
+
+
+def test_pam_prot_cds_targeton_concat():
+    def get_targeton(start, end, ref_seq, variants=None, alt_seq=None, cds_prefix='', cds_suffix=''):
+        return PamProtCDSTargeton(
+            CDSAnnotatedSequencePair(
+                GenomicRange('X', start, end, '+'),
+                ref_seq,
+                alt_seq or ref_seq,
+                variants or [],
+                cds_prefix,
+                cds_suffix))
+
+    pam_variant = PamVariant(GenomicPosition('X', 47), 'A', 'T', 'sgrna-1')
+    pam_variants = [pam_variant]
+
+    t1 = get_targeton(45, 50, 'AATAAA', cds_prefix='T', cds_suffix='CC', variants=pam_variants)
+    t2 = get_targeton(51, 56, 'CCCCCC', cds_prefix='G', cds_suffix='GG')
+    t3 = get_targeton(57, 62, 'GGGGGG', cds_prefix='C', cds_suffix='AA')
+    ct = PamProtCDSTargeton.concat([t1, t2, t3])
+
+    assert ct.annotated_seq.cds_prefix == t1.annotated_seq.cds_prefix
+    assert ct.annotated_seq.cds_suffix == t3.annotated_seq.cds_suffix
+    assert ct.pos_range.start == t1.pos_range.start
+    assert ct.pos_range.end == t3.pos_range.end
+    assert ct.annotated_seq.ref_seq == 'AATAAACCCCCCGGGGGG'
+    assert ct.variant_count == len(pam_variants)
+    assert ct.annotated_seq.variants == pam_variants
