@@ -19,6 +19,7 @@
 from __future__ import annotations
 from collections import namedtuple
 from dataclasses import dataclass
+from functools import partial
 import logging
 from typing import Dict, List, Optional, Set, Tuple, ClassVar, Any, Callable, TypeVar
 import pandas as pd
@@ -567,11 +568,11 @@ class VCFRecordParams:
         assert not (self.ref is None and self.alt is None)
 
     @classmethod
-    def from_meta(cls, meta: namedtuple, pam_mode: bool) -> VCFRecordParams:
-        f = cls.from_meta_no_pam if not pam_mode else (
+    def from_meta(cls, pam_mode: bool, meta: namedtuple) -> VCFRecordParams:
+        f = (
             cls.from_meta_pam_ext if meta.pam_codon_mask else
             cls.from_meta_no_pam
-        )
+        ) if pam_mode else cls.from_meta_no_pam
         return f(meta)
 
     @classmethod
@@ -613,59 +614,58 @@ class VCFRecordParams:
             ref_seq=meta.ref_seq,
             pam_seq=meta.pam_seq)
 
+    def get_vcf_record(
+        self,
+        ref_repository: ReferenceSequenceRepository,
+        pam_mode: bool
+    ) -> Dict[str, Any]:
+        """
+        Convert into a VCF record
 
-def get_record(
-    ref_repository: ReferenceSequenceRepository,
-    pam_ref: bool,
-    meta: VCFRecordParams
-) -> Dict[str, Any]:
-    """
-    Convert a row of the metadata table into a VCF record
+        If pam_ref is true, use the PAM-protected sequence as reference,
+        with extending to cover the whole start and end codons if those are
+        PAM-protected; the original reference otherwise.
+        """
 
-    If pam_ref is true, use the PAM-protected sequence as reference,
-    with extending to cover the whole start and end codons if those are
-    PAM-protected; the original reference otherwise.
-    """
+        pos: int
+        ref: str
+        alt: str
+        end: int
+        pre_pam: Optional[str]  # Reference before PAM protection (only set if it differs from ref)
 
-    pos: int
-    ref: str
-    alt: str
-    end: int
-    pre_pam: Optional[str]  # Reference before PAM protection (only set if it differs from ref)
+        # TODO: verify stop position for variants at position 1... might need correcting here as well
+        if self.var_type == var_type_del:
+            pos, end, ref, alt, pre_pam = _get_deletion_record(
+                ref_repository, self.chr, self.pos, self.ref, self.ref_start, self.ref_seq, self.pam_seq)
+        elif self.var_type == var_type_ins:
+            pos, end, ref, alt, pre_pam = _get_insertion_record(
+                ref_repository, self.chr, self.pos, self.alt, self.ref_start, self.ref_seq, self.pam_seq)
+        elif self.var_type == var_type_sub:
+            pos, end, ref, alt, pre_pam = _get_substitution_record(
+                self.pos, self.ref, self.alt, self.ref_start, self.ref_seq, self.pam_seq)
+        else:
+            raise RuntimeError("Invalid variant type!")
 
-    # TODO: verify stop position for variants at position 1... might need correcting here as well
-    if meta.var_type == var_type_del:
-        pos, end, ref, alt, pre_pam = _get_deletion_record(
-            ref_repository, meta.chr, meta.pos, meta.ref, meta.ref_start, meta.ref_seq, meta.pam_seq)
-    elif meta.var_type == var_type_ins:
-        pos, end, ref, alt, pre_pam = _get_insertion_record(
-            ref_repository, meta.chr, meta.pos, meta.alt, meta.ref_start, meta.ref_seq, meta.pam_seq)
-    elif meta.var_type == var_type_sub:
-        pos, end, ref, alt, pre_pam = _get_substitution_record(
-            meta.pos, meta.ref, meta.alt, meta.ref_start, meta.ref_seq, meta.pam_seq)
-    else:
-        raise RuntimeError("Invalid variant type!")
+        # Set INFO tags
+        info: Dict[str, Any] = {
+            'SGE_SRC': self.mutator,
+            'SGE_OLIGO': self.oligo_name
+        }
+        if pam_mode and pre_pam:
+            info['SGE_REF'] = pre_pam
 
-    # Set INFO tags
-    info: Dict[str, Any] = {
-        'SGE_SRC': meta.mutator,
-        'SGE_OLIGO': meta.oligo_name
-    }
-    if pam_ref and pre_pam:
-        info['SGE_REF'] = pre_pam
+        if self.vcf_var_id:
+            info['SGE_VCF_ALIAS'] = self.vcf_alias
+            info['SGE_VCF_VAR_ID'] = self.vcf_var_id
 
-    if meta.vcf_var_id:
-        info['SGE_VCF_ALIAS'] = meta.vcf_alias
-        info['SGE_VCF_VAR_ID'] = meta.vcf_var_id
-
-    # Set VCF record fields
-    return {
-        'alleles': (ref if pam_ref else (pre_pam or ref), alt),
-        'contig': meta.chr,
-        'start': pos - 1,  # zero-based representation
-        'stop': end - 1,  # zero-based representation
-        'info': info
-    }
+        # Set VCF record fields
+        return {
+            'alleles': (ref if pam_mode else (pre_pam or ref), alt),
+            'contig': self.chr,
+            'start': pos - 1,  # zero-based representation
+            'stop': end - 1,  # zero-based representation
+            'info': info
+        }
 
 
 def get_records(
@@ -674,8 +674,13 @@ def get_records(
     meta: pd.DataFrame
 ) -> List[Dict[str, Any]]:
 
-    def f(x: namedtuple) -> Dict[str, Any]:
-        return get_record(
-            ref_repository, pam_ref, VCFRecordParams.from_meta(x, pam_ref))
+    to_record_params_f = (
+        partial(VCFRecordParams.from_meta, pam_ref) if pam_ref else
+        VCFRecordParams.from_meta_no_pam
+    )
 
-    return list(map(f, meta[VCF_RECORD_METADATA_FIELDS].itertuples(index=False)))
+    def get_record(x: namedtuple) -> Dict[str, Any]:
+        return to_record_params_f(x).get_vcf_record(
+            ref_repository, pam_ref)
+
+    return list(map(get_record, meta[VCF_RECORD_METADATA_FIELDS].itertuples(index=False)))
