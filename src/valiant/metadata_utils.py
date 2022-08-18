@@ -250,12 +250,6 @@ def set_pam_extended_ref_alt(
     _set_targeton_at_ref_start_end(
         all_mutations, pam_codon_mask, pam_prot_cds_targetons)
 
-    # Discard mutations that do not start or end in a PAM-protected codon
-    pam_codon_mask = (
-        (all_mutations[META_CDS_START] != -1) |
-        (all_mutations[META_CDS_END] != -1)
-    )
-
     # Assign extended REF and ALT start offsets
     all_mutations.loc[pam_codon_mask, :] = (
         all_mutations.loc[pam_codon_mask, :]
