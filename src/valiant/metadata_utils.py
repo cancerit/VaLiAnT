@@ -21,8 +21,6 @@ from typing import List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from valiant.models.base import StrandedPositionRange
-
 from .models.targeton import PamProtCDSTargeton
 from .constants import META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_MUTATOR, META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, META_PAM_CODON_REF, META_PAM_MUT_SGRNA_ID, META_PAM_MUT_START, META_PAM_SEQ, META_REF, META_REF_AA, META_REF_START
 from .mave_hgvs import MAVEPrefix, get_mave_nt
