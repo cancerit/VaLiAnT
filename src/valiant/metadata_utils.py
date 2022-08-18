@@ -155,27 +155,25 @@ def _set_targeton_at_ref_start_end(
     pam_prot_cds_targetons: List[PamProtCDSTargeton]
 ) -> None:
 
+    # Generate interval index to bin mutation positions
+    pam_prot_cds_interval_index = pd.IntervalIndex.from_tuples([
+        targeton.pos_range.to_tuple()
+        for targeton in pam_prot_cds_targetons
+    ], closed='both')
+
     # Generate interval indices for the first and last protected codons
-    first_pam_codons: List[Tuple[int, int]] = []
-    last_pam_codons: List[Tuple[int, int]] = []
-    for targeton in pam_prot_cds_targetons:
-        first, last = targeton.get_liminal_pam_protected_codon_ranges()
-        first_pam_codons.append((first.start, first.end))
-        last_pam_codons.append((last.start, last.end))
-    first_pam_codon_intervals = get_interval_index(first_pam_codons)
-    last_pam_codon_intervals = get_interval_index(last_pam_codons)
 
     # Assign REF start CDS (if any)
     logging.debug("Assigning targetons at REF starts...")
     all_mutations.loc[pam_codon_mask, META_CDS_START] = pd.cut(
         all_mutations.loc[pam_codon_mask, META_MUT_POSITION],
-        first_pam_codon_intervals).cat.codes
+        pam_prot_cds_interval_index).cat.codes
 
     # Assign REF end CDS (if any)
     logging.debug("Assigning targetons at REF ends...")
     all_mutations.loc[pam_codon_mask, META_CDS_END] = pd.cut(
         all_mutations.loc[pam_codon_mask, META_REF_END_POS],
-        last_pam_codon_intervals).cat.codes
+        pam_prot_cds_interval_index).cat.codes
 
 
 def set_pam_extended_ref_alt(
