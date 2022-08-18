@@ -389,6 +389,6 @@ class OligoTemplate:
             if targeton.variant_count > 0
         ]
 
-        set_pam_extended_ref_alt(all_mutations, pam_prot_cds_targetons, debug_hash=h)
+        set_pam_extended_ref_alt(all_mutations, pam_prot_cds_targetons)
 
         return all_mutations

@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 from .models.targeton import PamProtCDSTargeton
-from .constants import META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_MUTATOR, META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_REF, META_PAM_MUT_SGRNA_ID, META_PAM_MUT_START, META_PAM_SEQ, META_REF, META_REF_AA, META_REF_START
+from .constants import META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_MUTATOR, META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, META_PAM_CODON_REF, META_PAM_MUT_SGRNA_ID, META_PAM_MUT_START, META_PAM_SEQ, META_REF, META_REF_AA, META_REF_START
 from .mave_hgvs import MAVEPrefix, get_mave_nt
 
 
@@ -141,6 +141,9 @@ def _init_pam_extended_fields(all_mutations: pd.DataFrame) -> None:
         all_mutations[col_name] = None
         all_mutations[col_name] = all_mutations[col_name].astype('string')
 
+    # Initialise mask
+    all_mutations[META_PAM_CODON_MASK] = np.zeros(rown, dtype=np.int8)
+
 
 def _set_targeton_at_ref_start_end(
     all_mutations: pd.DataFrame,
@@ -168,8 +171,7 @@ def _set_targeton_at_ref_start_end(
 
 def set_pam_extended_ref_alt(
     all_mutations: pd.DataFrame,
-    pam_prot_cds_targetons: List[PamProtCDSTargeton],
-    debug_hash: Optional[str] = None
+    pam_prot_cds_targetons: List[PamProtCDSTargeton]
 ) -> None:
 
     # Initialise new fields
@@ -242,20 +244,19 @@ def set_pam_extended_ref_alt(
         all_mutations, pam_codon_mask, pam_prot_cds_targetons)
 
     # Assign extended REF and ALT start offsets
-    all_mutations.loc[pam_codon_mask,:] = (
-        all_mutations.loc[pam_codon_mask,:]
+    all_mutations.loc[pam_codon_mask, :] = (
+        all_mutations.loc[pam_codon_mask, :]
         .groupby(META_CDS_START, group_keys=False)
         .apply(assign_pam_ref_alt_start)
     )
 
     # Assign extended REF and ALT end offsets
-    all_mutations.loc[pam_codon_mask,:] = (
-        all_mutations.loc[pam_codon_mask,:]
+    all_mutations.loc[pam_codon_mask, :] = (
+        all_mutations.loc[pam_codon_mask, :]
         .groupby(META_CDS_END, group_keys=False)
         .apply(assign_pam_ref_alt_end)
     )
 
-    logging.debug("Assigning extended REF and ALT slices...")
     def set_slice(string_col_name: str, end_col_name: str, slice_col_name: str) -> None:
         set_slice_string_field(
             all_mutations,
@@ -265,6 +266,7 @@ def set_pam_extended_ref_alt(
             end_col_name,
             slice_col_name)
 
+    logging.debug("Assigning extended REF and ALT slices...")
     set_slice(
         META_PAM_SEQ,
         META_REF_END_OFFSET,
@@ -274,3 +276,6 @@ def set_pam_extended_ref_alt(
         META_MSEQ_NO_ADAPT_NO_RC,
         META_ALT_END_OFFSET,
         META_PAM_CODON_ALT)
+
+    # Add mask (to filter when generating the VCF)
+    all_mutations.loc[pam_codon_mask, META_PAM_CODON_MASK] = 1
