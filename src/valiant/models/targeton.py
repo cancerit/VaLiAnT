@@ -596,7 +596,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
 
         pos_range = StrandedPositionRange(self.start, self.end, self.strand)
 
-        # TODO: shortcut if it's only one...?
+        # TODO: shortcut if it's only one...?
         first_codon_index, last_codon_index = self.get_liminal_codon_indices(spr)
 
         if self._is_codon_pam_protected(first_codon_index):

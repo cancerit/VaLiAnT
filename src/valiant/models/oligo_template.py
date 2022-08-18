@@ -220,7 +220,7 @@ class OligoTemplate:
 
     @property
     def target_segments(self) -> List[Tuple[int, TargetonOligoSegment]]:
-        # TODO: check the fact these could be the constant regions has no consequence;
+        # TODO: check the fact these could be the constant regions has no consequence;
         # probably not because they have no mutators assigned.
         return [
             (i, s)
