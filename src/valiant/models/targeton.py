@@ -551,6 +551,11 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     def _get_pam_codon_length(self, codon_index: int) -> int:
         return len(self._codon_to_pam_codon[codon_index])
 
+    def _get_pam_codon_theoretical_range(self, codon_index: int) -> Tuple[int, int]:
+        start: int = (codon_index * 3) + self.pos_range.start - self.frame
+        end: int = start + 2
+        return start, end
+
     def _get_pam_codon_position(self, codon_index: int, offset_f: Callable[[int], int]) -> int:
         return (codon_index * 3) + self.pos_range.start - self.frame + offset_f(
             self._get_pam_codon_length(codon_index))
@@ -565,6 +570,26 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
 
     def _is_codon_pam_protected(self, codon_index: int) -> bool:
         return codon_index in self._codon_to_sgrna_id
+
+    def get_liminal_pam_protected_codon_ranges(self) -> Tuple[Optional[StrandedPositionRange], Optional[StrandedPositionRange]]:
+        if not self.has_pam_variants:
+            return None, None
+
+        codon_indices = sorted(self._codon_to_sgrna_id.keys())
+        first_codon_index = codon_indices[0]
+        last_codon_index = codon_indices[-1]
+
+        first_codon_start, first_codon_end = self._get_pam_codon_theoretical_range(first_codon_index)
+        last_codon_start, last_codon_end = self._get_pam_codon_theoretical_range(last_codon_index)
+
+        # Correct ranges for partial codons
+        first_codon_start += 3 - self._get_pam_codon_length(first_codon_index)
+        last_codon_end -= 3 - self._get_pam_codon_length(last_codon_index)
+
+        return (
+            StrandedPositionRange(first_codon_start, first_codon_end, self.strand),
+            StrandedPositionRange(last_codon_start, last_codon_end, self.strand)
+        )
 
     def get_pam_ext_start(self, pos: int) -> int:
         """Get genomic position at the start of the PAM-protected codon"""
