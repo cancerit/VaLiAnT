@@ -16,8 +16,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+import errno
 import json
 import logging
+import os
 import click
 from typing import Optional
 from . import __version__
@@ -54,22 +56,49 @@ def main(ctx: click.Context, config_fp: Optional[str]):
             config = load_main_config(config_fp)
 
         except InvalidConfig as ex:
-            logging.critical(f"Invalid configuration: {ex.args[0]}")
+            logging.critical("Invalid configuration%s!" % (' ' + ex.args[0] if ex.args else ''))
             ctx.exit(1)
 
         except (PermissionError, FileNotFoundError) as ex:
             logging.critical(ex)
             ctx.exit(1)
 
-        # Run in the appropriate mode
-        if isinstance(config, SGEMainConfig):
-            run_sge(config.params, False)
+        # Check application version
+        if config.app_version != __version__:
+            logging.warning(
+                "Application version in configuration differs (%s vs. %s)!" %
+                (config.app_version, __version__))
 
-        elif isinstance(config, CDNAMainConfig):
-            run_cdna(config.params)
+        # Check output directory
+        if not os.path.isdir(config.params.output_dir):
+            logging.critical("Not a directory: '%s'!" % config.params.output_dir)
+            ctx.exit(1)
 
-        else:
-            logging.critical("Invalid configuration!")
+        # Check input files
+        try:
+            for fp in config.params.input_file_paths:
+                if not os.path.isfile(fp):
+                    raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), fp)
+
+        except FileNotFoundError as ex:
+            logging.critical(ex)
+            ctx.exit(1)
+
+        try:
+
+            # Run in the appropriate mode
+            if isinstance(config, SGEMainConfig):
+                run_sge(config.params, False)
+
+            elif isinstance(config, CDNAMainConfig):
+                run_cdna(config.params)
+
+            else:
+                logging.critical("Invalid configuration!")
+                ctx.exit(1)
+
+        except (PermissionError, FileNotFoundError) as ex:
+            logging.critical(ex)
             ctx.exit(1)
 
         ctx.exit(0)

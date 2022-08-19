@@ -477,9 +477,9 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
 @click.command()
 @common_params
-@click.option('--gff', type=existing_file, help="Annotation GFF file path")
-@click.option('--pam', type=existing_file, help="PAM protection VCF file path")
-@click.option('--vcf', type=existing_file, help="Custom variant VCF manifest file path")
+@click.option('--gff', 'gff_fp', type=existing_file, help="Annotation GFF file path")
+@click.option('--pam', 'pam_fp', type=existing_file, help="PAM protection VCF file path")
+@click.option('--vcf', 'vcf_fp', type=existing_file, help="Custom variant VCF manifest file path")
 @click.option(
     '--sequences-only',
     is_flag=True,
@@ -491,15 +491,15 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 def sge(
 
     # Input files
-    oligo_info: str,
-    ref_fasta: str,
-    codon_table: Optional[str],
-    gff: Optional[str],
-    pam: Optional[str],
-    vcf: Optional[str],
+    oligo_info_fp: str,
+    ref_fasta_fp: str,
+    codon_table_fp: Optional[str],
+    gff_fp: Optional[str],
+    pam_fp: Optional[str],
+    vcf_fp: Optional[str],
 
     # Output directory
-    output: str,
+    output_dir: str,
 
     # Metadata
     species: str,
@@ -535,12 +535,12 @@ def sge(
             adaptor_3=adaptor_3,
             min_length=min_length,
             max_length=max_length,
-            codon_table_fp=codon_table,
-            oligo_info_fp=oligo_info,
-            ref_fasta_fp=ref_fasta,
-            output_dir=output,
+            codon_table_fp=codon_table_fp,
+            oligo_info_fp=oligo_info_fp,
+            ref_fasta_fp=ref_fasta_fp,
+            output_dir=output_dir,
             revcomp_minus_strand=revcomp_minus_strand,
-            gff_fp=gff,
-            pam_fp=pam,
-            vcf_fp=vcf),
+            gff_fp=gff_fp,
+            pam_fp=pam_fp,
+            vcf_fp=vcf_fp),
         sequences_only)

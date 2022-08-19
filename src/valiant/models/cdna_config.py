@@ -16,17 +16,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from dataclasses import dataclass
-from typing import Any, ClassVar, Dict, Optional
-from typing_extensions import Literal
-from ..enums import ExecMode
+from typing import List, Optional
 from .config import BaseConfig
 from .options import Options
 
 
 class CDNAConfig(BaseConfig):
-    # mode: Literal[ExecMode] = ExecMode.CDNA
-
     annot_fp: Optional[str]
 
     class Config:
@@ -37,3 +32,10 @@ class CDNAConfig(BaseConfig):
             revcomp_minus_strand=False,
             oligo_max_length=self.max_length,
             oligo_min_length=self.min_length)
+
+    @property
+    def input_file_paths(self) -> List[str]:
+        fps = super().input_file_paths
+        if self.annot_fp is not None:
+            fps.append(self.annot_fp)
+        return fps

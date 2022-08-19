@@ -39,12 +39,12 @@ def set_logger(ctx: click.Context, param: click.Parameter, value: str) -> None:
 
 # See discussion: https://github.com/pallets/click/issues/108
 def common_params(f):
-    @click.argument('oligo-info', type=existing_file)
-    @click.argument('ref-fasta', type=existing_file)
-    @click.argument('output', type=writable_dir)
+    @click.argument('oligo_info_fp', type=existing_file, metavar='OLIGO_INFO')
+    @click.argument('ref_fasta_fp', type=existing_file, metavar='REF_FASTA')
+    @click.argument('output_dir', type=writable_dir, metavar="OUTPUT")
     @click.argument('species')
     @click.argument('assembly')
-    @click.option('--codon-table', type=existing_file, help="Codon table file path")
+    @click.option('--codon-table', 'codon_table_fp', type=existing_file, help="Codon table file path")
     @click.option('--adaptor-5', help="5' adaptor sequence")
     @click.option('--adaptor-3', help="3' adaptor sequence")
     @click.option(

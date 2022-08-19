@@ -338,17 +338,17 @@ def run_cdna(config: CDNAConfig) -> None:
 
 @click.command()
 @common_params
-@click.option('--annot', type=existing_file, help="cDNA annotation file path")
+@click.option('--annot', 'annot_fp', type=existing_file, help="cDNA annotation file path")
 def cdna(
 
     # Input files
-    oligo_info: str,
-    ref_fasta: str,
-    codon_table: Optional[str],
-    annot: Optional[str],
+    oligo_info_fp: str,
+    ref_fasta_fp: str,
+    codon_table_fp: Optional[str],
+    annot_fp: Optional[str],
 
     # Output directory
-    output: str,
+    output_dir: str,
 
     # Metadata
     species: str,
@@ -381,8 +381,8 @@ def cdna(
         adaptor_3=adaptor_3,
         min_length=min_length,
         max_length=max_length,
-        codon_table_fp=codon_table,
-        oligo_info_fp=oligo_info,
-        ref_fasta_fp=ref_fasta,
-        output_dir=output,
-        annot_fp=annot))
+        codon_table_fp=codon_table_fp,
+        oligo_info_fp=oligo_info_fp,
+        ref_fasta_fp=ref_fasta_fp,
+        output_dir=output_dir,
+        annot_fp=annot_fp))

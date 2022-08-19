@@ -18,7 +18,7 @@
 
 import abc
 import logging
-from typing import Optional
+from typing import Any, List, Optional
 
 from ..errors import InvalidConfig
 from ..utils import is_adaptor_valid
@@ -61,13 +61,24 @@ class BaseConfig(BaseModel, abc.ABC):
             'output_dir': 'outputDirPath'
         }
 
-    def __post_init__(self) -> None:
-        if not self.is_valid():
+    def __init__(__pydantic_self__, **data: Any) -> None:
+        super().__init__(**data)
+        if not __pydantic_self__.is_valid():
             raise InvalidConfig()
 
     @abc.abstractmethod
     def get_options(self) -> Options:
         pass
+
+    @property
+    def input_file_paths(self) -> List[str]:
+        fps: List[str] = [
+            self.oligo_info_fp,
+            self.ref_fasta_fp
+        ]
+        if self.codon_table_fp is not None:
+            fps.append(self.codon_table_fp)
+        return fps
 
     def write(self, fp: str) -> None:
         with open(fp, 'w') as fh:
@@ -79,7 +90,18 @@ class BaseConfig(BaseModel, abc.ABC):
         # Validate adaptors
         for adaptor in [self.adaptor_5, self.adaptor_3]:
             if not is_adaptor_valid(adaptor):
-                logging.critical("Invalid adaptor sequence '%s'!" % adaptor)
+                logging.error("Invalid adaptor sequence '%s'!" % adaptor)
+                success = False
+
+        # Validate oligonucleotide lengths
+        for length, label in [
+            (self.max_length, "maximum"),
+            (self.min_length, "minimum"),
+        ]:
+            if length < 1:
+                logging.error(
+                    "Invalid %s oligonucleotide length: "
+                    "not strictly positive!" % label)
                 success = False
 
         return success

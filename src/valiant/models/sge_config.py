@@ -16,7 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from typing import Optional
+from typing import Any, Dict, List, Optional
+from ..utils import get_not_none
 from .config import BaseConfig
 from .options import Options
 
@@ -34,6 +35,14 @@ class SGEConfig(BaseConfig):
             'pam_fp': 'PAMProtectionVCFFilePath',
             'vcf_fp': 'customVCFManifestFilePath'
         }
+
+    @property
+    def input_file_paths(self) -> List[str]:
+        return super().input_file_paths + get_not_none([
+            self.gff_fp,
+            self.pam_fp,
+            self.vcf_fp
+        ])
 
     def get_options(self) -> Options:
         return Options(
