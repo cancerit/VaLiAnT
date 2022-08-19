@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 from .models.targeton import PamProtCDSTargeton
-from .constants import META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_MUTATOR, META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, META_PAM_CODON_REF, META_PAM_MUT_SGRNA_ID, META_PAM_MUT_START, META_PAM_SEQ, META_REF, META_REF_AA, META_REF_START
+from .constants import META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, META_PAM_CODON_REF, META_PAM_MUT_SGRNA_ID, META_PAM_MUT_START, META_PAM_SEQ, META_REF, META_REF_AA, META_REF_START
 from .mave_hgvs import MAVEPrefix, get_mave_nt
 
 
@@ -160,8 +160,6 @@ def _set_targeton_at_ref_start_end(
         targeton.pos_range.to_tuple()
         for targeton in pam_prot_cds_targetons
     ], closed='both')
-
-    # Generate interval indices for the first and last protected codons
 
     # Assign REF start CDS (if any)
     logging.debug("Assigning targetons at REF starts...")
