@@ -35,10 +35,12 @@ def is_metadata_row_cds(r: pd.Series) -> bool:
 
 
 def get_mave_nt_from_row(r: pd.Series) -> str:
+    """Generate MAVE-HGVS string with targeton-relative position"""
+
     return get_mave_nt(
         MAVEPrefix.LINEAR_GENOMIC,
         r.var_type,
-        r.mut_position,
+        r.mut_position - r.ref_start + 1,
         r.ref,
         r.new)
 
