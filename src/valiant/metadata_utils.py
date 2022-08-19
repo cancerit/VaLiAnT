@@ -288,4 +288,7 @@ def set_pam_extended_ref_alt(
     all_mutations.loc[pam_codon_mask, META_PAM_CODON_MASK] = 1
 
     # Fill NA's in mask for custom variants in constant regions
-    all_mutations[META_VCF_VAR_IN_CONST] = all_mutations[META_VCF_VAR_IN_CONST].fillna(0)
+    all_mutations[META_VCF_VAR_IN_CONST] = (
+        all_mutations[META_VCF_VAR_IN_CONST].fillna(0) if META_VCF_VAR_IN_CONST in all_mutations else
+        np.zeros(all_mutations.shape[0], dtype=pd.Int8Dtype)
+    )
