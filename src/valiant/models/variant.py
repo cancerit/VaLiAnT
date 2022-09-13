@@ -579,15 +579,15 @@ class VCFRecordParams:
     def from_meta_no_pam(cls, meta: namedtuple) -> VCFRecordParams:
         return cls(
             chr=meta.ref_chr,
-            pos=meta.mut_position,
+            pos=int(meta.mut_position),
             ref=get_nullable_field(meta, META_REF) or None,
             alt=get_nullable_field(meta, META_NEW) or None,
-            var_type=meta.var_type,
+            var_type=int(meta.var_type),
             mutator=meta.mutator,
             oligo_name=meta.oligo_name,
             vcf_alias=get_nullable_field(meta, META_VCF_ALIAS),
             vcf_var_id=get_nullable_field(meta, META_VCF_VAR_ID),
-            ref_start=meta.ref_start,
+            ref_start=int(meta.ref_start),
             ref_seq=meta.ref_seq,
             pam_seq=meta.pam_seq)
 
@@ -602,15 +602,15 @@ class VCFRecordParams:
         )
         return cls(
             chr=meta.ref_chr,
-            pos=meta.pam_mut_start,
+            pos=int(meta.pam_mut_start),
             ref=ref,
             alt=alt,
-            var_type=var_type,
+            var_type=int(var_type),
             mutator=meta.mutator,
             oligo_name=meta.oligo_name,
             vcf_alias=get_nullable_field(meta, META_VCF_ALIAS),
             vcf_var_id=get_nullable_field(meta, META_VCF_VAR_ID),
-            ref_start=meta.ref_start,
+            ref_start=int(meta.ref_start),
             ref_seq=meta.ref_seq,
             pam_seq=meta.pam_seq)
 

@@ -72,6 +72,11 @@ def get_sgrna_ids_from_row_as_string(frame: int, codon_to_sgrna_ids: Dict[int, s
             frame, codon_to_sgrna_ids, r))
 
 
+def set_metadata_sgrna_ids_empty(metadata: pd.DataFrame) -> None:
+    metadata[META_PAM_MUT_SGRNA_ID] = ''
+    metadata[META_PAM_MUT_SGRNA_ID] = metadata[META_PAM_MUT_SGRNA_ID].astype('string')
+
+
 def set_metadata_sgrna_ids(frame: int, codon_to_sgrna_ids: Dict[int, str], metadata: pd.DataFrame) -> None:
     """Set the sgRNA ID field in the metadata table (SGE only)"""
 

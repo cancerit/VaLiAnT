@@ -39,7 +39,7 @@ from .mutated_sequences import (
 )
 from .snv_table import AuxiliaryTables
 from ..enums import MutationType, TargetonMutator, VariantType
-from ..sgrna_utils import get_codon_end, get_codon_start, set_metadata_sgrna_ids
+from ..sgrna_utils import set_metadata_sgrna_ids, set_metadata_sgrna_ids_empty
 from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
 from ..utils import get_constant_category, get_out_of_frame_offset, is_dna
 
@@ -616,11 +616,14 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         return self.variant_count > 0
 
     def _set_metadata_sgrna_ids(self, mutations: MutationCollection) -> None:
-        codon_to_sgrna_ids: Dict[int, str] = {
-            codon_index: variant.sgrna_id
-            for codon_index, variant in self._codon_to_pam_variant.items()
-        }
-        return set_metadata_sgrna_ids(self.frame, codon_to_sgrna_ids, mutations.df)
+        if self.has_pam_variants and not mutations.is_empty:
+            codon_to_sgrna_ids: Dict[int, str] = {
+                codon_index: variant.sgrna_id
+                for codon_index, variant in self._codon_to_pam_variant.items()
+            }
+            set_metadata_sgrna_ids(self.frame, codon_to_sgrna_ids, mutations.df)
+        else:
+            set_metadata_sgrna_ids_empty(mutations.df)
 
     def _get_sgrna_ids(self, d: Dict[str, Any]) -> FrozenSet[str]:
         sgrna_ids: Optional[FrozenSet[str]] = d.get(self._SGRNA_IDS, None)
@@ -647,8 +650,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
 
         mutations = super().compute_mutations(mutators, aux)
 
-        if self.has_pam_variants:
-            for mc in mutations.values():
-                if not mc.is_empty:
-                    self._set_metadata_sgrna_ids(mc)
+        for mc in mutations.values():
+            self._set_metadata_sgrna_ids(mc)
+
         return mutations
