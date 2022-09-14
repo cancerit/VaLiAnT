@@ -266,7 +266,7 @@ def set_pam_extended_ref_alt(
     )
 
     # Compute REF end position
-    # NOTE: refernce lengths are corrected so that neither length zero or
+    # NOTE: reference lengths are corrected so that neither length zero or
     # length one REF's may incorrectly shift the inclusive end position.
     all_mutations.loc[pam_codon_mask, META_REF_END_POS] = (
         all_mutations.loc[pam_codon_mask, META_MUT_POSITION] +
