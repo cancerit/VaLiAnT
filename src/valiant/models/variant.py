@@ -26,7 +26,7 @@ import pandas as pd
 from pyranges import PyRanges
 from pysam import VariantRecord
 
-from valiant.constants import META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, META_PAM_CODON_REF, META_PAM_MUT_START, META_REF, META_VCF_ALIAS, META_VCF_VAR_ID
+from valiant.constants import META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, META_PAM_CODON_REF, META_PAM_MUT_START, META_REF, META_VCF_ALIAS, META_VCF_VAR_ID, METADATA_PAM_FIELDS
 from .base import GenomicPosition, GenomicRange, StrandedPositionRange
 from .refseq_repository import ReferenceSequenceRepository
 from .sequences import ReferenceSequence
@@ -49,10 +49,7 @@ VCF_RECORD_METADATA_FIELDS: List[str] = [
     'vcf_alias',
     'vcf_var_id',
     'var_type',
-    META_PAM_MUT_START,
-    META_PAM_CODON_REF,
-    META_PAM_CODON_ALT,
-    META_PAM_CODON_MASK
+    *METADATA_PAM_FIELDS
 ]
 
 
@@ -566,6 +563,9 @@ class VCFRecordParams:
 
     def __post_init__(self) -> None:
         assert not (self.ref is None and self.alt is None)
+        assert isinstance(self.pos, int)
+        assert isinstance(self.var_type, int)
+        assert isinstance(self.ref_start, int)
 
     @classmethod
     def from_meta(cls, pam_mode: bool, meta: namedtuple) -> VCFRecordParams:
@@ -668,16 +668,20 @@ class VCFRecordParams:
         }
 
 
+def _get_vcf_record_params_constructor(pam_ref: bool) -> Callable:
+    return (
+        partial(VCFRecordParams.from_meta, pam_ref) if pam_ref else
+        VCFRecordParams.from_meta_no_pam
+    )
+
+
 def get_records(
     ref_repository: ReferenceSequenceRepository,
     pam_ref: bool,
     meta: pd.DataFrame
 ) -> List[Dict[str, Any]]:
 
-    to_record_params_f = (
-        partial(VCFRecordParams.from_meta, pam_ref) if pam_ref else
-        VCFRecordParams.from_meta_no_pam
-    )
+    to_record_params_f = _get_vcf_record_params_constructor(pam_ref)
 
     def get_record(x: namedtuple) -> Dict[str, Any]:
         return to_record_params_f(x).get_vcf_record(

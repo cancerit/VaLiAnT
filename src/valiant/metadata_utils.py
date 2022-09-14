@@ -22,7 +22,7 @@ import numpy as np
 import pandas as pd
 
 from .models.targeton import PamProtCDSTargeton
-from .constants import META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, META_PAM_CODON_REF, META_PAM_MUT_SGRNA_ID, META_PAM_MUT_START, META_PAM_SEQ, META_REF, META_REF_AA, META_REF_START, META_VCF_VAR_IN_CONST
+from .constants import META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, META_PAM_CODON_REF, META_PAM_MUT_SGRNA_ID, META_PAM_MUT_START, META_PAM_SEQ, META_REF, META_REF_AA, META_REF_START, META_VCF_VAR_IN_CONST, METADATA_PAM_FIELDS
 from .mave_hgvs import MAVEPrefix, get_mave_nt
 
 
@@ -116,6 +116,32 @@ META_ALT_END_OFFSET = 'alt_end_offset'
 NO_CATEGORY: int = -1
 
 
+def _init_nullable_int_field(df: pd.DataFrame, field: str) -> None:
+    df[field] = np.empty(df.shape[0], dtype=pd.Int32Dtype)
+
+
+def _init_string_field(df: pd.DataFrame, field: str) -> None:
+    df[field] = None
+    df[field] = df[field].astype('string')
+
+
+def _init_pam_extended_required_fields(all_mutations: pd.DataFrame) -> None:
+    rown: int = all_mutations.shape[0]
+
+    # Initialise mask
+    all_mutations[META_PAM_CODON_MASK] = np.zeros(rown, dtype=np.int8)
+
+    # Initialise extended REF start positions
+    _init_nullable_int_field(all_mutations, META_PAM_MUT_START)
+
+    # Initialise extended REF and ALT fields
+    for col_name in [META_PAM_CODON_REF, META_PAM_CODON_ALT]:
+        _init_string_field(all_mutations, col_name)
+
+    for field in METADATA_PAM_FIELDS:
+        assert field in all_mutations
+
+
 def _init_pam_extended_fields(all_mutations: pd.DataFrame) -> None:
     rown: int = all_mutations.shape[0]
 
@@ -125,7 +151,6 @@ def _init_pam_extended_fields(all_mutations: pd.DataFrame) -> None:
 
     # Initialise nullable integer fields
     for col_name in [
-        META_PAM_MUT_START,
         META_REF_LENGTH,
         META_ALT_LENGTH,
         META_ALT_REF_DIFF,
@@ -133,18 +158,7 @@ def _init_pam_extended_fields(all_mutations: pd.DataFrame) -> None:
         META_REF_END_OFFSET,
         META_ALT_END_OFFSET
     ]:
-        all_mutations[col_name] = np.empty(rown, dtype=pd.Int32Dtype)
-
-    # Initialise extended REF and ALT fields
-    for col_name in [
-        META_PAM_CODON_REF,
-        META_PAM_CODON_ALT
-    ]:
-        all_mutations[col_name] = None
-        all_mutations[col_name] = all_mutations[col_name].astype('string')
-
-    # Initialise mask
-    all_mutations[META_PAM_CODON_MASK] = np.zeros(rown, dtype=np.int8)
+        _init_nullable_int_field(all_mutations, col_name)
 
 
 def get_interval_index(ts: List[Tuple[int, int]]) -> pd.IntervalIndex:
@@ -181,11 +195,22 @@ def set_pam_extended_ref_alt(
     pam_prot_cds_targetons: List[PamProtCDSTargeton]
 ) -> None:
 
-    # Initialise new fields
-    _init_pam_extended_fields(all_mutations)
+    # Initialise required new fields
+    _init_pam_extended_required_fields(all_mutations)
+
+    if not pam_prot_cds_targetons:
+        logging.debug("No PAM-protected CDS targetons.")
+        return
 
     # Filter for mutations that overlap at least one PAM-protected codon
     pam_codon_mask: pd.Series = all_mutations[META_PAM_MUT_SGRNA_ID].str.len() > 0
+
+    if not pam_codon_mask.any():
+        logging.warning("No sgRNA ID's assigned to PAM-protected CDS targetons!")
+        return
+
+    # Initialise extra fields
+    _init_pam_extended_fields(all_mutations)
 
     def get_targeton(targeton_index: int) -> Optional[PamProtCDSTargeton]:
         assert targeton_index >= -1  # DEBUG
@@ -201,7 +226,8 @@ def set_pam_extended_ref_alt(
 
         df[META_PAM_MUT_START] = (
             df[META_MUT_POSITION].apply(
-                lambda x: targeton.get_pam_ext_start(x)) if targeton else
+                lambda x: targeton.get_pam_ext_start(x)
+            ).astype(np.int32) if targeton else
             df[META_MUT_POSITION]
         )
         df[META_START_OFFSET] = df[META_PAM_MUT_START].sub(df[META_REF_START])

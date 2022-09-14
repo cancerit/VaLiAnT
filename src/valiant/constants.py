@@ -107,6 +107,15 @@ METADATA_FIELDS = [
     META_VCF_VAR_IN_CONST
 ]
 
+# Temporary metadata fields required
+# for the generation of the PAM VCF
+METADATA_PAM_FIELDS = [
+    META_PAM_MUT_START,
+    META_PAM_CODON_REF,
+    META_PAM_CODON_ALT,
+    META_PAM_CODON_MASK
+]
+
 METADATA_FIELDS_SET = set(METADATA_FIELDS)
 
 ARRAY_SEPARATOR = ';'
