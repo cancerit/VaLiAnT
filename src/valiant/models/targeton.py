@@ -543,10 +543,16 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
             self.annotated_seq.log_same_codon_variants()
             raise ValueError("Multiple PAM protection variants in a single codon!")
 
+        codon_to_pam_variant: Dict[int, PamVariant] = {}
+        codon_to_pam_codon: Dict[int, str] = {}
+
         if self.has_pam_variants:
             codon_indices = self.annotated_seq.get_variant_codon_indices()
-            self._setattr('_codon_to_pam_variant', self._get_codon_to_pam_variant(codon_indices))
-            self._setattr('_codon_to_pam_codon', self._get_codon_to_pam_codon(codon_indices))
+            codon_to_pam_variant = self._get_codon_to_pam_variant(codon_indices)
+            codon_to_pam_codon = self._get_codon_to_pam_codon(codon_indices)
+
+        self._setattr('_codon_to_pam_variant', codon_to_pam_variant)
+        self._setattr('_codon_to_pam_codon', codon_to_pam_codon)
 
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
         return self.annotated_seq.get_variant_mutation_types(
@@ -609,7 +615,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
             self._codon_to_pam_variant[codon_index].sgrna_id
             for codon_index in self.get_codon_indices(spr)
             if codon_index in self._codon_to_pam_variant
-        })
+        }) if self._codon_to_pam_variant else frozenset()
 
     @property
     def has_pam_variants(self) -> bool:
