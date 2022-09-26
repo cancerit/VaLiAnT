@@ -63,6 +63,7 @@ META_MSEQ = 'mseq'
 META_PAM_MUT_ANNOT = 'pam_mut_annot'
 META_PAM_MUT_SGRNA_ID = 'pam_mut_sgrna_id'
 META_MAVE_NT = 'mave_nt'
+META_MAVE_NT_REF = 'mave_nt_ref'
 META_MSEQ_NO_ADAPT = 'mseq_no_adapt'
 META_MSEQ_NO_ADAPT_NO_RC = 'mseq_no_adapt_no_rc'
 META_VCF_VAR_IN_CONST = 'vcf_var_in_const'
@@ -104,6 +105,7 @@ METADATA_FIELDS = [
     META_PAM_MUT_ANNOT,
     META_PAM_MUT_SGRNA_ID,
     META_MAVE_NT,
+    META_MAVE_NT_REF,
     META_VCF_VAR_IN_CONST
 ]
 
