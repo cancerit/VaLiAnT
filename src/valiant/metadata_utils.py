@@ -34,15 +34,23 @@ def is_metadata_row_cds(r: pd.Series) -> bool:
     return META_CDS_PROBE_FIELD in r and not pd.isna(r[META_CDS_PROBE_FIELD])
 
 
-def get_mave_nt_from_row(r: pd.Series) -> str:
+def _get_mave_nt_from_row(r: pd.Series, ref_field: str) -> str:
     """Generate MAVE-HGVS string with targeton-relative position"""
 
     return get_mave_nt(
         MAVEPrefix.LINEAR_GENOMIC,
         r.var_type,
         r.mut_position - r.ref_start + 1,
-        r.ref,
+        r[ref_field],
         r.new)
+
+
+def get_mave_nt_from_row(r: pd.Series) -> str:
+    return _get_mave_nt_from_row(r, META_REF)
+
+
+def get_mave_nt_ref_from_row(r: pd.Series) -> str:
+    return _get_mave_nt_from_row(r, META_REF_NO_PAM)
 
 
 def _get_field(
