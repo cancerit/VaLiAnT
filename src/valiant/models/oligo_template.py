@@ -23,7 +23,7 @@ import logging
 from typing import Dict, Iterable, List, Optional, Set, FrozenSet, Tuple
 import numpy as np
 import pandas as pd
-from ..metadata_utils import set_pam_extended_ref_alt, set_ref_meta
+from ..metadata_utils import set_pam_extended_ref_alt, set_ref, set_ref_meta
 from .codon_table import CodonTable
 from .oligo_segment import OligoSegment, TargetonOligoSegment
 from .refseq_ranges import ReferenceSequenceRanges
@@ -389,6 +389,7 @@ class OligoTemplate:
         ]
 
         set_ref_meta(all_mutations)
+        set_ref(all_mutations)
         set_pam_extended_ref_alt(all_mutations, pam_prot_cds_targetons)
 
         return all_mutations
