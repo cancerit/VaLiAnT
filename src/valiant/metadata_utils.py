@@ -45,23 +45,28 @@ def get_mave_nt_from_row(r: pd.Series) -> str:
         r.new)
 
 
-def get_string_lengths(df: pd.DataFrame, mask: pd.Series, col_name: str) -> pd.Series:
+def get_string_lengths(df: pd.DataFrame, col_name: str, mask: Optional[pd.Series] = None) -> pd.Series:
+    """Get string lengths"""
+
     return (
-        df.loc[mask, col_name]
+        (df.loc[mask, col_name] if mask is not None else df[col_name])
         .astype('string')
         .str.len()
         .fillna(0)
-        .astype(pd.Int32Dtype())
+        .astype(np.int32)
     )
 
 
 def set_string_length_field(
     df: pd.DataFrame,
-    mask: pd.Series,
     string_col_name: str,
-    length_col_name: str
+    length_col_name: str,
+    mask: Optional[pd.Series] = None
 ) -> None:
-    df.loc[mask, length_col_name] = get_string_lengths(df, mask, string_col_name)
+    if mask is not None:
+        df.loc[mask, length_col_name] = get_string_lengths(df, string_col_name, mask=mask)
+    else:
+        df[length_col_name] = get_string_lengths(df, string_col_name)
 
 
 def get_slice(s: str, a: int, b: int) -> str:
@@ -151,14 +156,14 @@ def _init_pam_extended_fields(all_mutations: pd.DataFrame) -> None:
 
     # Initialise nullable integer fields
     for col_name in [
-        META_REF_LENGTH,
-        META_ALT_LENGTH,
         META_ALT_REF_DIFF,
         META_START_OFFSET,
-        META_REF_END_OFFSET,
         META_ALT_END_OFFSET
     ]:
         _init_nullable_int_field(all_mutations, col_name)
+
+    # Initialise non-nullable integer field
+    all_mutations[META_ALT_LENGTH] = np.zeros(rown, dtype=np.int32)
 
 
 def get_interval_index(ts: List[Tuple[int, int]]) -> pd.IntervalIndex:
@@ -188,6 +193,33 @@ def _set_targeton_at_ref_start_end(
     all_mutations.loc[pam_codon_mask, META_CDS_END] = pd.cut(
         all_mutations.loc[pam_codon_mask, META_REF_END_POS],
         pam_prot_cds_interval_index).cat.codes
+
+
+def set_ref_meta(meta: pd.DataFrame) -> None:
+    """
+    Set temporary metadata fields describing REF
+
+    Required fields:
+    - META_REF: mutation reference
+    - META_REF_START: reference sequence start genomic position
+    - META_MUT_POSITION: mutation start genomic position
+
+    Set fields:
+    - META_REF_LENGTH: length of the mutation reference
+    - META_REF_END_POS: mutation end genomic position
+    - META_REF_END_OFFSET: mutation reference end relative position
+    """
+
+    # Compute REF length
+    set_string_length_field(meta, META_REF, META_REF_LENGTH)
+
+    # Compute REF end position
+    # NOTE: reference lengths are corrected so that neither length zero or
+    # length one REF's may incorrectly shift the inclusive end position.
+    meta[META_REF_END_POS] = meta[META_MUT_POSITION].add(
+        meta[META_REF_LENGTH].sub(1).clip(lower=0))
+
+    meta[META_REF_END_OFFSET] = meta[META_REF_END_POS].sub(meta[META_REF_START])
 
 
 def set_pam_extended_ref_alt(
@@ -251,10 +283,7 @@ def set_pam_extended_ref_alt(
 
     def set_length_field(string_col_name: str, length_col_name: str) -> None:
         set_string_length_field(
-            all_mutations, pam_codon_mask, string_col_name, length_col_name)
-
-    # Compute REF length
-    set_length_field(META_REF, META_REF_LENGTH)
+            all_mutations, string_col_name, length_col_name, mask=pam_codon_mask)
 
     # Compute ALT length
     set_length_field(META_NEW, META_ALT_LENGTH)
@@ -263,14 +292,6 @@ def set_pam_extended_ref_alt(
     all_mutations.loc[pam_codon_mask, META_ALT_REF_DIFF] = (
         all_mutations.loc[pam_codon_mask, META_ALT_LENGTH] -
         all_mutations.loc[pam_codon_mask, META_REF_LENGTH]
-    )
-
-    # Compute REF end position
-    # NOTE: reference lengths are corrected so that neither length zero or
-    # length one REF's may incorrectly shift the inclusive end position.
-    all_mutations.loc[pam_codon_mask, META_REF_END_POS] = (
-        all_mutations.loc[pam_codon_mask, META_MUT_POSITION] +
-        all_mutations.loc[pam_codon_mask, META_REF_LENGTH].sub(1).clip(lower=0)
     )
 
     _set_targeton_at_ref_start_end(

@@ -23,12 +23,11 @@ import logging
 from typing import Dict, Iterable, List, Optional, Set, FrozenSet, Tuple
 import numpy as np
 import pandas as pd
-from valiant.metadata_utils import set_pam_extended_ref_alt, set_slice_string_field, set_string_length_field
-from valiant.models.codon_table import CodonTable
-
-from valiant.models.oligo_segment import OligoSegment, TargetonOligoSegment
-from valiant.models.refseq_ranges import ReferenceSequenceRanges
-from valiant.models.targeton import ITargeton, PamProtCDSTargeton
+from ..metadata_utils import set_pam_extended_ref_alt, set_ref_meta
+from .codon_table import CodonTable
+from .oligo_segment import OligoSegment, TargetonOligoSegment
+from .refseq_ranges import ReferenceSequenceRanges
+from .targeton import ITargeton, PamProtCDSTargeton
 from .base import GenomicRange, TranscriptInfo
 from .custom_variants import CustomVariantMutation, CustomVariantMutationCollection, CustomVariantOligoRenderer
 from .mutated_sequences import MutationCollection
@@ -389,6 +388,7 @@ class OligoTemplate:
             if targeton.variant_count > 0
         ]
 
+        set_ref_meta(all_mutations)
         set_pam_extended_ref_alt(all_mutations, pam_prot_cds_targetons)
 
         return all_mutations
