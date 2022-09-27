@@ -461,8 +461,6 @@ class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
 class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     __slots__ = ['annotated_seq', '_codon_to_pam_variant', '_codon_to_pam_codon']
 
-    _SGRNA_IDS: ClassVar[str] = 'sgrna_ids'
-
     @classmethod
     def concat(cls, targetons: List[PamProtCDSTargeton]) -> PamProtCDSTargeton:
         n: int = len(targetons)
@@ -631,14 +629,6 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         else:
             set_metadata_sgrna_ids_empty(mutations.df)
 
-    def _get_sgrna_ids(self, d: Dict[str, Any]) -> FrozenSet[str]:
-        sgrna_ids: Optional[FrozenSet[str]] = d.get(self._SGRNA_IDS, None)
-        if sgrna_ids is None:
-            raise RuntimeError("sgRNA ID's required!")
-        if not isinstance(sgrna_ids, frozenset):
-            raise TypeError("sgRNA ID's: not a FrozenSet!")
-        return sgrna_ids
-
     def compute_mutations(
         self,
         mutators: FrozenSet[TargetonMutator],
@@ -649,9 +639,6 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         Compute all mutations
 
         sgRNA ID's should be provided unless no PAM protection was applied.
-
-        Keyword arguments:
-        - {self._SGRNA_IDS}: FrozenSet[str]
         """
 
         mutations = super().compute_mutations(mutators, aux)
