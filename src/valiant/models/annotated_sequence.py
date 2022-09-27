@@ -98,6 +98,13 @@ class AnnotatedSequencePair(BaseAnnotatedSequencePair, Generic[VariantT]):
     def variants(self) -> List[VariantT]:
         return self._variants
 
+    def get_variants_in_range(self, genomic_range: RangeT) -> List[VariantT]:
+        return [
+            variant
+            for variant in self.variants
+            if variant.genomic_position.in_range(genomic_range)
+        ]
+
     @property
     def alt_seq(self) -> str:
         return self._alt_seq

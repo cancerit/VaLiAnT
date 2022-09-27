@@ -456,6 +456,12 @@ class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
         return [None] * self.variant_count
 
+    def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        return frozenset([
+            variant.sgrna_id
+            for variant in self.annotated_seq.get_variants_in_range(spr)
+        ])
+
 
 @dataclass(frozen=True)
 class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):

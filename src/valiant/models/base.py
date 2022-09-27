@@ -141,6 +141,9 @@ class GenomicPosition:
     def __str__(self) -> str:
         return f"{self.chromosome}:{self.position}"
 
+    def in_range(self, pr: PositionRange) -> bool:
+        return self.position >= pr.start and self.position <= pr.end
+
 
 @dataclass(frozen=True, init=False)
 class GenomicRange(StrandedPositionRange):
