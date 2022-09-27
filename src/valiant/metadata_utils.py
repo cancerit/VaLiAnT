@@ -24,6 +24,7 @@ import pandas as pd
 from .models.targeton import PamProtCDSTargeton
 from .constants import META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, META_PAM_CODON_REF, META_PAM_MUT_SGRNA_ID, META_PAM_MUT_START, META_PAM_SEQ, META_REF, META_REF_AA, META_REF_SEQ, META_REF_START, META_VCF_VAR_IN_CONST, METADATA_PAM_FIELDS
 from .mave_hgvs import MAVEPrefix, get_mave_nt
+from .utils import init_nullable_int_field, init_string_field
 
 
 # Metadata table field used to determine whether an entry maps to a CDS
@@ -142,15 +143,6 @@ META_REF_NO_PAM = 'ref_no_pam'
 NO_CATEGORY: int = -1
 
 
-def _init_nullable_int_field(df: pd.DataFrame, field: str) -> None:
-    df[field] = np.empty(df.shape[0], dtype=pd.Int32Dtype)
-
-
-def _init_string_field(df: pd.DataFrame, field: str) -> None:
-    df[field] = ''
-    df[field] = df[field].astype('string')
-
-
 def _init_pam_extended_required_fields(all_mutations: pd.DataFrame) -> None:
     rown: int = all_mutations.shape[0]
 
@@ -158,11 +150,11 @@ def _init_pam_extended_required_fields(all_mutations: pd.DataFrame) -> None:
     all_mutations[META_PAM_CODON_MASK] = np.zeros(rown, dtype=np.int8)
 
     # Initialise extended REF start positions
-    _init_nullable_int_field(all_mutations, META_PAM_MUT_START)
+    init_nullable_int_field(all_mutations, META_PAM_MUT_START)
 
     # Initialise extended REF and ALT fields
     for col_name in [META_PAM_CODON_REF, META_PAM_CODON_ALT]:
-        _init_string_field(all_mutations, col_name)
+        init_string_field(all_mutations, col_name)
 
     for field in METADATA_PAM_FIELDS:
         assert field in all_mutations
@@ -180,7 +172,7 @@ def _init_pam_extended_fields(all_mutations: pd.DataFrame) -> None:
         META_ALT_REF_DIFF,
         META_ALT_END_OFFSET
     ]:
-        _init_nullable_int_field(all_mutations, col_name)
+        init_nullable_int_field(all_mutations, col_name)
 
     # Initialise non-nullable integer field
     for col_name in [
@@ -235,7 +227,7 @@ def set_ref_meta(meta: pd.DataFrame) -> None:
     """
 
     # Initialise REF field (without PAM protection variants)
-    _init_string_field(meta, META_REF_NO_PAM)
+    init_string_field(meta, META_REF_NO_PAM)
 
     # Compute REF length
     set_string_length_field(meta, META_REF, META_REF_LENGTH)

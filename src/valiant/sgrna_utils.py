@@ -18,7 +18,9 @@
 
 from typing import Dict, List, Optional, Set
 import pandas as pd
+
 from .constants import META_MUT_POSITION, META_REF, META_PAM_MUT_SGRNA_ID, ARRAY_SEPARATOR
+from .utils import init_string_field
 
 
 def get_codon_index_range(codon_start: int, codon_end: int) -> List[int]:
@@ -73,8 +75,7 @@ def get_sgrna_ids_from_row_as_string(frame: int, codon_to_sgrna_ids: Dict[int, s
 
 
 def set_metadata_sgrna_ids_empty(metadata: pd.DataFrame) -> None:
-    metadata[META_PAM_MUT_SGRNA_ID] = ''
-    metadata[META_PAM_MUT_SGRNA_ID] = metadata[META_PAM_MUT_SGRNA_ID].astype('string')
+    init_string_field(metadata, META_PAM_MUT_SGRNA_ID)
 
 
 def set_metadata_sgrna_ids(frame: int, codon_to_sgrna_ids: Dict[int, str], metadata: pd.DataFrame) -> None:

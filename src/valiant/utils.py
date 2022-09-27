@@ -181,3 +181,12 @@ def group_consecutive(items: List[Tuple[int, T]]) -> List[List[T]]:
     consecutive_items.append([x for _, x in items[start:]])
 
     return consecutive_items
+
+
+def init_nullable_int_field(df: pd.DataFrame, field: str) -> None:
+    df[field] = np.empty(df.shape[0], dtype=pd.Int32Dtype)
+
+
+def init_string_field(df: pd.DataFrame, field: str) -> None:
+    df[field] = ''
+    df[field] = df[field].astype('string')
