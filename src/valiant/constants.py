@@ -70,7 +70,6 @@ META_VCF_VAR_IN_CONST = 'vcf_var_in_const'
 
 # Temporary field names (not included in the final table)
 META_VAR_TYPE = 'var_type'
-META_CODON_REL_MUT_POS = 'codon_rel_mut_pos'
 META_PAM_CODON_MASK = 'pam_codon_mask'
 META_PAM_CODON_REF = 'pam_codon_ref'
 META_PAM_CODON_ALT = 'pam_codon_alt'

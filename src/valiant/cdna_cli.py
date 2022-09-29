@@ -26,7 +26,7 @@ import pandas as pd
 
 from .cli_utils import load_codon_table
 from .common_cli import common_params, existing_file, finalise
-from .constants import CDS_ONLY_MUTATORS, META_MAVE_NT, META_MSEQ, META_MSEQ_NO_ADAPT, META_OLIGO_NAME, META_VCF_VAR_IN_CONST, MUTATOR_CATEGORIES
+from .constants import CDS_ONLY_MUTATORS, META_MAVE_NT, META_MAVE_NT_REF, META_MSEQ, META_MSEQ_NO_ADAPT, META_OLIGO_NAME, META_VCF_VAR_IN_CONST, MUTATOR_CATEGORIES
 from .enums import TargetonMutator
 from .errors import SequenceNotFound, InvalidMutatorForTarget
 from .metadata_utils import get_mave_nt_from_row
@@ -236,6 +236,7 @@ def get_targeton_metadata_table(
 
     # Add mutation MAVE-HGVS code
     df[META_MAVE_NT] = pd.Series(df.apply(get_mave_nt_from_row, axis=1), dtype='string')
+    df[META_MAVE_NT_REF] = df[META_MAVE_NT]
 
     # Drop field that would be discarded downstream
     df = df.drop('var_type', axis=1)
