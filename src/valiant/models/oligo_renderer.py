@@ -23,9 +23,8 @@ import numpy as np
 import pandas as pd
 from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
-from ..constants import META_MSEQ, META_MSEQ_NO_ADAPT, META_MSEQ_NO_ADAPT_NO_RC, REVCOMP_OLIGO_NAME_SUFFIX, META_MAVE_NT
+from ..constants import META_MSEQ, META_MSEQ_NO_ADAPT, META_MSEQ_NO_ADAPT_NO_RC, REVCOMP_OLIGO_NAME_SUFFIX
 from ..enums import VariantType
-from ..metadata_utils import get_mave_nt_from_row
 from ..utils import get_constant_category, reverse_complement, get_source_type_column, validate_strand
 
 
@@ -222,8 +221,5 @@ class BaseOligoRenderer:
 
         # Set sequence source type
         df['src_type'] = get_source_type_column('ref', rown)
-
-        # Add mutation MAVE-HGVS code
-        df[META_MAVE_NT] = pd.Series(df.apply(get_mave_nt_from_row, axis=1), dtype='string')
 
         return df

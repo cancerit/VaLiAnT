@@ -23,7 +23,7 @@ import logging
 from typing import Dict, Iterable, List, Optional, Set, FrozenSet, Tuple
 import numpy as np
 import pandas as pd
-from ..metadata_utils import get_mave_nt_ref_from_row, set_pam_extended_ref_alt, set_ref, set_ref_meta
+from ..metadata_utils import get_mave_nt_pam_from_row, get_mave_nt_ref_from_row, set_pam_extended_ref_alt, set_ref, set_ref_meta
 from .codon_table import CodonTable
 from .oligo_segment import OligoSegment, TargetonOligoSegment
 from .refseq_ranges import ReferenceSequenceRanges
@@ -39,6 +39,7 @@ from .variant import CustomVariant
 from ..constants import (
     ARRAY_SEPARATOR,
     CUSTOM_MUTATOR,
+    META_MAVE_NT,
     META_MAVE_NT_REF,
     META_OLIGO_NAME,
     META_PAM_MUT_ANNOT,
@@ -395,5 +396,8 @@ class OligoTemplate:
 
         # Add mutation MAVE-HGVS code (REF without PAM protection)
         all_mutations[META_MAVE_NT_REF] = pd.Series(all_mutations.apply(get_mave_nt_ref_from_row, axis=1), dtype='string')
+
+        # Add mutation MAVE-HGVS code (REF and ALT extended to include the PAM codon)
+        all_mutations[META_MAVE_NT] = pd.Series(all_mutations.apply(get_mave_nt_pam_from_row, axis=1), dtype='string')
 
         return all_mutations
