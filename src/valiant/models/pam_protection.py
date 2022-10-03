@@ -175,3 +175,10 @@ def compute_pam_protected_sequence(
     pam_variants: Set[PamVariant]
 ) -> PamProtectedReferenceSequence:
     return PamProtectedReferenceSequence.from_reference_sequence(ref_seq, pam_variants)
+
+
+def get_position_to_sgrna_ids(pam_variants: List[PamVariant]) -> Dict[int, str]:
+    return {
+        variant.genomic_position.position: variant.sgrna_id
+        for variant in pam_variants
+    }

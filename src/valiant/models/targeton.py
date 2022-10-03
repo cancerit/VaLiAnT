@@ -23,11 +23,15 @@ from typing import Any, Callable, ClassVar, Dict, Generic, List, FrozenSet, Opti
 import numpy as np
 import pandas as pd
 
-from valiant.models.annotated_sequence import AnnotatedSequencePair, AnnotatedSequenceT, CDSAnnotatedSequencePair, RangeT, VariantT
-from valiant.models.base import GenomicRange, StrandedPositionRange
-from valiant.models.pam_protection import PamProtectedReferenceSequence, PamVariant
+from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS, NON_CODING_SGRNA_ID_PREFIX
+from ..enums import MutationType, TargetonMutator, VariantType
+from ..sgrna_utils import set_metadata_sgrna_ids, set_metadata_sgrna_ids_empty
+from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
+from ..utils import get_constant_category, get_out_of_frame_offset
+from .annotated_sequence import AnnotatedSequencePair, AnnotatedSequenceT, CDSAnnotatedSequencePair, RangeT, VariantT
+from .base import GenomicRange, StrandedPositionRange
 from .codon_table import CodonTable, STOP_CODE
-from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS
+from .pam_protection import PamProtectedReferenceSequence, PamVariant, get_position_to_sgrna_ids
 from .mutated_sequences import (
     DeletionMutatedSequence,
     Deletion1MutatedSequence,
@@ -38,10 +42,6 @@ from .mutated_sequences import (
     SingleCodonMutatedSequence
 )
 from .snv_table import AuxiliaryTables
-from ..enums import MutationType, TargetonMutator, VariantType
-from ..sgrna_utils import set_metadata_sgrna_ids, set_metadata_sgrna_ids_empty
-from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
-from ..utils import get_constant_category, get_out_of_frame_offset, is_dna
 
 
 TargetonT = TypeVar('TargetonT', bound='ITargeton')
@@ -130,8 +130,22 @@ class ITargeton(BaseTargeton, Generic[AnnotatedSequenceT], abc.ABC):
         return self.annotated_seq.pos_range
 
     @property
+    def variants(self) -> List[VariantT]:
+        return self.annotated_seq.variants
+
+    @property
     def variant_count(self) -> int:
         return self.annotated_seq.variant_count
+
+    def _get_sgrna_ids(self, spr: StrandedPositionRange, prefix: Optional[str] = None) -> FrozenSet[str]:
+        sgrna_ids: FrozenSet[str] = frozenset({
+            variant.sgrna_id
+            for variant in self.annotated_seq.get_variants_in_range(spr)
+        })
+        return frozenset([
+            prefix + sgrna_id
+            for sgrna_id in sgrna_ids
+        ]) if prefix else sgrna_ids
 
     @abc.abstractmethod
     def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
@@ -139,7 +153,7 @@ class ITargeton(BaseTargeton, Generic[AnnotatedSequenceT], abc.ABC):
 
     @abc.abstractmethod
     def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
-        pass
+        return self._get_sgrna_ids(spr)
 
 
 @dataclass(frozen=True)
@@ -185,7 +199,7 @@ class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT, RangeT]):
         return []
 
     def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
-        return frozenset()
+        return super()._get_sgrna_ids(spr, prefix=NON_CODING_SGRNA_ID_PREFIX)
 
     def compute_mutations(self, mutators: FrozenSet[TargetonMutator]) -> Dict[TargetonMutator, MutationCollection]:
         return super()._compute_mutations(mutators)
@@ -281,9 +295,6 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
     def get_liminal_codon_indices(self, spr: StrandedPositionRange) -> Tuple[int, int]:
         codon_indices = self.get_codon_indices(spr)
         return codon_indices[0], codon_indices[-1]
-
-    def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
-        return frozenset()
 
     def _add_snv_metadata(
         self,
@@ -448,6 +459,23 @@ class PamProtected(abc.ABC):
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
         pass
 
+    def _get_rel_position_to_sgrna_ids(self, start: int, variants: List[PamVariant]) -> Dict[int, str]:
+        return {
+            (k - start): v
+            for k, v in get_position_to_sgrna_ids(variants).items()
+        }
+
+    @abc.abstractmethod
+    def get_position_to_sgrna_ids(self) -> Dict[int, str]:
+        pass
+
+    @abc.abstractmethod
+    def _set_metadata_sgrna_ids(self, mutations: MutationCollection) -> None:
+        pass
+
+
+def _set_metadata_sgrna_id():
+    pass
 
 @dataclass(frozen=True)
 class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
@@ -457,15 +485,43 @@ class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
         return [None] * self.variant_count
 
     def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
-        return frozenset([
-            variant.sgrna_id
-            for variant in self.annotated_seq.get_variants_in_range(spr)
-        ])
+        return super()._get_sgrna_ids(spr, prefix=NON_CODING_SGRNA_ID_PREFIX)
+
+    def get_position_to_sgrna_ids(self) -> Dict[int, str]:
+        return get_position_to_sgrna_ids(self.variants)
+
+    def _set_metadata_sgrna_ids(self, mutations: MutationCollection) -> None:
+        if not mutations.is_empty:
+            position_to_sgrna_ids = self._get_rel_position_to_sgrna_ids(self.start, self.variants)
+            set_metadata_sgrna_ids(0, position_to_sgrna_ids, {}, mutations.df)
+        else:
+            set_metadata_sgrna_ids_empty(mutations.df)
+
+    def compute_mutations(
+        self,
+        mutators: FrozenSet[TargetonMutator],
+        **kwargs
+    ) -> Dict[TargetonMutator, MutationCollection]:
+        f"""
+        Compute all mutations
+
+        sgRNA ID's should be provided unless no PAM protection was applied.
+        """
+
+        mutations = super().compute_mutations(mutators)
+
+        for mc in mutations.values():
+            self._set_metadata_sgrna_ids(mc)
+
+        return mutations
 
 
 @dataclass(frozen=True)
 class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     __slots__ = ['annotated_seq', '_codon_to_pam_variant', '_codon_to_pam_codon']
+
+    def get_position_to_sgrna_ids(self) -> Dict[int, str]:
+        return get_position_to_sgrna_ids(self.variants)
 
     @classmethod
     def concat(cls, targetons: List[PamProtCDSTargeton]) -> PamProtCDSTargeton:
@@ -526,7 +582,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         return {
             codon_index: variant
             for variant, codon_index in zip(
-                self.annotated_seq.variants,
+                self.variants,
                 codon_indices)
         }
 
@@ -615,23 +671,29 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         )
 
     def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
-        return frozenset({
+        cds = frozenset({
             self._codon_to_pam_variant[codon_index].sgrna_id
             for codon_index in self.get_codon_indices(spr)
             if codon_index in self._codon_to_pam_variant
         }) if self._codon_to_pam_variant else frozenset()
+        ncd = frozenset(
+            NON_CODING_SGRNA_ID_PREFIX + x
+            for x in super()._get_sgrna_ids(spr) - cds
+        )
+        return frozenset.union(cds, ncd)
 
     @property
     def has_pam_variants(self) -> bool:
         return self.variant_count > 0
 
     def _set_metadata_sgrna_ids(self, mutations: MutationCollection) -> None:
-        if self.has_pam_variants and not mutations.is_empty:
+        if not mutations.is_empty:
             codon_to_sgrna_ids: Dict[int, str] = {
                 codon_index: variant.sgrna_id
                 for codon_index, variant in self._codon_to_pam_variant.items()
-            }
-            set_metadata_sgrna_ids(self.frame, codon_to_sgrna_ids, mutations.df)
+            } if self.has_pam_variants else {}
+            position_to_sgrna_ids = self._get_rel_position_to_sgrna_ids(self.start, self.variants)
+            set_metadata_sgrna_ids(self.frame, position_to_sgrna_ids, codon_to_sgrna_ids, mutations.df)
         else:
             set_metadata_sgrna_ids_empty(mutations.df)
 

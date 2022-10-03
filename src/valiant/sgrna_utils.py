@@ -19,7 +19,7 @@
 from typing import Dict, List, Optional, Set
 import pandas as pd
 
-from .constants import META_MUT_POSITION, META_REF, META_PAM_MUT_SGRNA_ID, ARRAY_SEPARATOR
+from .constants import META_MUT_POSITION, META_REF, META_PAM_MUT_SGRNA_ID, ARRAY_SEPARATOR, NON_CODING_SGRNA_ID_PREFIX
 from .utils import init_string_field
 
 
@@ -51,6 +51,10 @@ def get_sgrna_ids(frame: int, codon_to_sgrna_ids: Dict[int, str], mut_pos: int, 
     )
 
 
+def _get_ref(r: pd.Series) -> Optional[str]:
+    return r[META_REF] if not pd.isna(r[META_REF]) else None
+
+
 def get_sgrna_ids_from_row(frame: int, codon_to_sgrna_ids: Dict[int, str], r: pd.Series) -> Set[str]:
     """
     List the identifiers of the sgRNA's whose variants map to codons altered by the mutation
@@ -58,7 +62,7 @@ def get_sgrna_ids_from_row(frame: int, codon_to_sgrna_ids: Dict[int, str], r: pd
     Metadata table row expected, with relative start position and reference sequence.
     """
 
-    mut_ref: Optional[str] = r[META_REF] if not pd.isna(r[META_REF]) else None
+    mut_ref: Optional[str] = _get_ref(r)
     return get_sgrna_ids(frame, codon_to_sgrna_ids, r[META_MUT_POSITION], mut_ref)
 
 
@@ -66,24 +70,67 @@ def sgrna_ids_to_string(sgrna_ids: Set[str]) -> str:
     return ARRAY_SEPARATOR.join(sorted(sgrna_ids))
 
 
-def get_sgrna_ids_from_row_as_string(frame: int, codon_to_sgrna_ids: Dict[int, str], r: pd.Series) -> str:
-    """Concatenated sgRNA ID's or empty string"""
-
-    return sgrna_ids_to_string(
-        get_sgrna_ids_from_row(
-            frame, codon_to_sgrna_ids, r))
-
-
 def set_metadata_sgrna_ids_empty(metadata: pd.DataFrame) -> None:
     init_string_field(metadata, META_PAM_MUT_SGRNA_ID)
 
 
-def set_metadata_sgrna_ids(frame: int, codon_to_sgrna_ids: Dict[int, str], metadata: pd.DataFrame) -> None:
+def get_ref_length_from_row(r: pd.Series) -> int:
+    ref: Optional[str] = _get_ref(r)
+    return len(ref) if ref else 0
+
+
+def get_sgrna_ids_ncd_from_row(position_to_sgrna_ids: Dict[int, str], r: pd.Series) -> Set[str]:
+    if not position_to_sgrna_ids:
+        return set()
+
+    ref_start: int = r[META_MUT_POSITION]
+    ref_length: int = get_ref_length_from_row(r)
+    sgrna_ids: Set[str]
+
+    if ref_length > 1:
+        ref_end = ref_start + ref_length - 1
+        sgrna_ids = {
+            sgrna_id
+            for pos, sgrna_id in position_to_sgrna_ids.items()
+            if ref_start <= pos <= ref_end
+        }
+    else:
+        sgrna_ids = {
+            sgrna_id
+            for pos, sgrna_id in position_to_sgrna_ids.items()
+            if pos == ref_start
+        }
+
+    return sgrna_ids
+
+
+def set_metadata_sgrna_ids(
+    frame: int,
+    position_to_sgrna_ids: Dict[int, str],
+    codon_to_sgrna_ids: Dict[int, str],
+    metadata: pd.DataFrame
+) -> None:
     """Set the sgRNA ID field in the metadata table (SGE only)"""
 
     def get_sgrna_id_str(r: pd.Series) -> str:
-        return get_sgrna_ids_from_row_as_string(
-            frame, codon_to_sgrna_ids, r)
+        sgrna_ids: Set[str] = set()
+
+        # Add sgRNA ID's in coding regions
+        if codon_to_sgrna_ids:
+            sgrna_ids |= get_sgrna_ids_from_row(
+                frame, codon_to_sgrna_ids, r)
+
+        # Add sgRNA ID's in non-coding regions
+        if position_to_sgrna_ids:
+            ncd_sgrna_ids = get_sgrna_ids_ncd_from_row(
+                position_to_sgrna_ids, r)
+
+            sgrna_ids |= {
+                NON_CODING_SGRNA_ID_PREFIX + sgrna_id
+                for sgrna_id in (ncd_sgrna_ids - sgrna_ids)
+            }
+
+        return sgrna_ids_to_string(sgrna_ids)
 
     metadata[META_PAM_MUT_SGRNA_ID] = metadata.apply(
         get_sgrna_id_str, axis=1).astype('string')
@@ -125,11 +172,3 @@ def get_codon_indices_in_range(
 
     # Generate full codon index range
     return get_codon_index_range(codon_start, codon_end)
-
-
-def get_codon_start(codon_index: int) -> int:
-    return codon_index * 3
-
-
-def get_codon_end(codon_index: int) -> int:
-    return codon_index * 3 + 2
