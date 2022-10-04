@@ -65,6 +65,7 @@ targeton_metadata_table_fields = set([
     'oligo_name',
     'src_type',
     'mave_nt',
+    'mave_nt_ref',
     'vcf_var_in_const'
 ])
 
