@@ -19,7 +19,7 @@
 from typing import Dict, List, Optional, Set
 import pandas as pd
 
-from .constants import META_MUT_POSITION, META_REF, META_PAM_MUT_SGRNA_ID, ARRAY_SEPARATOR, NON_CODING_SGRNA_ID_PREFIX
+from .constants import META_MUT_POSITION, META_REF, META_PAM_MUT_SGRNA_ID, ARRAY_SEPARATOR
 from .utils import init_string_field
 
 
@@ -122,13 +122,8 @@ def set_metadata_sgrna_ids(
 
         # Add sgRNA ID's in non-coding regions
         if position_to_sgrna_ids:
-            ncd_sgrna_ids = get_sgrna_ids_ncd_from_row(
+            sgrna_ids |= get_sgrna_ids_ncd_from_row(
                 position_to_sgrna_ids, r)
-
-            sgrna_ids |= {
-                NON_CODING_SGRNA_ID_PREFIX + sgrna_id
-                for sgrna_id in (ncd_sgrna_ids - sgrna_ids)
-            }
 
         return sgrna_ids_to_string(sgrna_ids)
 

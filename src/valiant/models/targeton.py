@@ -23,7 +23,7 @@ from typing import Any, Callable, ClassVar, Dict, Generic, List, FrozenSet, Opti
 import numpy as np
 import pandas as pd
 
-from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS, NON_CODING_SGRNA_ID_PREFIX
+from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS
 from ..enums import MutationType, TargetonMutator, VariantType
 from ..sgrna_utils import set_metadata_sgrna_ids, set_metadata_sgrna_ids_empty
 from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
@@ -137,15 +137,11 @@ class ITargeton(BaseTargeton, Generic[AnnotatedSequenceT], abc.ABC):
     def variant_count(self) -> int:
         return self.annotated_seq.variant_count
 
-    def _get_sgrna_ids(self, spr: StrandedPositionRange, prefix: Optional[str] = None) -> FrozenSet[str]:
-        sgrna_ids: FrozenSet[str] = frozenset({
+    def _get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        return frozenset({
             variant.sgrna_id
             for variant in self.annotated_seq.get_variants_in_range(spr)
         })
-        return frozenset([
-            prefix + sgrna_id
-            for sgrna_id in sgrna_ids
-        ]) if prefix else sgrna_ids
 
     @abc.abstractmethod
     def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
@@ -153,7 +149,7 @@ class ITargeton(BaseTargeton, Generic[AnnotatedSequenceT], abc.ABC):
 
     @abc.abstractmethod
     def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
-        return self._get_sgrna_ids(spr)
+        pass
 
 
 @dataclass(frozen=True)
@@ -199,7 +195,7 @@ class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT, RangeT]):
         return []
 
     def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
-        return super()._get_sgrna_ids(spr, prefix=NON_CODING_SGRNA_ID_PREFIX)
+        return super()._get_sgrna_ids(spr)
 
     def compute_mutations(self, mutators: FrozenSet[TargetonMutator]) -> Dict[TargetonMutator, MutationCollection]:
         return super()._compute_mutations(mutators)
@@ -295,6 +291,9 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
     def get_liminal_codon_indices(self, spr: StrandedPositionRange) -> Tuple[int, int]:
         codon_indices = self.get_codon_indices(spr)
         return codon_indices[0], codon_indices[-1]
+
+    def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        return super()._get_sgrna_ids(spr)
 
     def _add_snv_metadata(
         self,
@@ -474,9 +473,6 @@ class PamProtected(abc.ABC):
         pass
 
 
-def _set_metadata_sgrna_id():
-    pass
-
 @dataclass(frozen=True)
 class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
     __slots__ = ['annotated_seq']
@@ -485,7 +481,7 @@ class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
         return [None] * self.variant_count
 
     def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
-        return super()._get_sgrna_ids(spr, prefix=NON_CODING_SGRNA_ID_PREFIX)
+        return super()._get_sgrna_ids(spr)
 
     def get_position_to_sgrna_ids(self) -> Dict[int, str]:
         return get_position_to_sgrna_ids(self.variants)
@@ -676,10 +672,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
             for codon_index in self.get_codon_indices(spr)
             if codon_index in self._codon_to_pam_variant
         }) if self._codon_to_pam_variant else frozenset()
-        ncd = frozenset(
-            NON_CODING_SGRNA_ID_PREFIX + x
-            for x in super()._get_sgrna_ids(spr) - cds
-        )
+        ncd = super()._get_sgrna_ids(spr)
         return frozenset.union(cds, ncd)
 
     @property
