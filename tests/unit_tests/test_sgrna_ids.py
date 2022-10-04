@@ -21,7 +21,7 @@ import pytest
 from valiant.models.base import GenomicRange, GenomicPosition
 from valiant.models.refseq_ranges import ReferenceSequenceRanges
 from valiant.models.sequences import ReferenceSequence
-from valiant.models.oligo_segment import InvariantOligoSegment, TargetonOligoSegment
+from valiant.models.oligo_segment import InvariantOligoSegment
 from valiant.models.custom_variants import CustomVariant
 from valiant.models.oligo_template import OligoTemplate
 from valiant.models.targeton import PamProtTargeton, PamProtCDSTargeton

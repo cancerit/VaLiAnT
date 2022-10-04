@@ -22,11 +22,11 @@ import logging
 from typing import Dict, Iterable, List, Optional, Set, FrozenSet
 import pandas as pd
 from pyranges import PyRanges
-from .base import GenomicPosition, GenomicRange
-from .sequences import ReferenceSequence
-from .variant import BaseVariant, get_variant, SubstitutionVariant
 from ..loaders.vcf import get_vcf
 from ..utils import get_id_column
+from .base import GenomicRange
+from .sequences import ReferenceSequence
+from .variant import BaseVariant, get_variant, SubstitutionVariant
 
 
 def apply_pam_variants(ref_seq: ReferenceSequence, pam_variants: List[PamVariant]) -> str:
