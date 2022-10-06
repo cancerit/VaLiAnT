@@ -21,7 +21,7 @@ from dataclasses import dataclass
 import os
 from typing import Any
 import pandas as pd
-from ..constants import METADATA_FIELDS_SET, METADATA_FIELDS, VCF_PAM_SUFFIX, VCF_REF_SUFFIX
+from ..constants import META_VCF_VAR_IN_CONST, METADATA_FIELDS_SET, METADATA_FIELDS, VCF_PAM_SUFFIX, VCF_REF_SUFFIX
 from ..loaders.vcf import write_vcf
 from ..utils import get_constant_category
 from ..writers import write_oligo_metadata, write_oligo_unique
@@ -40,6 +40,9 @@ def _fill_metadata(species: str, assembly: str, metadata: pd.DataFrame) -> pd.Da
     # Add missing columns
     for field in METADATA_FIELDS_SET - set(metadata.columns):
         metadata[field] = None
+
+    # Fill NA's
+    metadata[META_VCF_VAR_IN_CONST] = metadata[META_VCF_VAR_IN_CONST].fillna(0)
 
     return metadata
 
