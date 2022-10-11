@@ -2,7 +2,7 @@
 
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,7 +21,7 @@
 from setuptools import setup, find_packages
 
 PACKAGE_NAME = 'valiant'
-VERSION = '2.0.0'
+VERSION = '3.0.0'
 
 config = {
     'name': PACKAGE_NAME,
@@ -29,12 +29,13 @@ config = {
     'author': 'Luca Barbon',
     'author_email': 'cgphelp@sanger.ac.uk',
     'version': VERSION,
-    'python_requires': '>= 3.7',
+    'python_requires': '>=3.7,<3.10',
     'install_requires': [
         'chardet',
         'click',
         'cython',
         'pandas>=1.1,<1.2',
+        'pydantic',
         'pyranges',
         'pysam'
     ],

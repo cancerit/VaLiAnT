@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,14 +17,15 @@
 #############################
 
 from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple, Any
+from functools import partial
+from typing import List, Optional, Tuple, Any
 import numpy as np
 import pandas as pd
 from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
-from ..constants import REVCOMP_OLIGO_NAME_SUFFIX
+from ..constants import META_MSEQ, META_MSEQ_NO_ADAPT, META_MSEQ_NO_ADAPT_NO_RC, REVCOMP_OLIGO_NAME_SUFFIX
 from ..enums import VariantType
-from ..utils import get_constant_category, reverse_complement, get_source_type_column
+from ..utils import get_constant_category, reverse_complement, get_source_type_column, validate_strand
 
 
 var_type_sub: int = VariantType.SUBSTITUTION.value
@@ -78,6 +79,21 @@ def get_oligo_name(
         raise ValueError("Invalid variant type!")
 
 
+def get_oligo_name_from_row(oligo_name_prefix: str, r) -> str:
+    return get_oligo_name(
+        oligo_name_prefix,
+        r.var_type,
+        r.mutator,
+        r.mut_position,
+        r.ref if not pd.isnull(r.ref) else None,
+        r.new if not pd.isnull(r.new) else None)
+
+
+def get_oligo_names_from_dataframe(oligo_name_prefix: str, df: pd.DataFrame) -> pd.Series:
+    f = partial(get_oligo_name_from_row, oligo_name_prefix)
+    return pd.Series(df.apply(f, axis=1), dtype='string')
+
+
 @dataclass(init=False)
 class BaseOligoRenderer:
     __slots__ = {
@@ -128,6 +144,10 @@ class BaseOligoRenderer:
         return self.ref_seq.genomic_range.strand
 
     @property
+    def has_adaptors(self) -> bool:
+        return bool(self.adaptor_5) or bool(self.adaptor_3)
+
+    @property
     def _constant_fields(self) -> List[Tuple[str, Any]]:
         return [
             ('gene_id', self.gene_id),
@@ -138,22 +158,28 @@ class BaseOligoRenderer:
             ('pam_seq', self.ref_seq.pam_protected_sequence)
         ]
 
-    def _render_mutated_sequence(self, mseq: str) -> str:
+    def _add_adaptors(self, mseq: str) -> str:
         return f"{self.adaptor_5}{mseq}{self.adaptor_3}"
 
-    def _render_mutated_sequence_rc(self, mseq: str) -> str:
-        return f"{self.adaptor_5}{reverse_complement(mseq)}{self.adaptor_3}"
+    def _should_apply_reverse_complement(self, apply_reverse_complement: bool) -> bool:
+        validate_strand(self.strand)
 
-    def _get_renderer(self, reverse_complement: bool) -> Callable[[str], str]:
-        if reverse_complement:
-            if self.strand != '-':
-                raise ValueError("Attempted reverse complement of plus strand sequence!")
-            return self._render_mutated_sequence_rc
-        else:
-            return self._render_mutated_sequence
+        if apply_reverse_complement and self.strand != '-':
+            raise ValueError("Attempted reverse complement of plus strand sequence!")
+
+        return apply_reverse_complement
 
     def _get_oligo_name(self, var_type: int, source: str, start: int, ref: Optional[str], alt: Optional[str]) -> str:
         return get_oligo_name(self._oligo_name_prefix, var_type, source, start, ref, alt)
+
+    def get_oligo_names_from_dataframe(self, df: pd.DataFrame) -> pd.Series:
+        return get_oligo_names_from_dataframe(self._oligo_name_prefix, df)
+
+    def _get_mutated_sequence(self, mseq: str) -> str:
+        return mseq
+
+    def _render_mutated_sequence_no_adaptors(self, mseq: str) -> str:
+        return self._get_mutated_sequence(mseq)
 
     def get_metadata_table(self, df: pd.DataFrame, options: Options) -> pd.DataFrame:
         if set(df.columns.array) < {'oligo_name', 'mut_position', 'ref', 'new', 'mutator', 'mseq'}:
@@ -172,13 +198,26 @@ class BaseOligoRenderer:
             df[col_name] = get_constant_category(col_value, rown)
 
         # Add reverse complement information to the metadata
-        rc: bool = self.ref_seq.genomic_range.strand == '-' and options.revcomp_minus_strand
+        rc: bool = self._should_apply_reverse_complement(options.revcomp_minus_strand)
         df['revc'] = np.repeat(rc, rown).astype(np.int8)
         if rc:
             df.oligo_name = df.oligo_name + REVCOMP_OLIGO_NAME_SUFFIX
 
+        # Render oligonucleotide sequences without adaptors (never reverse complement)
+        df[META_MSEQ_NO_ADAPT_NO_RC] = df[META_MSEQ].apply(
+            self._render_mutated_sequence_no_adaptors).astype('string')
+
+        # Render oligonucleotide sequences without adaptors
+        df[META_MSEQ_NO_ADAPT] = (
+            df[META_MSEQ_NO_ADAPT_NO_RC].apply(reverse_complement).astype('string') if rc else
+            df[META_MSEQ_NO_ADAPT_NO_RC]
+        )
+
         # Render full oligonucleotide sequences
-        df.mseq = df.mseq.apply(self._get_renderer(rc)).astype('string')
+        df[META_MSEQ] = (
+            df[META_MSEQ_NO_ADAPT].apply(self._add_adaptors).astype('string') if self.has_adaptors else
+            df[META_MSEQ_NO_ADAPT]
+        )
 
         # Set sequence source type
         df['src_type'] = get_source_type_column('ref', rown)

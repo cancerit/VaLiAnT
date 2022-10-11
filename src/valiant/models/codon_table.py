@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,10 +18,30 @@
 
 from __future__ import annotations
 from itertools import groupby
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple
+
+from ..enums import MutationType
 from ..globals import TRIPLET_RCS
+from ..utils import validate_strand
 
 STOP_CODE = 'STOP'
+
+
+def get_codon_mutation_type(
+    translate_f: Callable[[str], str],
+    ref: str,
+    alt: str
+) -> MutationType:
+    alt_aa: str = translate_f(alt)
+
+    if alt_aa == STOP_CODE:
+        return MutationType.NONSENSE
+
+    ref_aa: str = translate_f(ref)
+    return (
+        MutationType.SYNONYMOUS if alt_aa == ref_aa else
+        MutationType.MISSENSE
+    )
 
 
 class CodonTable:
@@ -81,6 +101,13 @@ class CodonTable:
     def translate_rc(self, codon: str) -> str:
         return self._codon2aa[TRIPLET_RCS[codon]]
 
+    def get_translate_f(self, strand: str) -> Callable[[str], str]:
+        validate_strand(strand)
+        return (
+            self.translate if strand == '+' else
+            self.translate_rc
+        )
+
     def get_translation_table(self) -> List[Tuple[str, str]]:
         return list(self._codon2aa.items())
 
@@ -89,6 +116,22 @@ class CodonTable:
             (TRIPLET_RCS[codon], aa)
             for codon, aa in self._codon2aa.items()
         ]
+
+    def get_mutation_types_at(
+        self,
+        strand: str,
+        ref_seq: str,
+        alt_seq: str,
+        codon_indices: List[int]
+    ) -> List[MutationType]:
+        tr = self.get_translate_f(strand)
+
+        def get_mutation_type(codon_index: int) -> MutationType:
+            start: int = codon_index * 3
+            sl = slice(start, start + 3)
+            return get_codon_mutation_type(tr, ref_seq[sl], alt_seq[sl])
+
+        return list(map(get_mutation_type, codon_indices))
 
     @classmethod
     def load(cls, fp: str) -> CodonTable:

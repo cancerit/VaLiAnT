@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,7 +22,7 @@ import pytest
 from valiant.enums import VariantType
 from valiant.loaders.vcf import write_vcf, get_vcf
 from valiant.models.refseq_repository import ReferenceSequenceRepository
-from valiant.models.variant import get_record, _get_insertion_record, _get_deletion_record
+from valiant.models.variant import _get_vcf_record_params_constructor, _get_insertion_record, _get_deletion_record
 
 CHROMOSOME = 'X'
 REF_START = 10
@@ -55,7 +55,9 @@ def get_metadata_table(
         'mutator': [mutator],
         'oligo_name': [oligo_name],
         'vcf_var_id': [None],
-        'var_type': [var_type.value]
+        'var_type': [var_type.value],
+        'pam_codon_mask': [0],
+        'vcf_alias': [None]
     })
 
     meta.var_type = meta.var_type.astype('int8')
@@ -68,6 +70,8 @@ def get_metadata_table(
     meta.pam_seq = meta.pam_seq.astype('string')
     meta.ref = meta.ref.astype('category')
     meta.new = meta.new.astype('category')
+    meta.pam_codon_mask = meta.pam_codon_mask.astype('int8')
+    meta.vcf_alias = meta.vcf_alias.astype('string')
 
     return meta
 
@@ -109,8 +113,13 @@ def test_get_record(ref_repository, var_type, pos, ref, alt, pos_vcf, ref_vcf, a
         MUTATOR,
         OLIGO_NAME)
 
-    variant = get_record(
-        ref_repository, meta.itertuples(index=False).__next__())
+    to_record_params_f = _get_vcf_record_params_constructor(True)
+
+    def get_record(x):
+        return to_record_params_f(x).get_vcf_record(
+            ref_repository, True)
+
+    variant = get_record(meta.itertuples(index=False).__next__())
 
     stop = (pos_vcf + len(ref_vcf)) if ref is not None else (pos_vcf + 1)
 

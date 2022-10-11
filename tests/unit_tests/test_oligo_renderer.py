@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,11 +19,11 @@
 from contextlib import nullcontext
 import pandas as pd
 import pytest
+from valiant.enums import VariantType
 from valiant.enums import VariantType, TargetonMutator
-from valiant.models.base import GenomicRange
 from valiant.models.options import Options
-from valiant.models.pam_protection import PamProtectedReferenceSequence
 from valiant.models.oligo_renderer import BaseOligoRenderer
+from valiant.utils import reverse_complement
 from .utils import get_pam_protected_sequence
 
 
@@ -76,33 +76,31 @@ def test_base_oligo_renderer_constant_fields():
 @pytest.mark.parametrize('seq,a5,a3,exp,exp_rc', [
     ('AACCGGCC', 'TTT', 'TTT', 'TTTAACCGGCCTTT', 'TTTGGCCGGTTTTT')
 ])
-def test_base_oligo_renderer_render_mutated_sequence(seq, a5, a3, exp, exp_rc):
+def test_base_oligo_renderer_add_adaptors(seq, a5, a3, exp, exp_rc):
     pam_seq = get_pam_protected_sequence(SEQ, None)
 
     # Initialise renderer
     renderer = BaseOligoRenderer(pam_seq, GENE_ID, TRANSCRIPT_ID, a5, a3)
 
     # Check rendered oligonucleotide sequence
-    assert renderer._render_mutated_sequence(seq) == exp
-
-    # Check rendered oligonucleotide sequence (reverse complement)
-    assert renderer._render_mutated_sequence_rc(seq) == exp_rc
+    assert renderer._add_adaptors(seq) == exp
+    assert renderer._add_adaptors(reverse_complement(seq)) == exp_rc
 
 
 @pytest.mark.parametrize('strand,rc,exp,valid', [
-    ('+', False, '_render_mutated_sequence', True),
+    ('+', False, False, True),
     ('+', True, None, False),
-    ('-', False, '_render_mutated_sequence', True),
-    ('-', True, '_render_mutated_sequence_rc', True)
+    ('-', False, False, True),
+    ('-', True, True, True)
 ])
-def test_base_oligo_renderer_get_renderer(strand, rc, exp, valid):
+def test_base_oligo_renderer_should_apply_reverse_complement(strand, rc, exp, valid):
     pam_seq = get_pam_protected_sequence(SEQ, None, strand=strand)
 
     # Initialise renderer
     renderer = BaseOligoRenderer(pam_seq, GENE_ID, TRANSCRIPT_ID, '', '')
 
     with pytest.raises(ValueError) if not valid else nullcontext():
-        assert renderer._get_renderer(rc).__name__ == exp
+        assert renderer._should_apply_reverse_complement(rc) is exp
 
 
 @pytest.mark.parametrize('var_type,source,start,ref,alt,exp', [
@@ -128,13 +126,17 @@ def test_base_oligo_renderer_get_metadata_table(rc):
     pam_seq = get_pam_protected_sequence(SEQ, None, strand='-')
 
     df = pd.DataFrame.from_records([
-        ('OLIGO_1', 100, 'A', 'C', 'snv', 'AAACGGG')
-    ], columns=['oligo_name', 'mut_position', 'ref', 'new', 'mutator', 'mseq'])
+        ('OLIGO_1', 100, 'A', 'C', 'snv', 'AAACGGG', VariantType.SUBSTITUTION.value)
+    ], columns=['oligo_name', 'mut_position', 'ref', 'new', 'mutator', 'mseq', 'var_type'])
 
     # Initialise renderer
     renderer = BaseOligoRenderer(pam_seq, GENE_ID, TRANSCRIPT_ID, '', '')
 
-    meta = renderer.get_metadata_table(df, Options(rc, 300))
+    options = Options(
+        oligo_max_length=300,
+        oligo_min_length=1,
+        revcomp_minus_strand=rc)
+    meta = renderer.get_metadata_table(df, options)
     meta_cols = set(meta.columns)
     assert META_COLUMNS <= meta_cols
 

@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,17 +17,20 @@
 #############################
 
 from __future__ import annotations
+from collections import namedtuple
 from dataclasses import dataclass
 from functools import partial
 import logging
-from typing import Dict, List, Optional, Set, Tuple, ClassVar, Any, Callable
+from typing import Dict, List, Optional, Set, Tuple, ClassVar, Any, Callable, TypeVar
 import pandas as pd
 from pyranges import PyRanges
 from pysam import VariantRecord
-from .base import GenomicPosition, GenomicRange
+
+from valiant.constants import META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, META_PAM_CODON_REF, META_PAM_MUT_START, META_REF, META_VCF_ALIAS, META_VCF_VAR_ID, METADATA_PAM_FIELDS
+from .base import GenomicPosition, GenomicRange, StrandedPositionRange
 from .refseq_repository import ReferenceSequenceRepository
 from .sequences import ReferenceSequence
-from ..enums import VariantType, VariantClassification
+from ..enums import VariantType
 from ..loaders.vcf import load_vcf_manifest, var_type_sub, var_type_del, var_type_ins, var_class_unclass, var_class_mono
 from ..string_mutators import delete_nucleotides, insert_nucleotides, replace_nucleotides
 from ..utils import get_id_column, is_dna, get_var_types
@@ -45,8 +48,12 @@ VCF_RECORD_METADATA_FIELDS: List[str] = [
     'ref_chr',
     'vcf_alias',
     'vcf_var_id',
-    'var_type'
+    'var_type',
+    *METADATA_PAM_FIELDS
 ]
+
+
+T = TypeVar('T')
 
 
 def _validate_seq(seq: str, label: str) -> None:
@@ -77,6 +84,14 @@ class BaseVariant:
 
     type: ClassVar[VariantType]
 
+    def get_ref(self) -> Optional[str]:
+        return self.ref if hasattr(self, 'ref') else None
+
+    @property
+    def ref_length(self) -> int:
+        ref = self.get_ref()
+        return len(ref) if ref is not None else 0
+
     def get_ref_offset(self, ref_seq: ReferenceSequence) -> int:
         if not ref_seq.genomic_range.contains_position(self.genomic_position):
             raise ValueError(
@@ -85,14 +100,28 @@ class BaseVariant:
 
         return self.genomic_position.position - ref_seq.genomic_range.start
 
+    def _get_relative_position(self, seq_start: int) -> int:
+        if seq_start < 1:
+            raise ValueError("Invalid sequence start position!")
+        return self.genomic_position.position - seq_start
+
+    def get_corrected_ref_from(self, seq: str, offset: int) -> Optional[str]:
+        return (
+            seq[offset] if self.ref_length == 1 else
+            seq[offset:offset + self.ref_length] if self.ref_length > 1 else
+            None
+        )
+
+    def get_corrected_ref(self, seq: str, seq_start: int) -> Optional[str]:
+        return self.get_corrected_ref_from(
+            seq, self._get_relative_position(seq_start))
+
     def mutate_from(self, seq: str, offset: int, ref_check: bool = False) -> str:
         raise NotImplementedError()
 
     def mutate(self, seq: str, seq_start: int, ref_check: bool = False) -> str:
-        if seq_start < 1:
-            raise ValueError("Invalid sequence start position!")
         return self.mutate_from(
-            seq, self.genomic_position.position - seq_start, ref_check=ref_check)
+            seq, self._get_relative_position(seq_start), ref_check=ref_check)
 
 
 @dataclass(frozen=True)
@@ -163,6 +192,19 @@ class CustomVariant:
     base_variant: BaseVariant
     vcf_alias: Optional[str]
     vcf_variant_id: Optional[str]
+
+    def get_ref(self) -> Optional[str]:
+        return self.base_variant.get_ref()
+
+    @property
+    def ref_length(self) -> int:
+        return self.base_variant.ref_length
+
+    def get_ref_range(self, strand: str) -> StrandedPositionRange:
+        start: int = self.base_variant.genomic_position.position
+        ref_length: int = len(getattr(self.base_variant, 'ref', ''))
+        end: int = start + (ref_length if ref_length > 1 else 0)
+        return StrandedPositionRange(start, end, strand)
 
 
 VAR_TYPE_CONSTRUCTOR: Dict[int, Callable[[Any], BaseVariant]] = {
@@ -340,20 +382,6 @@ def get_variant(r: VariantRecord) -> BaseVariant:
     return get_variant_from_tuple(r.contig, r.pos, r.ref, r.alts[0])
 
 
-def get_custom_variant(
-    vcf_alias: Optional[str],
-    vcf_variant_id: Optional[str],
-    chromosome: str,
-    position: int,
-    ref: str,
-    alt: str
-) -> CustomVariant:
-    return CustomVariant(
-        get_variant_from_tuple(chromosome, position, ref, alt),
-        vcf_alias,
-        vcf_variant_id)
-
-
 def _get_shared_nucleotide(
     ref_repository: ReferenceSequenceRepository,
     ref_seq: str,
@@ -483,57 +511,180 @@ def _get_deletion_record(
     return prev_pos, end, pam_slice, shared_nt, (ref_slice if pam_slice != ref_slice else None)
 
 
-def get_record(ref_repository: ReferenceSequenceRepository, meta) -> Dict[str, Any]:
-    # TODO: include PAM protection positions in the metadata...?
-    pos: int = meta.mut_position
-    pam_seq: str = meta.pam_seq
-    ref_seq: str = meta.ref_seq
-    ref_start: int = meta.ref_start
-    meta_ref: Optional[str] = meta.ref if not pd.isna(meta.ref) else None
-    meta_alt: Optional[str] = meta.new if not pd.isna(meta.new) else None
-    chromosome: str = meta.ref_chr
-    var_type = meta.var_type
-
-    ref: str
-    alt: str
-    end: int
-    pre_pam: Optional[str]
-
-    # TODO: verify stop position for variants at position 1... might need correcting here as well
-    if var_type == var_type_del:
-        pos, end, ref, alt, pre_pam = _get_deletion_record(
-            ref_repository, chromosome, pos, meta_ref, ref_start, ref_seq, pam_seq)  # type: ignore
-    elif var_type == var_type_ins:
-        pos, end, ref, alt, pre_pam = _get_insertion_record(
-            ref_repository, chromosome, pos, meta_alt, ref_start, ref_seq, pam_seq)  # type: ignore
+def _get_slices(ref_seq: str, pam_seq: str, offset: int, mut_len: int) -> Tuple[str, str]:
+    if mut_len > 1:
+        sl = slice(offset, offset + mut_len)
+        ref_slice = ref_seq[sl]
+        pam_slice = pam_seq[sl]
     else:
-        ref = meta_ref  # type: ignore
-        alt = meta_alt  # type: ignore
-        end = pos + len(ref)
-        pre_pam = None
-
-    # Set INFO tags
-    info: Dict[str, Any] = {
-        'SGE_SRC': meta.mutator,
-        'SGE_OLIGO': meta.oligo_name
-    }
-    if pre_pam:
-        info['SGE_REF'] = pre_pam
-
-    if not pd.isna(meta.vcf_var_id):
-        info['SGE_VCF_ALIAS'] = meta.vcf_alias
-        info['SGE_VCF_VAR_ID'] = meta.vcf_var_id
-
-    # Set VCF record fields
-    return {
-        'alleles': (ref, alt),
-        'contig': chromosome,
-        'start': pos - 1,  # zero-based representation
-        'stop': end - 1,  # zero-based representation
-        'info': info
-    }
+        ref_slice = ref_seq[offset]
+        pam_slice = pam_seq[offset]
+    return ref_slice, pam_slice
 
 
-def get_records(ref_repository: ReferenceSequenceRepository, meta: pd.DataFrame) -> List[Dict[str, Any]]:
-    f = partial(get_record, ref_repository)
-    return list(map(f, meta[VCF_RECORD_METADATA_FIELDS].itertuples(index=False)))
+def _get_substitution_record(
+    pos: int,
+    ref: str,
+    alt: str,
+    seq_start: int,
+    ref_seq: str,
+    pam_seq: str
+) -> Tuple[int, int, str, str, Optional[str]]:
+    mut_len: int = len(ref)
+    end: int = pos + mut_len
+
+    # Retrieve reference sequence before and after PAM protection
+    offset: int = pos - seq_start
+    ref_slice, pam_slice = _get_slices(ref_seq, pam_seq, offset, mut_len)
+    return pos, end, pam_slice, alt, (ref_slice if pam_slice != ref_slice else None)
+
+
+def get_nullable_field(s: namedtuple, field: str, default: Optional[T] = None) -> Optional[T]:
+    x: T = s.__getattribute__(field)
+    return x if not pd.isna(x) else default
+
+
+@dataclass
+class VCFRecordParams:
+    __slots__ = ['chr', 'pos', 'ref', 'alt', 'var_type', 'mutator', 'oligo_name', 'vcf_alias', 'vcf_var_id', 'ref_start', 'ref_seq', 'pam_seq']
+
+    chr: str
+    pos: int
+    ref: Optional[str]
+    alt: Optional[str]
+    var_type: int
+    mutator: str
+    oligo_name: str
+    vcf_alias: Optional[str]
+    vcf_var_id: Optional[str]
+    ref_start: int
+    ref_seq: str
+    pam_seq: str
+
+    def __post_init__(self) -> None:
+        assert not (self.ref is None and self.alt is None)
+        assert isinstance(self.pos, int)
+        assert isinstance(self.var_type, int)
+        assert isinstance(self.ref_start, int)
+
+    @classmethod
+    def from_meta(cls, pam_mode: bool, meta: namedtuple) -> VCFRecordParams:
+        f = (
+            cls.from_meta_pam_ext if meta.pam_codon_mask else
+            cls.from_meta_no_pam
+        ) if pam_mode else cls.from_meta_no_pam
+        return f(meta)
+
+    @classmethod
+    def from_meta_no_pam(cls, meta: namedtuple) -> VCFRecordParams:
+        return cls(
+            chr=meta.ref_chr,
+            pos=int(meta.mut_position),
+            ref=get_nullable_field(meta, META_REF) or None,
+            alt=get_nullable_field(meta, META_NEW) or None,
+            var_type=int(meta.var_type),
+            mutator=meta.mutator,
+            oligo_name=meta.oligo_name,
+            vcf_alias=get_nullable_field(meta, META_VCF_ALIAS),
+            vcf_var_id=get_nullable_field(meta, META_VCF_VAR_ID),
+            ref_start=int(meta.ref_start),
+            ref_seq=meta.ref_seq,
+            pam_seq=meta.pam_seq)
+
+    @classmethod
+    def from_meta_pam_ext(cls, meta: namedtuple) -> VCFRecordParams:
+        ref = get_nullable_field(meta, META_PAM_CODON_REF) or None
+        alt = get_nullable_field(meta, META_PAM_CODON_ALT) or None
+        var_type = (
+            var_type_del if alt is None else
+            var_type_ins if ref is None else
+            var_type_sub
+        )
+        return cls(
+            chr=meta.ref_chr,
+            pos=int(meta.pam_mut_start),
+            ref=ref,
+            alt=alt,
+            var_type=int(var_type),
+            mutator=meta.mutator,
+            oligo_name=meta.oligo_name,
+            vcf_alias=get_nullable_field(meta, META_VCF_ALIAS),
+            vcf_var_id=get_nullable_field(meta, META_VCF_VAR_ID),
+            ref_start=int(meta.ref_start),
+            ref_seq=meta.ref_seq,
+            pam_seq=meta.pam_seq)
+
+    def get_vcf_record(
+        self,
+        ref_repository: ReferenceSequenceRepository,
+        pam_mode: bool
+    ) -> Dict[str, Any]:
+        """
+        Convert into a VCF record
+
+        If pam_ref is true, use the PAM-protected sequence as reference,
+        with extending to cover the whole start and end codons if those are
+        PAM-protected; the original reference otherwise.
+        """
+
+        pos: int
+        ref: str
+        alt: str
+        end: int
+        pre_pam: Optional[str]  # Reference before PAM protection (only set if it differs from ref)
+
+        # TODO: verify stop position for variants at position 1... might need correcting here as well
+        if self.var_type == var_type_del:
+            pos, end, ref, alt, pre_pam = _get_deletion_record(
+                ref_repository, self.chr, self.pos, self.ref, self.ref_start, self.ref_seq, self.pam_seq)
+        elif self.var_type == var_type_ins:
+            pos, end, ref, alt, pre_pam = _get_insertion_record(
+                ref_repository, self.chr, self.pos, self.alt, self.ref_start, self.ref_seq, self.pam_seq)
+        elif self.var_type == var_type_sub:
+            pos, end, ref, alt, pre_pam = _get_substitution_record(
+                self.pos, self.ref, self.alt, self.ref_start, self.ref_seq, self.pam_seq)
+        else:
+            raise RuntimeError("Invalid variant type!")
+
+        # Set INFO tags
+        info: Dict[str, Any] = {
+            'SGE_SRC': self.mutator,
+            'SGE_OLIGO': self.oligo_name
+        }
+        if pam_mode and pre_pam:
+            info['SGE_REF'] = pre_pam
+
+        if self.vcf_var_id:
+            info['SGE_VCF_ALIAS'] = self.vcf_alias
+            info['SGE_VCF_VAR_ID'] = self.vcf_var_id
+
+        # Set VCF record fields
+        return {
+            'alleles': (ref if pam_mode else (pre_pam or ref), alt),
+            'contig': self.chr,
+            'start': pos - 1,  # zero-based representation
+            'stop': end - 1,  # zero-based representation
+            'info': info
+        }
+
+
+def _get_vcf_record_params_constructor(pam_ref: bool) -> Callable:
+    return (
+        partial(VCFRecordParams.from_meta, pam_ref) if pam_ref else
+        VCFRecordParams.from_meta_no_pam
+    )
+
+
+def get_records(
+    ref_repository: ReferenceSequenceRepository,
+    pam_ref: bool,
+    meta: pd.DataFrame
+) -> List[Dict[str, Any]]:
+
+    to_record_params_f = _get_vcf_record_params_constructor(pam_ref)
+
+    def get_record(x: namedtuple) -> Dict[str, Any]:
+        return to_record_params_f(x).get_vcf_record(
+            ref_repository, pam_ref)
+
+    return list(map(get_record, meta[VCF_RECORD_METADATA_FIELDS].itertuples(index=False)))

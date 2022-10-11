@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -140,6 +140,9 @@ class GenomicPosition:
 
     def __str__(self) -> str:
         return f"{self.chromosome}:{self.position}"
+
+    def in_range(self, pr: PositionRange) -> bool:
+        return self.position >= pr.start and self.position <= pr.end
 
 
 @dataclass(frozen=True, init=False)

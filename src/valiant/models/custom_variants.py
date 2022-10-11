@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,9 +18,11 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, FrozenSet
 import numpy as np
 import pandas as pd
+from ..constants import META_PAM_MUT_SGRNA_ID, META_VCF_VAR_IN_CONST
+from ..sgrna_utils import sgrna_ids_to_string
 from .mutated_sequences import BaseMutationCollection
 from .oligo_renderer import BaseOligoRenderer
 from .pam_protection import PamProtectedReferenceSequence
@@ -52,21 +54,36 @@ class CustomVariantOligoRenderer(BaseOligoRenderer):
         return super()._get_oligo_name(var_type, vcf_alias, start, ref, alt)
 
 
-@dataclass
+@dataclass(frozen=True)
 class CustomVariantMutation:
-    variant: CustomVariant
-    sequence: str
+    __slots__ = ['variant', 'pam_ref', 'sequence', 'overlaps_constant_region', 'sgrna_ids']
 
-    def to_row(self) -> Tuple[Optional[str], Optional[str], int, int, Optional[str], Optional[str], str]:
+    variant: CustomVariant
+    pam_ref: Optional[str]
+    sequence: str
+    overlaps_constant_region: bool
+    sgrna_ids: FrozenSet[str]
+
+    @property
+    def alt(self) -> Optional[str]:
+        return getattr(self.variant.base_variant, 'alt', None)
+
+    @property
+    def ref_length(self) -> int:
+        return self.variant.ref_length
+
+    def to_row(self) -> Tuple[Optional[str], Optional[str], int, int, Optional[str], Optional[str], str, str]:
         var: BaseVariant = self.variant.base_variant
         return (
             self.variant.vcf_alias,
             self.variant.vcf_variant_id,
             var.type.value,
             var.genomic_position.position,
-            getattr(var, 'ref', None),
-            getattr(var, 'alt', None),
-            self.sequence
+            self.pam_ref,
+            self.alt,
+            self.sequence,
+            sgrna_ids_to_string(self.sgrna_ids) if self.sgrna_ids else '',
+            1 if self.overlaps_constant_region else 0
         )
 
 
@@ -86,7 +103,9 @@ class CustomVariantMutationCollection(BaseMutationCollection):
             'mut_position',
             'ref',
             'new',
-            'mseq'
+            'mseq',
+            META_PAM_MUT_SGRNA_ID,
+            META_VCF_VAR_IN_CONST
         ])
 
         # Compress table
@@ -97,5 +116,7 @@ class CustomVariantMutationCollection(BaseMutationCollection):
         df.ref = df.ref.astype('category')
         df.new = df.new.astype('category')
         df.mseq = df.mseq.astype('string')
+        df[META_PAM_MUT_SGRNA_ID] = df[META_PAM_MUT_SGRNA_ID].astype('string')
+        df[META_VCF_VAR_IN_CONST] = df[META_VCF_VAR_IN_CONST].astype(pd.Int8Dtype())
 
         return cls(df=df)

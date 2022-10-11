@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,24 +17,43 @@
 #############################
 
 from __future__ import annotations
-import abc
 from dataclasses import dataclass
-from functools import partial
-from typing import Callable, Dict, List, Optional, Set, FrozenSet, Tuple
+from itertools import chain
+import logging
+from typing import Dict, Iterable, List, Optional, Set, FrozenSet, Tuple
 import numpy as np
 import pandas as pd
+from ..metadata_utils import get_mave_nt_pam_from_row, get_mave_nt_ref_from_row, set_pam_extended_ref_alt, set_ref, set_ref_meta
+from .codon_table import CodonTable
+from .oligo_segment import OligoSegment, TargetonOligoSegment
+from .refseq_ranges import ReferenceSequenceRanges
+from .targeton import ITargeton, PamProtCDSTargeton
 from .base import GenomicRange, TranscriptInfo
 from .custom_variants import CustomVariantMutation, CustomVariantMutationCollection, CustomVariantOligoRenderer
-from .mutated_sequences import MutatedSequence, MutationCollection
+from .mutated_sequences import MutationCollection
 from .oligo_renderer import BaseOligoRenderer
 from .options import Options
 from .pam_protection import PamProtectedReferenceSequence
 from .snv_table import AuxiliaryTables
-from .targeton import BaseTargeton, CDSTargeton, Targeton
 from .variant import CustomVariant
-from ..constants import CUSTOM_MUTATOR
+from ..constants import (
+    ARRAY_SEPARATOR,
+    CUSTOM_MUTATOR,
+    META_MAVE_NT,
+    META_MAVE_NT_REF,
+    META_OLIGO_NAME,
+    META_PAM_MUT_ANNOT,
+    META_VAR_TYPE,
+    META_MUT_POSITION,
+    META_REF,
+    META_NEW,
+    META_MUTATOR,
+    META_MSEQ,
+    META_OLIGO_LENGTH,
+    MUTATION_TYPE_NON_CDS
+)
 from ..enums import MutationType, TargetonMutator
-from ..utils import get_constant_category
+from ..utils import get_constant_category, group_consecutive
 
 MUTATION_TYPE_LABELS: Dict[int, str] = {
     MutationType.SYNONYMOUS.value: 'syn',
@@ -44,6 +63,17 @@ MUTATION_TYPE_LABELS: Dict[int, str] = {
 
 MUTATION_TYPE_CATEGORIES = sorted(MUTATION_TYPE_LABELS.values())
 MUTATION_TYPE_CATEGORIES_T = tuple(MUTATION_TYPE_CATEGORIES)
+
+EMPTY_MUTATION_TABLE_FIELDS = [
+    META_OLIGO_NAME,
+    META_VAR_TYPE,
+    META_MUT_POSITION,
+    META_REF,
+    META_NEW,
+    META_MUTATOR,
+    META_MSEQ,
+    META_OLIGO_LENGTH
+]
 
 
 def _decode_mut_type(x) -> str:
@@ -60,81 +90,15 @@ def decode_mut_types_cat(mut_type: pd.Series) -> pd.Categorical:
         categories=MUTATION_TYPE_CATEGORIES)
 
 
-class OligoSegment(abc.ABC):
-
-    @property
-    @abc.abstractmethod
-    def sequence(self) -> str:
-        pass
-
-    @property
-    @abc.abstractmethod
-    def genomic_range(self) -> GenomicRange:
-        pass
-
-    @property
-    @abc.abstractmethod
-    def pam_protected_sequence(self) -> str:
-        pass
-
-    @property
-    def start(self) -> int:
-        return self.genomic_range.start
+def get_empty_mutation_table() -> pd.DataFrame:
+    return pd.DataFrame(columns=EMPTY_MUTATION_TABLE_FIELDS)
 
 
-@dataclass
-class InvariantOligoSegment(OligoSegment):
-    __slots__ = {'ref_sequence'}
-
-    ref_sequence: PamProtectedReferenceSequence
-
-    @property
-    def sequence(self) -> str:
-        return self.ref_sequence.sequence
-
-    @property
-    def genomic_range(self) -> GenomicRange:
-        return self.ref_sequence.genomic_range
-
-    @property
-    def pam_protected_sequence(self) -> str:
-        return self.ref_sequence.pam_protected_sequence
-
-    @property
-    def ref_seq(self) -> PamProtectedReferenceSequence:
-        return self.ref_sequence
-
-
-@dataclass
-class TargetonOligoSegment(OligoSegment):
-    __slots__ = {'targeton', 'mutator'}
-
-    targeton: BaseTargeton
-    mutators: FrozenSet[TargetonMutator]
-
-    @property
-    def sequence(self) -> str:
-        return self.targeton.seq
-
-    @property
-    def pam_protected_sequence(self) -> str:
-        return self.targeton.pam_seq
-
-    @property
-    def genomic_range(self) -> GenomicRange:
-        # This property can only be used for SGE libraries
-        return self.targeton.pos_range  # type: ignore
-
-    def compute_mutations(self, aux: AuxiliaryTables) -> Dict[TargetonMutator, MutationCollection]:
-        if isinstance(self.targeton, CDSTargeton):
-            return self.targeton.compute_mutations(self.mutators, aux)
-        if isinstance(self.targeton, Targeton):
-            return self.targeton.compute_mutations(self.mutators)
-        raise TypeError("Invalid targeton type!")
-
-    @property
-    def start(self) -> int:
-        return self.targeton.pos_range.start
+def encode_pam_mutation_types(mutation_types: Iterable[Optional[MutationType]]) -> str:
+    return ARRAY_SEPARATOR.join([
+        MUTATION_TYPE_LABELS[x.value] if x is not None else MUTATION_TYPE_NON_CDS
+        for x in mutation_types
+    ])
 
 
 @dataclass(init=False)
@@ -167,20 +131,8 @@ class RegionOligoRenderer(BaseOligoRenderer):
         self.prefix = prefix
         self.suffix = suffix
 
-    def get_oligo_name(self, mutator: TargetonMutator, start_offset: int, ms: MutatedSequence) -> str:
-        return super()._get_oligo_name(
-            ms.type.value, mutator.value, start_offset + ms.position, ms.ref, ms.new)
-
-    def _render_mutated_ref_sequence(self, mseq: str) -> str:
+    def _get_mutated_sequence(self, mseq: str) -> str:
         return f"{self.prefix}{mseq}{self.suffix}"
-
-    def _render_mutated_sequence(self, mseq: str) -> str:
-        return super()._render_mutated_sequence(
-            self._render_mutated_ref_sequence(mseq))
-
-    def _render_mutated_sequence_rc(self, mseq: str) -> str:
-        return super()._render_mutated_sequence_rc(
-            self._render_mutated_ref_sequence(mseq))
 
 
 @dataclass
@@ -202,17 +154,10 @@ class OligoMutationCollection:
             raise RuntimeError(
                 f"Empty mutation collection for mutator '{self.mutator}'!")
 
-        get_oligo_name: Callable[[MutatedSequence], str] = partial(
-            self.renderer.get_oligo_name,
-            self.mutator,
-            self.target_region_start)
-
         df: pd.DataFrame = self.mutation_collection.df
-        df['oligo_name'] = pd.Series(
-            map(get_oligo_name, self.mutation_collection.mutations),
-            dtype='string')
-        df['mutator'] = get_constant_category(self.mutator.value, df.shape[0])
-        df.mut_position += self.target_region_start
+        df[META_MUTATOR] = get_constant_category(self.mutator.value, df.shape[0])
+        df[META_MUT_POSITION] += self.target_region_start
+        df[META_OLIGO_NAME] = self.renderer.get_oligo_names_from_dataframe(df)
 
         return self.renderer.get_metadata_table(df, options)
 
@@ -220,6 +165,7 @@ class OligoMutationCollection:
 @dataclass
 class OligoTemplate:
     __slots__ = {
+        'ref_ranges',
         'transcript_info',
         'ref_seq',
         'sgrna_ids',
@@ -229,6 +175,7 @@ class OligoTemplate:
         'segments'
     }
 
+    ref_ranges: ReferenceSequenceRanges
     transcript_info: Optional[TranscriptInfo]
     ref_seq: PamProtectedReferenceSequence
     sgrna_ids: FrozenSet[str]
@@ -254,6 +201,10 @@ class OligoTemplate:
         return self.ref_range.strand
 
     @property
+    def ref_start(self) -> int:
+        return self.ref_range.start
+
+    @property
     def name(self) -> str:
         return '_'.join([
             self.ref_range.chromosome,
@@ -270,6 +221,8 @@ class OligoTemplate:
 
     @property
     def target_segments(self) -> List[Tuple[int, TargetonOligoSegment]]:
+        # TODO: check the fact these could be the constant regions has no consequence;
+        # probably not because they have no mutators assigned.
         return [
             (i, s)
             for i, s in enumerate(self.segments)
@@ -280,13 +233,53 @@ class OligoTemplate:
     def ref_segments(self) -> List[OligoSegment]:
         return self.segments
 
-    def _compute_custom_variants(self) -> CustomVariantMutationCollection:
-        return CustomVariantMutationCollection.from_variants([
-            CustomVariantMutation(
-                variant, self.ref_seq.apply_variant(
-                    variant.base_variant, ref_check=False))
-            for variant in self.custom_variants
+    def _get_concat_cds_targetons(self) -> List[PamProtCDSTargeton]:
+        # Assumption: segments are consecutive (concatenation would fail otherwise)
+        targetons = [
+            (i, segment.targeton)
+            for i, segment in self.target_segments
+            if isinstance(segment.targeton, PamProtCDSTargeton)
+        ]
+
+        n: int = len(targetons)
+
+        if n == 0:
+            return []
+        if n == 1:
+            return [targetons[0][1]]
+
+        grouped_targetons = group_consecutive(targetons)
+
+        if (
+            logging.root.level <= logging.DEBUG
+            and any(len(g) > 1 for g in grouped_targetons)
+        ):
+            logging.debug("Consecutive CDS targeton concatenation required.")
+
+        # Targetons will be extracted as they are from single-targeton groups
+        return list(map(PamProtCDSTargeton.concat, grouped_targetons))
+
+    def _get_custom_variant_sgrna_ids(self, variant: CustomVariant) -> FrozenSet[str]:
+        spr = variant.get_ref_range(self.strand)
+        return frozenset().union(*[
+            segment.get_sgrna_ids(spr)
+            for segment in self.segments
         ])
+
+    def _get_custom_variant_mutation(self, variant: CustomVariant) -> CustomVariantMutation:
+        return CustomVariantMutation(
+            variant,
+            self.ref_seq.get_variant_corrected_ref(
+                variant.base_variant),
+            self.ref_seq.apply_variant(
+                variant.base_variant, ref_check=False),
+            self.ref_ranges.is_range_in_constant_region(
+                variant.get_ref_range(self.strand)),
+            self._get_custom_variant_sgrna_ids(variant))
+
+    def _compute_custom_variants(self) -> CustomVariantMutationCollection:
+        return CustomVariantMutationCollection.from_variants(
+            list(map(self._get_custom_variant_mutation, self.custom_variants)))
 
     def _get_mutation_collection(
         self,
@@ -338,25 +331,24 @@ class OligoTemplate:
         df['mutator'] = get_constant_category(CUSTOM_MUTATOR, df.shape[0])
         return renderer.get_metadata_table(df, options)
 
+    def _get_pam_variant_annotations(self, codon_table: CodonTable, n: int) -> pd.Categorical:
+        s: str = encode_pam_mutation_types(chain.from_iterable([
+            segment.get_pam_annotations(codon_table)
+            for segment in self.segments
+        ]))
+        return get_constant_category(s, n, categories=[s])
+
     def get_mutation_table(self, aux: AuxiliaryTables, options: Options) -> pd.DataFrame:
         if not self.target_segments:
-            return pd.DataFrame(columns=[
-                'oligo_name',
-                'var_type',
-                'mut_position',
-                'ref',
-                'new',
-                'mutator',
-                'mseq',
-                'oligo_length'
-            ])
+            return get_empty_mutation_table()
 
         # Compute mutations per region
         region_mutations: pd.DataFrame = pd.concat([
             pd.concat([
                 self._get_mutation_collection(
                     i, segment, mutator, mutation_collection).get_metadata_table(options)
-                for mutator, mutation_collection in segment.compute_mutations(aux).items()
+                for mutator, mutation_collection in segment.compute_mutations(
+                    aux, sgrna_ids=self.sgrna_ids).items()
             ])
             for i, segment in self.target_segments
         ], ignore_index=True)
@@ -377,5 +369,32 @@ class OligoTemplate:
 
         # Compute oligonucleotide lengths
         all_mutations['oligo_length'] = all_mutations.mseq.str.len().astype(np.int32)
+
+        # Add PAM variant annotations
+        rown: int = all_mutations.shape[0]
+        all_mutations[META_PAM_MUT_ANNOT] = self._get_pam_variant_annotations(
+            aux.codon_table, rown)
+
+        assert 'pam_seq' in all_mutations
+
+        # Remove duplications from the index
+        all_mutations = all_mutations.reset_index(drop=True)
+
+        # Concatenate consecutive CDS targetons and discard those unaffected by PAM variants
+        pam_prot_cds_targetons = [
+            targeton
+            for targeton in self._get_concat_cds_targetons()
+            if targeton.variant_count > 0
+        ]
+
+        set_ref_meta(all_mutations)
+        set_ref(all_mutations)
+        set_pam_extended_ref_alt(all_mutations, pam_prot_cds_targetons)
+
+        # Add mutation MAVE-HGVS code (REF without PAM protection)
+        all_mutations[META_MAVE_NT_REF] = pd.Series(all_mutations.apply(get_mave_nt_ref_from_row, axis=1), dtype='string')
+
+        # Add mutation MAVE-HGVS code (REF and ALT extended to include the PAM codon)
+        all_mutations[META_MAVE_NT] = pd.Series(all_mutations.apply(get_mave_nt_pam_from_row, axis=1), dtype='string')
 
         return all_mutations

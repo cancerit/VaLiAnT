@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,9 +23,10 @@ Functions that may force the program to exit, meant to be called by the CLI comm
 import logging
 import sys
 from typing import Optional
+
 from .constants import DEFAULT_CODON_TABLE_FILE_NAME
 from .models.codon_table import CodonTable
-from .utils import is_dna, get_data_file_path
+from .utils import get_data_file_path
 
 
 def set_logger(log: str) -> None:
@@ -34,12 +35,6 @@ def set_logger(log: str) -> None:
         logging.critical("Invalid log level '%s'!" % log)
         sys.exit(1)
     logging.basicConfig(level=logging._nameToLevel[log_level])
-
-
-def validate_adaptor(adaptor: Optional[str]) -> None:
-    if adaptor and not is_dna(adaptor):
-        logging.critical("Invalid adaptor sequence '%s'!" % adaptor)
-        sys.exit(1)
 
 
 def load_codon_table(fp: Optional[str]) -> CodonTable:

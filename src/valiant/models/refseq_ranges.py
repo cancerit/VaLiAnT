@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -26,7 +26,7 @@ import re
 from typing import Dict, Iterable, List, Optional, FrozenSet, Tuple
 import pandas as pd
 from pyranges import PyRanges
-from .base import GenomicRange
+from .base import GenomicRange, PositionRange
 from ..enums import TargetonMutator
 from ..loaders.tsv import load_tsv
 from ..utils import get_smallest_int_type, parse_list, parse_mutators
@@ -214,6 +214,12 @@ class ReferenceSequenceRanges:
     @property
     def const_region_2(self) -> Optional[GenomicRange]:
         return self._const_regions[1]
+
+    def is_range_in_constant_region(self, gr: PositionRange) -> bool:
+        for cr in self._const_regions:
+            if cr is not None and not (gr.start > cr.end or gr.end < cr.start):
+                return True
+        return False
 
     def regions_as_pyranges(self) -> List[Tuple[str, str, int, int, bool]]:
         return [

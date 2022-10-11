@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -64,7 +64,7 @@ def _check_csv(out_dir, header, rown, fn):
 
 
 def test_metadata_table_init():
-    mt = MetadataTable(partial_meta.copy(), max_oligo_length)
+    mt = MetadataTable(partial_meta.copy(), 1, max_oligo_length)
     assert mt.short_oligo_n == 1
     assert mt.long_oligo_n == 3
     assert np.array_equal(mt.oligo_length_mask.values, [False] * 3 + [True])
@@ -72,7 +72,7 @@ def test_metadata_table_init():
 
 def test_metadata_table_from_partial():
     mt = MetadataTable.from_partial(
-        species, assembly, partial_meta.copy(), max_oligo_length)
+        species, assembly, partial_meta.copy(), 1, max_oligo_length)
     assert 'species' in mt.metadata
     assert np.array_equal(mt.metadata.species.cat.categories, [species])
     assert 'assembly' in mt.metadata
@@ -82,7 +82,7 @@ def test_metadata_table_from_partial():
 def test_write_common_files():
     base_fn = 'test_file'
     mt = MetadataTable.from_partial(
-        species, assembly, partial_meta.copy(), max_oligo_length)
+        species, assembly, partial_meta.copy(), 1, max_oligo_length)
 
     with TemporaryDirectory() as out_dir:
 
@@ -97,7 +97,7 @@ def test_write_common_files():
 
 def test_get_info():
     mt = MetadataTable.from_partial(
-        species, assembly, partial_meta.copy(), max_oligo_length)
+        species, assembly, partial_meta.copy(), 1, max_oligo_length)
     info = mt.get_info()
 
     assert isinstance(info, OligoGenerationInfo)

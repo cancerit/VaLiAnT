@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,11 +21,13 @@ from functools import lru_cache
 import os
 import pathlib
 import re
-from typing import List, Type, Tuple, FrozenSet, Iterable
+from typing import Any, List, Optional, Type, Tuple, FrozenSet, Iterable, TypeVar
 import numpy as np
 import pandas as pd
 from .constants import SRC_TYPES
 from .enums import TargetonMutator
+
+T = TypeVar('T')
 
 dna_complement_tr_table = str.maketrans('ACGT', 'TGCA')
 dna_re = re.compile('^[ACGT]+$')
@@ -140,3 +142,51 @@ def get_source_type_column(src_type: str, n: int) -> pd.Series:
 
 def repr_enum_list(enums: Iterable[Enum]) -> str:
     return ', '.join(str(e.value) for e in enums)
+
+
+def has_duplicates(items: List[int]) -> bool:
+    return len(set(items)) != len(items)
+
+
+def is_adaptor_valid(adaptor: Optional[str]) -> None:
+    return adaptor is None or is_dna(adaptor)
+
+
+def get_not_none(it: Iterable) -> Any:
+    return [x for x in it if x is not None]
+
+
+def diff(a: List[int]) -> List[int]:
+    if len(a) < 2:
+        raise ValueError("Pairwise differences undefined for lists of less than two items!")
+    return [y - x for x, y in zip(a, a[1:])]
+
+
+def group_consecutive(items: List[Tuple[int, T]]) -> List[List[T]]:
+    n: int = len(items)
+    if n == 0:
+        return [[]]
+    if n == 1:
+        return [[items[0][1]]]
+
+    consecutive_items: List[List[T]] = []
+    diffs: List[int] = diff([i for i, _ in items])
+    start: int = 0
+    end: int
+    for i in range(n - 1):
+        if diffs[i] != 1:
+            end = i + 1
+            consecutive_items.append([x for _, x in items[start:end]])
+            start = end
+    consecutive_items.append([x for _, x in items[start:]])
+
+    return consecutive_items
+
+
+def init_nullable_int_field(df: pd.DataFrame, field: str) -> None:
+    df[field] = np.empty(df.shape[0], dtype=pd.Int32Dtype)
+
+
+def init_string_field(df: pd.DataFrame, field: str) -> None:
+    df[field] = ''
+    df[field] = df[field].astype('string')

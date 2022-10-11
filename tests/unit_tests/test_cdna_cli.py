@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -52,6 +52,7 @@ targeton_metadata_table_fields = set([
     'ref',
     'new',
     'mseq',
+    'mseq_no_adapt',
     'mutator',
     'ref_aa',
     'alt_aa',
@@ -62,7 +63,10 @@ targeton_metadata_table_fields = set([
     'revc',
     'oligo_length',
     'oligo_name',
-    'src_type'
+    'src_type',
+    'mave_nt',
+    'mave_nt_ref',
+    'vcf_var_in_const'
 ])
 
 codon_table = load_codon_table()
@@ -150,7 +154,7 @@ def test_mut_coll_to_df():
         get_empty_aa_column,
         start_pos,
         TargetonMutator.SNV,
-        MutationCollection(df=raw_df.copy(deep=True)))
+        MutationCollection(raw_df.copy(deep=True)))
 
     # Check mutation position field
     assert df.mut_position.min() == raw_df.mut_position.min() + start_pos
@@ -194,6 +198,9 @@ def test_get_targeton_metadata_table(annotated):
     # Check oligonucleotide sequence
     assert df.mseq.str.startswith(adaptor_5).all()
     assert df.mseq.str.endswith(adaptor_3).all()
+
+    # Check oligonucleotide sequence (no adaptors)
+    assert df.mseq.str.slice(len(adaptor_5), -len(adaptor_3)).equals(df.mseq_no_adapt)
 
     # Check source type
     assert list(df.src_type.unique()) == ['cdna']

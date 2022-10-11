@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -40,13 +40,19 @@ variant_mseqs = [
 ]
 
 
+def get_custom_variant_mutation(seq, custom_variant):
+    return CustomVariantMutation(
+        custom_variant, custom_variant.get_ref(), seq, False, frozenset())
+
+
 @pytest.mark.parametrize('variant', variants)
 def test_custom_variant_mutation_init(variant):
     seq = 'AAAAAAAAAA'
     custom_variant = CustomVariant(variant, 'vcf_alias', 'VARIANT_ID')
 
     # Initialise custom variant mutation
-    CustomVariantMutation(custom_variant, seq)
+    CustomVariantMutation(
+        custom_variant, custom_variant.get_ref(), seq, False, frozenset())
 
 
 @pytest.mark.parametrize('variant', variants)
@@ -56,14 +62,16 @@ def test_custom_variant_mutation_to_row(variant):
     custom_variant = CustomVariant(variant, 'vcf_alias', 'VARIANT_ID')
 
     # Initialise custom variant mutation
-    cvm = CustomVariantMutation(custom_variant, seq)
+    cvm = get_custom_variant_mutation(seq, custom_variant)
 
     # Check custom variant mutation
-    vcf_alias, vcf_variant_id, var_type_, pos, ref, alt, seq_ = cvm.to_row()
+    vcf_alias, vcf_variant_id, var_type_, pos, ref, alt, seq_, sgrna_ids, in_const = cvm.to_row()
     assert vcf_alias == custom_variant.vcf_alias
     assert vcf_variant_id == custom_variant.vcf_variant_id
     assert var_type_ == var_type.value
     assert pos == custom_variant.base_variant.genomic_position.position
+    assert sgrna_ids == ''
+    assert in_const == 0
 
     if var_type != VariantType.INSERTION:
         assert ref == custom_variant.base_variant.ref
@@ -101,7 +109,7 @@ def test_custom_variant_mutation_collection_from_variants(variant, mseq):
     vcf_var_id = 'VARIANT_ID'
     var_type = variant.type
     custom_variant = CustomVariant(variant, vcf_alias, vcf_var_id)
-    cvm = CustomVariantMutation(custom_variant, mseq)
+    cvm = get_custom_variant_mutation(mseq, custom_variant)
 
     # Initialise mutation collection
     cvmc = CustomVariantMutationCollection.from_variants([cvm])

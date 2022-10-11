@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,8 +19,9 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import os
+from typing import Any
 import pandas as pd
-from ..constants import METADATA_FIELDS_SET, METADATA_FIELDS
+from ..constants import META_VCF_VAR_IN_CONST, METADATA_FIELDS_SET, METADATA_FIELDS, VCF_PAM_SUFFIX, VCF_REF_SUFFIX
 from ..loaders.vcf import write_vcf
 from ..utils import get_constant_category
 from ..writers import write_oligo_metadata, write_oligo_unique
@@ -40,26 +41,51 @@ def _fill_metadata(species: str, assembly: str, metadata: pd.DataFrame) -> pd.Da
     for field in METADATA_FIELDS_SET - set(metadata.columns):
         metadata[field] = None
 
+    # Fill NA's
+    metadata[META_VCF_VAR_IN_CONST] = metadata[META_VCF_VAR_IN_CONST].fillna(0)
+
     return metadata
 
 
 @dataclass(frozen=True)
 class MetadataTable:
-    __slots__ = {'metadata', 'oligo_length_mask', 'short_oligo_n', 'long_oligo_n'}
+    __slots__ = {'metadata', '_oligo_length_mask', '_oligo_min_length_mask', '_oligo_max_length_mask', 'too_short_oligo_n', 'short_oligo_n', 'long_oligo_n'}
 
     metadata: pd.DataFrame
-    oligo_length_mask: pd.Series
+    _oligo_length_mask: pd.Series
+    _oligo_min_length_mask: pd.Series
+    _oligo_max_length_mask: pd.Series
+    too_short_oligo_n: int
     short_oligo_n: int
     long_oligo_n: int
 
-    def __init__(self, metadata: pd.DataFrame, oligo_max_length: int) -> None:
+    @property
+    def oligo_length_mask(self) -> pd.Series:
+        return self._oligo_length_mask
+
+    @property
+    def has_excluded_oligos(self) -> bool:
+        return self.long_oligo_n > 0 or self.too_short_oligo_n > 0
+
+    def _setattr(self, attr: str, value: Any) -> None:
+        object.__setattr__(self, attr, value)
+
+    def __init__(self, metadata: pd.DataFrame, oligo_min_length: int, oligo_max_length: int) -> None:
         if oligo_max_length < 1:
             raise ValueError("Invalid maximum oligonucleotide length!")
 
-        object.__setattr__(self, 'metadata', metadata)
-        object.__setattr__(self, 'oligo_length_mask', metadata.oligo_length <= oligo_max_length)
-        object.__setattr__(self, 'short_oligo_n', self.oligo_length_mask.sum())
-        object.__setattr__(self, 'long_oligo_n', len(self.oligo_length_mask) - self.short_oligo_n)
+        self._setattr('metadata', metadata)
+
+        # Create olignonucleotide length masks
+        self._setattr('_oligo_min_length_mask', metadata.oligo_length >= oligo_min_length)
+        self._setattr('_oligo_max_length_mask', metadata.oligo_length <= oligo_max_length)
+        self._setattr('_oligo_length_mask', self._oligo_min_length_mask & self._oligo_max_length_mask)
+
+        # Count the oligonucleotides per length range
+        n: int = len(self.oligo_length_mask)
+        self._setattr('too_short_oligo_n', n - self._oligo_min_length_mask.sum())
+        self._setattr('long_oligo_n', n - self._oligo_max_length_mask.sum())
+        self._setattr('short_oligo_n', n - self.too_short_oligo_n - self.long_oligo_n)
 
     @classmethod
     def from_partial(
@@ -67,15 +93,17 @@ class MetadataTable:
         species: str,
         assembly: str,
         metadata: pd.DataFrame,
+        oligo_min_length: int,
         oligo_max_length: int
     ) -> MetadataTable:
         return cls(
             _fill_metadata(species, assembly, metadata),
+            oligo_min_length,
             oligo_max_length)
 
     def write_metadata_file(self, fp: str) -> None:
         write_oligo_metadata((
-            self.metadata.loc[self.oligo_length_mask, METADATA_FIELDS] if self.long_oligo_n > 0 else
+            self.metadata.loc[self.oligo_length_mask, METADATA_FIELDS] if self.has_excluded_oligos else
             self.metadata[METADATA_FIELDS]
         ), fp)
 
@@ -94,15 +122,19 @@ class MetadataTable:
             ).drop_duplicates(subset=['mseq'], keep='first'),
             fp)
 
-    def write_vcf_file(self, fp: str, ref_repository: ReferenceSequenceRepository) -> None:
+    def write_vcf_file(self, fp: str, ref_repository: ReferenceSequenceRepository, pam_ref: bool) -> None:
+        """
+        Generate a VCF using either the original or the PAM-protected reference as REF
+        """
+
         metadata = (
-            self.metadata[self.oligo_length_mask] if self.long_oligo_n > 0 else
+            self.metadata[self.oligo_length_mask] if self.has_excluded_oligos else
             self.metadata
         )
         write_vcf(
             fp,
             list(metadata.ref_chr.cat.categories.values),
-            get_records(ref_repository, metadata))
+            get_records(ref_repository, pam_ref, metadata))
 
     def write_common_files(self, out_dir: str, base_fn: str) -> None:
         if self.short_oligo_n > 0:
@@ -115,7 +147,7 @@ class MetadataTable:
             unique_oligos_fn = base_fn + '_unique.csv'
             self.write_unique_file(os.path.join(out_dir, unique_oligos_fn))
 
-        if self.long_oligo_n > 0:
+        if self.has_excluded_oligos:
 
             # Save discarded metadata to file
             excluded_metadata_fn = base_fn + '_meta_excluded.csv'
@@ -128,12 +160,20 @@ class MetadataTable:
         base_fn: str,
         ref_repository: ReferenceSequenceRepository
     ) -> None:
+
+        # Write metadata and unique oligonucleotides
         self.write_common_files(out_dir, base_fn)
+
         if self.short_oligo_n > 0:
 
-            # Save variants to file (VCF format)
-            vcf_fn = base_fn + '.vcf'
-            self.write_vcf_file(os.path.join(out_dir, vcf_fn), ref_repository)
+            # Write mutations in VCF format
+            for pam_as_ref, suffix in [
+                (True, VCF_PAM_SUFFIX),
+                (False, VCF_REF_SUFFIX)
+            ]:
+                fn = f"{base_fn}_{suffix}.vcf"
+                fp = os.path.join(out_dir, fn)
+                self.write_vcf_file(fp, ref_repository, pam_as_ref)
 
     def get_info(self) -> OligoGenerationInfo:
-        return OligoGenerationInfo(self.long_oligo_n)
+        return OligoGenerationInfo(self.too_short_oligo_n, self.long_oligo_n)

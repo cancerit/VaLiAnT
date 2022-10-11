@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,22 +23,27 @@ from typing import Callable, Dict, Optional, NoReturn
 import click
 import numpy as np
 import pandas as pd
-from .constants import CDS_ONLY_MUTATORS, MUTATOR_CATEGORIES
-from .cli_utils import load_codon_table, validate_adaptor, set_logger
-from .common_cli import common_params, existing_file
+
+from .cli_utils import load_codon_table
+from .common_cli import common_params, existing_file, finalise
+from .constants import CDS_ONLY_MUTATORS, META_MAVE_NT, META_MAVE_NT_REF, META_MSEQ, META_MSEQ_NO_ADAPT, META_OLIGO_NAME, META_VCF_VAR_IN_CONST, MUTATOR_CATEGORIES
 from .enums import TargetonMutator
 from .errors import SequenceNotFound, InvalidMutatorForTarget
+from .metadata_utils import get_mave_nt_from_row
 from .models.base import StrandedPositionRange, PositionRange
 from .models.cdna import CDNA, AnnotatedCDNA
 from .models.cdna_seq_repository import CDNASequenceRepository
 from .models.cdna_targeton_configs import CDNATargetonConfig, CDNATargetonConfigCollection
 from .models.codon_table import CodonTable
+from .models.cdna_config import CDNAConfig
 from .models.metadata_table import MetadataTable
 from .models.mutated_sequences import MutationCollection
 from .models.oligo_generation_info import OligoGenerationInfo
-from .models.oligo_renderer import get_oligo_name
+from .models.oligo_renderer import get_oligo_names_from_dataframe
 from .models.oligo_template import MUTATION_TYPE_CATEGORIES_T, decode_mut_types_cat
+from .models.options import Options
 from .models.snv_table import AuxiliaryTables
+from .models.stats import Stats
 from .models.targeton import Targeton, CDSTargeton
 from .utils import get_constant_category, get_empty_category_column, get_source_type_column, repr_enum_list
 
@@ -100,10 +105,9 @@ def get_annotated_cdna_mutations(
     sequence, cds_ext_5p, cds_ext_3p = cdna.get_extended_subsequence(
         targeton_cfg.r2_range)
     seq = sequence.sequence
-    return CDSTargeton(
-        seq, seq, StrandedPositionRange.to_plus_strand(
-            targeton_cfg.r2_range), cds_ext_5p, cds_ext_3p).compute_mutations(
-                targeton_cfg.mutators, aux)
+    spr = StrandedPositionRange.to_plus_strand(targeton_cfg.r2_range)
+    targeton = CDSTargeton.build_without_variants(spr, seq, cds_ext_5p, cds_ext_3p)
+    return targeton.compute_mutations(targeton_cfg.mutators, aux)
 
 
 def get_cdna_mutations(
@@ -111,10 +115,9 @@ def get_cdna_mutations(
     cdna: CDNA
 ) -> Dict[TargetonMutator, MutationCollection]:
     seq = cdna.get_subsequence_string(targeton_cfg.r2_range)
-    return Targeton(
-        seq, seq, StrandedPositionRange.to_plus_strand(
-            targeton_cfg.r2_range)).compute_mutations(
-                targeton_cfg.mutators)
+    spr = StrandedPositionRange.to_plus_strand(targeton_cfg.r2_range)
+    targeton = Targeton.build_without_variants(spr, seq)
+    return targeton.compute_mutations(targeton_cfg.mutators)
 
 
 def mut_coll_to_df(
@@ -201,12 +204,19 @@ def get_targeton_metadata_table(
     df['revc'] = np.int8(0)
 
     # Add constant sequences (if any)
-    prefix = (adaptor_5 or '') + c1
-    if prefix:
-        df.mseq = prefix + df.mseq
-    suffix = c2 + (adaptor_3 or '')
-    if suffix:
-        df.mseq = df.mseq + suffix
+    if c1:
+        df[META_MSEQ] = c1 + df[META_MSEQ]
+    if c2:
+        df[META_MSEQ] = df[META_MSEQ] + c2
+
+    df[META_MSEQ_NO_ADAPT] = df[META_MSEQ]
+
+    # Add adaptors (if any)
+    if adaptor_5:
+        df[META_MSEQ] = adaptor_5 + df[META_MSEQ]
+
+    if adaptor_3:
+        df[META_MSEQ] = df[META_MSEQ] + adaptor_3
 
     # Add oligonucleotide lengths
     df['oligo_length'] = df.mseq.str.len().astype(np.int32)
@@ -222,21 +232,20 @@ def get_targeton_metadata_table(
     oligo_name_prefix = f"{targeton_cfg.seq_id}_{transcript_label}.{gene_label}_"
 
     # Generate oligonucleotide names
-    df['oligo_name'] = pd.Series(
-        df.apply(lambda r: get_oligo_name(
-            oligo_name_prefix,
-            r.var_type,
-            r.mutator,
-            r.mut_position,
-            r.ref if not pd.isnull(r.ref) else None,
-            r.new if not pd.isnull(r.new) else None), axis=1),
-        dtype='string')
+    df[META_OLIGO_NAME] = get_oligo_names_from_dataframe(oligo_name_prefix, df)
+
+    # Add mutation MAVE-HGVS code
+    df[META_MAVE_NT] = pd.Series(df.apply(get_mave_nt_from_row, axis=1), dtype='string')
+    df[META_MAVE_NT_REF] = df[META_MAVE_NT]
 
     # Drop field that would be discarded downstream
     df = df.drop('var_type', axis=1)
 
     # Set sequence source type
     df['src_type'] = get_source_type_column('cdna', rown)
+
+    # Set mask for custom variants in constant regions to zero
+    df[META_VCF_VAR_IN_CONST] = np.zeros(rown, dtype=np.int8)
 
     return df
 
@@ -248,7 +257,7 @@ def process_targeton(
     adaptor_5: Optional[str],
     adaptor_3: Optional[str],
     get_cdna_f: Callable,
-    max_length: int,
+    options: Options,
     output: str,
     targeton_cfg: CDNATargetonConfig
 ) -> OligoGenerationInfo:
@@ -259,7 +268,8 @@ def process_targeton(
         assembly,
         get_targeton_metadata_table(
             get_cdna_f, aux, adaptor_5, adaptor_3, targeton_cfg),
-        max_length)
+        options.oligo_min_length,
+        options.oligo_max_length)
 
     base_fn = f"{targeton_cfg.seq_id}_{targeton_cfg.get_hash()}"
     metadata.write_common_files(output, base_fn)
@@ -282,19 +292,67 @@ def process_targeton(
     return metadata.get_info()
 
 
+def run_cdna(config: CDNAConfig) -> None:
+    options = config.get_options()
+
+    # Load targeton configurations
+    try:
+        targetons = CDNATargetonConfigCollection.load(config.oligo_info_fp)
+    except ValueError as ex:
+        exit_on_critical_exception(ex, "Failed to load cDNA targeton file!")
+
+    # Load cDNA sequences
+    try:
+        seq_repo = CDNASequenceRepository.load(
+            targetons.sequence_ids, config.ref_fasta_fp, annot_fp=config.annot_fp)
+    except SequenceNotFound:
+        sys.exit(1)
+    except ValueError as ex:
+        exit_on_critical_exception(ex, "Failed to load cDNA annotation file!")
+
+    # Get auxiliary tables
+    aux: AuxiliaryTables = get_auxiliary_tables(
+        targetons, load_codon_table(config.codon_table_fp))
+
+    get_cdna_f = partial(get_cdna, seq_repo)
+    process_targeton_f = partial(
+        process_targeton,
+        config.species,
+        config.assembly,
+        aux,
+        config.adaptor_5,
+        config.adaptor_3,
+        get_cdna_f,
+        options,
+        config.output_dir)
+
+    stats = Stats()
+    info: OligoGenerationInfo
+    for targeton_cfg in targetons.cts:
+        try:
+            info = process_targeton_f(targeton_cfg)
+
+        except ValueError as ex:
+            exit_on_critical_exception(ex, "Failed to generate oligonucleotides!")
+
+        stats.update(info)
+
+    finalise(config, stats)
+
+
 @click.command()
 @common_params
-@click.option('--annot', type=existing_file, help="cDNA annotation file path")
+@click.option('--annot', 'annot_fp', type=existing_file, help="cDNA annotation file path")
 def cdna(
 
     # Input files
-    oligo_info: str,
-    ref_fasta: str,
-    codon_table: Optional[str],
-    annot: Optional[str],
+    oligo_info_fp: str,
+    ref_fasta_fp: str,
+    codon_table_fp: Optional[str],
+    annot_fp: Optional[str],
 
     # Output directory
-    output: str,
+    output_dir: str,
 
     # Metadata
     species: str,
@@ -306,9 +364,7 @@ def cdna(
 
     # Actions
     max_length: int,
-
-    # Extra
-    log: str
+    min_length: int
 
 ):
     """
@@ -322,56 +378,15 @@ def cdna(
     ASSEMBLY will be included in the metadata
     """
 
-    # Set logging up
-    set_logger(log)
-
-    # Validate adaptor sequences
-    validate_adaptor(adaptor_5)
-    validate_adaptor(adaptor_3)
-
-    # Load targeton configurations
-    try:
-        targetons = CDNATargetonConfigCollection.load(oligo_info)
-    except ValueError as ex:
-        exit_on_critical_exception(ex, "Failed to load cDNA targeton file!")
-
-    # Load cDNA sequences
-    try:
-        seq_repo = CDNASequenceRepository.load(
-            targetons.sequence_ids, ref_fasta, annot_fp=annot)
-    except SequenceNotFound:
-        sys.exit(1)
-    except ValueError as ex:
-        exit_on_critical_exception(ex, "Failed to load cDNA annotation file!")
-
-    # Get auxiliary tables
-    aux: AuxiliaryTables = get_auxiliary_tables(
-        targetons, load_codon_table(codon_table))
-
-    # Long oligonucleotides counter
-    long_oligo_n: int = 0
-
-    get_cdna_f = partial(get_cdna, seq_repo)
-    process_targeton_f = partial(
-        process_targeton,
-        species,
-        assembly,
-        aux,
-        adaptor_5,
-        adaptor_3,
-        get_cdna_f,
-        max_length,
-        output)
-
-    for targeton_cfg in targetons.cts:
-        try:
-            long_oligo_n += process_targeton_f(targeton_cfg).long_oligo_n
-
-        except ValueError as ex:
-            exit_on_critical_exception(ex, "Failed to generate oligonucleotides!")
-
-    # Log number of oligonucleotides discarded due to excessive length
-    if long_oligo_n:
-        logging.warning(
-            "%d oligonucleotides longer than %d bases were discarded!" %
-            (long_oligo_n, max_length))
+    run_cdna(CDNAConfig(
+        species=species,
+        assembly=assembly,
+        adaptor_5=adaptor_5,
+        adaptor_3=adaptor_3,
+        min_length=min_length,
+        max_length=max_length,
+        codon_table_fp=codon_table_fp,
+        oligo_info_fp=oligo_info_fp,
+        ref_fasta_fp=ref_fasta_fp,
+        output_dir=output_dir,
+        annot_fp=annot_fp))

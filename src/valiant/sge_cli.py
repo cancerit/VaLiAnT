@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,23 +23,27 @@ import sys
 from typing import Dict, Iterable, List, Optional, FrozenSet, Set, Tuple
 import click
 from pyranges import PyRanges
+
 from .enums import TargetonMutator
 from .models.base import GenomicRange
 from .models.codon_table import CodonTable
+from .models.sge_config import SGEConfig
 from .models.exon import AnnotationRepository, CDSContextRepository, GenomicRangePair, TranscriptInfo
 from .models.metadata_table import MetadataTable
 from .models.oligo_generation_info import OligoGenerationInfo
-from .models.oligo_template import InvariantOligoSegment, OligoSegment, OligoTemplate, TargetonOligoSegment
+from .models.oligo_segment import InvariantOligoSegment, OligoSegment, TargetonOligoSegment
+from .models.oligo_template import OligoTemplate
 from .models.options import Options
 from .models.pam_protection import compute_pam_protected_sequence, PamProtectedReferenceSequence, PamProtectionVariantRepository, PamVariant
 from .models.refseq_ranges import genomic_ranges_to_pyranges, ReferenceSequenceRangeCollection, ReferenceSequenceRanges, TargetReferenceRegion
 from .models.refseq_repository import fetch_reference_sequences, ReferenceSequenceRepository
 from .models.sequences import ReferenceSequence
 from .models.snv_table import AuxiliaryTables
-from .models.targeton import BaseTargeton, CDSTargeton, Targeton
+from .models.stats import Stats
+from .models.targeton import ITargeton, PamProtCDSTargeton, PamProtTargeton
 from .models.variant import CustomVariant, VariantRepository
-from .common_cli import common_params, existing_file
-from .cli_utils import load_codon_table, validate_adaptor, set_logger
+from .common_cli import common_params, existing_file, finalise
+from .cli_utils import load_codon_table
 from .writers import write_reference_sequences
 
 
@@ -110,11 +114,29 @@ def get_oligo_template(
 
     # 2. Get constant regions
 
-    def get_constant_segment(gr: Optional[GenomicRange]) -> Optional[InvariantOligoSegment]:
-        return InvariantOligoSegment(pam_ref_seq.get_subsequence(gr)) if gr else None
+    def get_cds_targeton(
+        region_pam_seq: PamProtectedReferenceSequence,
+        exg_gr_pair: GenomicRangePair
+    ) -> PamProtCDSTargeton:
+        return PamProtCDSTargeton.from_pam_seq(
+            region_pam_seq,
+            get_cds_extension_sequence(exg_gr_pair[0]),
+            get_cds_extension_sequence(exg_gr_pair[1]))
 
-    const_region_1: Optional[InvariantOligoSegment] = get_constant_segment(rsr.const_region_1)
-    const_region_2: Optional[InvariantOligoSegment] = get_constant_segment(rsr.const_region_2)
+    def get_targeton(region_pam_seq: PamProtectedReferenceSequence) -> ITargeton:
+        if cds:
+            exg_gr_pair: Optional[GenomicRangePair] = cds.get_cds_extensions(
+                region_pam_seq.genomic_range)
+            if exg_gr_pair is not None:
+                return get_cds_targeton(region_pam_seq, exg_gr_pair)
+        return PamProtTargeton.from_pam_seq(region_pam_seq)
+
+    def get_constant_region_segment(gr: Optional[GenomicRange]) -> Optional[InvariantOligoSegment]:
+        return InvariantOligoSegment(
+            get_targeton(pam_ref_seq.get_subsequence(gr))) if gr else None
+
+    const_region_1: Optional[InvariantOligoSegment] = get_constant_region_segment(rsr.const_region_1)
+    const_region_2: Optional[InvariantOligoSegment] = get_constant_region_segment(rsr.const_region_2)
 
     # 3. Get potential target regions
 
@@ -128,28 +150,11 @@ def get_oligo_template(
 
         return sequence
 
-    def get_cds_targeton(
-        region_pam_seq: PamProtectedReferenceSequence,
-        exg_gr_pair: GenomicRangePair
-    ) -> CDSTargeton:
-        return CDSTargeton.from_pam_seq(
-            region_pam_seq,
-            get_cds_extension_sequence(exg_gr_pair[0]),
-            get_cds_extension_sequence(exg_gr_pair[1]))
-
-    def get_targeton(region_pam_seq: PamProtectedReferenceSequence) -> BaseTargeton:
-        if cds:
-            exg_gr_pair: Optional[GenomicRangePair] = cds.get_cds_extensions(
-                region_pam_seq.genomic_range)
-            if exg_gr_pair is not None:
-                return get_cds_targeton(region_pam_seq, exg_gr_pair)
-        return Targeton.from_pam_seq(region_pam_seq)
-
     def get_oligo_segment(trr: TargetReferenceRegion) -> OligoSegment:
         region_pam_seq = pam_ref_seq.get_subsequence(trr.genomic_range)
         return (
             TargetonOligoSegment(get_targeton(region_pam_seq), trr.mutators) if trr.mutators else
-            get_constant_segment(trr.genomic_range)
+            get_constant_region_segment(trr.genomic_range)
         )
 
     def get_transcript_info(genomic_ranges: Iterable[GenomicRange]) -> Optional[TranscriptInfo]:
@@ -175,6 +180,7 @@ def get_oligo_template(
         segment.genomic_range for segment in segments)
 
     return OligoTemplate(
+        rsr,
         transcript_info,
         pam_ref_seq,
         rsr.sgrna_ids,
@@ -331,6 +337,7 @@ def generate_oligos(output: str, ref_repository: ReferenceSequenceRepository, au
         species,
         assembly,
         ot.get_mutation_table(aux, options),
+        options.oligo_min_length,
         options.oligo_max_length)
 
     # Generate file name prefix
@@ -358,91 +365,32 @@ def generate_oligos(output: str, ref_repository: ReferenceSequenceRepository, au
     return metadata.get_info()
 
 
-@click.command()
-@common_params
-@click.option('--gff', type=existing_file, help="Annotation GFF file path")
-@click.option('--pam', type=existing_file, help="PAM protection VCF file path")
-@click.option('--vcf', type=existing_file, help="Custom variant VCF file path")
-@click.option(
-    '--sequences-only',
-    is_flag=True,
-    help="Fetch reference sequences and quit")
-@click.option(
-    '--revcomp-minus-strand',
-    is_flag=True,
-    help="Include reverse complement in oligonucleotide if reference is on minus strand")
-def sge(
-
-    # Input files
-    oligo_info: str,
-    ref_fasta: str,
-    codon_table: Optional[str],
-    gff: Optional[str],
-    pam: Optional[str],
-    vcf: Optional[str],
-
-    # Output directory
-    output: str,
-
-    # Metadata
-    species: str,
-    assembly: str,
-
-    # Adaptor sequences
-    adaptor_5: Optional[str],
-    adaptor_3: Optional[str],
-
-    # Actions
-    sequences_only: bool,
-    revcomp_minus_strand: bool,
-    max_length: int,
-
-    # Extra
-    log: str
-
-) -> None:
-    """
-    SGE oligonucleotide generation tool
-
-    \b
-    OLIGO_INFO is the BED-like input file path
-    REF_FASTA is the reference genome FASTA file path
-    OUTPUT is the output directory path
-    SPECIES will be included in the metadata
-    ASSEMBLY will be included in the metadata
-    """
-
-    options: Options = Options(revcomp_minus_strand, max_length)
-
-    # Set logging up
-    set_logger(log)
-
-    # Validate adaptor sequences
-    validate_adaptor(adaptor_5)
-    validate_adaptor(adaptor_3)
+def run_sge(config: SGEConfig, sequences_only: bool) -> None:
+    options = config.get_options()
 
     # Load codon table
-    ct: CodonTable = load_codon_table(codon_table)
+    ct: CodonTable = load_codon_table(config.codon_table_fp)
 
     # Load CDS, stop codon, and UTR features from GTF/GFF2 file (if any)
-    annotation: Optional[AnnotationRepository] = _load_gff_file(gff)
-    exons: Optional[CDSContextRepository] = annotation.cds if annotation else None
+    annotation: Optional[AnnotationRepository] = _load_gff_file(config.gff_fp)
+    is_annotation_available: bool = annotation is not None
+    exons: Optional[CDSContextRepository] = annotation.cds if is_annotation_available else None
 
     # Load oligonucleotide templates
-    rsrs: ReferenceSequenceRangeCollection = _load_oligo_templates(oligo_info)
+    rsrs: ReferenceSequenceRangeCollection = _load_oligo_templates(config.oligo_info_fp)
 
     # Load PAM protection variants
-    pam_repository: PamProtectionVariantRepository = _load_pam_protection_vcf(rsrs.sgrna_ids, pam)
+    pam_repository: PamProtectionVariantRepository = _load_pam_protection_vcf(rsrs.sgrna_ids, config.pam_fp)
 
     # Collect all genomic ranges for which reference sequences have to be fetched
     ref_ranges = rsrs.ref_ranges
 
     # Load custom variants
     variant_repository: Optional[VariantRepository] = None
-    if vcf:
+    if config.vcf_fp:
         logging.debug("Loading custom variants...")
         try:
-            variant_repository = VariantRepository.load(vcf, rsrs._ref_ranges)
+            variant_repository = VariantRepository.load(config.vcf_fp, rsrs._ref_ranges)
         except ValueError as ex:
             logging.critical(ex.args[0])
             logging.critical("Failed to load custom variants!")
@@ -482,7 +430,7 @@ def sge(
 
     # Fetch reference sequences
     try:
-        ref: ReferenceSequenceRepository = fetch_reference_sequences(ref_fasta, ref_ranges)
+        ref: ReferenceSequenceRepository = fetch_reference_sequences(config.ref_fasta_fp, ref_ranges)
     except ValueError as ex:
         logging.critical(ex.args[0])
         logging.critical("Failed to retrieve reference sequences!")
@@ -495,35 +443,104 @@ def sge(
         pam_repository,
         variant_repository,
         annotation,
-        adaptor_5=adaptor_5,
-        adaptor_3=adaptor_3)
+        adaptor_5=config.adaptor_5,
+        adaptor_3=config.adaptor_3)
 
     def get_qc_row(ot: OligoTemplate) -> List[str]:
         return get_oligo_template_qc_info(ref, ot)
 
     write_reference_sequences(
         map(get_qc_row, oligo_templates),
-        os.path.join(output, "ref_sequences.csv"))
+        os.path.join(config.output_dir, "ref_sequences.csv"))
 
     if sequences_only:
         sys.exit(0)
 
-    # Long oligonucleotides counter
-    long_oligo_n: int = 0
-
+    stats = Stats()
+    info: OligoGenerationInfo
     for ot in oligo_templates:
         try:
+
             # Generate all oligonucleotides and write to file
-            info = generate_oligos(output, ref, aux, ot, species, assembly, options)
+            info = generate_oligos(
+                config.output_dir, ref, aux, ot, config.species, config.assembly, options)
+
         except ValueError as ex:
             logging.critical(ex.args[0])
             logging.critical("Failed to generate oligonucleotides!")
             sys.exit(1)
 
-        long_oligo_n += info.long_oligo_n
+        stats.update(info)
 
-    # Log number of oligonucleotides discarded due to excessive length
-    if long_oligo_n:
-        logging.warning(
-            "%d oligonucleotides longer than %d bases were discarded!" %
-            (long_oligo_n, options.oligo_max_length))
+    finalise(config, stats)
+
+
+@click.command()
+@common_params
+@click.option('--gff', 'gff_fp', type=existing_file, help="Annotation GFF file path")
+@click.option('--pam', 'pam_fp', type=existing_file, help="PAM protection VCF file path")
+@click.option('--vcf', 'vcf_fp', type=existing_file, help="Custom variant VCF manifest file path")
+@click.option(
+    '--sequences-only',
+    is_flag=True,
+    help="Fetch reference sequences and quit")
+@click.option(
+    '--revcomp-minus-strand',
+    is_flag=True,
+    help="Include reverse complement in oligonucleotide if reference is on minus strand")
+def sge(
+
+    # Input files
+    oligo_info_fp: str,
+    ref_fasta_fp: str,
+    codon_table_fp: Optional[str],
+    gff_fp: Optional[str],
+    pam_fp: Optional[str],
+    vcf_fp: Optional[str],
+
+    # Output directory
+    output_dir: str,
+
+    # Metadata
+    species: str,
+    assembly: str,
+
+    # Adaptor sequences
+    adaptor_5: Optional[str],
+    adaptor_3: Optional[str],
+
+    # Actions
+    sequences_only: bool,
+    revcomp_minus_strand: bool,
+    max_length: int,
+    min_length: int
+
+) -> None:
+    """
+    SGE oligonucleotide generation tool
+
+    \b
+    OLIGO_INFO is the BED-like input file path
+    REF_FASTA is the reference genome FASTA file path
+    OUTPUT is the output directory path
+    SPECIES will be included in the metadata
+    ASSEMBLY will be included in the metadata
+    """
+
+    run_sge(
+        SGEConfig(
+            species=species,
+            assembly=assembly,
+            adaptor_5=adaptor_5,
+            adaptor_3=adaptor_3,
+            min_length=min_length,
+            max_length=max_length,
+            codon_table_fp=codon_table_fp,
+            oligo_info_fp=oligo_info_fp,
+            ref_fasta_fp=ref_fasta_fp,
+            output_dir=output_dir,
+            revcomp_minus_strand=revcomp_minus_strand,
+            gff_fp=gff_fp,
+            pam_fp=pam_fp,
+            vcf_fp=vcf_fp),
+        sequences_only)

@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020-2021 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -43,11 +43,16 @@ def get_dummy_pam_protected(seq):
     return DUMMY_PAM_PROTECTION_NT * len(seq)
 
 
+def get_no_op_pam_protected_sequence(seq, genomic_range):
+    return PamProtectedReferenceSequence.from_reference_sequence(
+        ReferenceSequence(seq, genomic_range), [])
+
+
+# TODO: make it valid (no same-codon PAM protection)?
 def get_pam_protected_sequence(seq, pam_protection, chromosome='X', strand='+', pos=1):
     gr = GenomicRange(chromosome, pos, len(seq), strand)
-    ref_seq = ReferenceSequence(seq, gr)
-    return PamProtectedReferenceSequence.from_reference_sequence(
-        ref_seq, get_dummy_pam_protected(seq) if pam_protection else seq)
+    pam_seq = get_dummy_pam_protected(seq) if pam_protection else seq
+    return PamProtectedReferenceSequence(seq, gr, pam_seq, [])
 
 
 def get_targeton(seq, pam_protection, chromosome='X', strand='+', pos=1):
