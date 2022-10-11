@@ -259,9 +259,6 @@ class OligoTemplate:
         # Targetons will be extracted as they are from single-targeton groups
         return list(map(PamProtCDSTargeton.concat, grouped_targetons))
 
-    def _get_targeton_ranges(targetons: List[ITargeton]) -> List[Tuple[int, int]]:
-        return [t.pos_range.to_tuple() for t in targetons]
-
     def _get_custom_variant_sgrna_ids(self, variant: CustomVariant) -> FrozenSet[str]:
         spr = variant.get_ref_range(self.strand)
         return frozenset().union(*[
