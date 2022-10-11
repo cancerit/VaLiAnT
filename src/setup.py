@@ -29,7 +29,7 @@ config = {
     'author': 'Luca Barbon',
     'author_email': 'cgphelp@sanger.ac.uk',
     'version': VERSION,
-    'python_requires': '>= 3.7',
+    'python_requires': '>=3.7,<=3.9',
     'install_requires': [
         'chardet',
         'click',
