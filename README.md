@@ -30,6 +30,10 @@ Please also see the [VaLiAnT Wiki](https://github.com/cancerit/VaLiAnT/wiki) for
     - [Python virtual environment](#python-virtual-environment)
     - [Docker image](#docker-image-1)
   - [File formats](#file-formats)
+    - [Configuration file](#configuration-file)
+      - [Common parameters](#common-parameters)
+      - [SGE parameters](#sge-parameters)
+      - [cDNA parameters](#cdna-parameters)
     - [SGE targeton file](#sge-targeton-file)
     - [cDNA targeton file](#cdna-targeton-file)
     - [cDNA annotation file](#cdna-annotation-file)
@@ -52,6 +56,10 @@ Input parameters:
 - assembly
 - 5' adaptor (optional)
 - 3' adaptor (optional)
+
+Main command input files:
+
+- [configuration file](#configuration-file) (JSON)
 
 SGE input files:
 
@@ -77,6 +85,7 @@ Output files:
 - [oligonucleotide metadata file](#oligonucleotide-metadata-file) (CSV)
 - [variant file](#variant-file) (VCF, SGE-only)
 - [unique oligonucleotides file](#unique-oligonucleotides-file) (CSV)
+- [configuration file](#configuration-file) (JSON)
 
 The reference directory should contain both the FASTA file and its index; *e.g.*, if the FASTA file is named `genome.fa`, a `genome.fa.fai` file should also be present in the same directory. When running the tool in a container, the directory containing both files should therefore be mounted.
 
@@ -102,6 +111,12 @@ valiant sge \
     --gff "${GTF_FILE}" \
     --adaptor-5 "${ADAPTOR_5}" \
     --adaptor-3 "${ADAPTOR_3}"
+```
+
+Alternatively, a [configuration file](#configuration-file) can be provided to the main command:
+
+```sh
+valiant -c config.json
 ```
 
 ### Docker image
@@ -165,6 +180,7 @@ Main command.
 |Option|Format|Default|Description|
 |-|-|-|-|
 |`version`|flag|`false`|Show the version of the tool and quit.|
+|`config`|file path|-|Path to the [configuration file](#configuration-file).|
 
 ### valiant (sge|cdna)
 
@@ -461,7 +477,7 @@ Please take care to read errors during the dependency installation step carefull
 
 Requirements:
 
-- Python 3.7+
+- Python 3.7, 3.8, or 3.9
 
 To install in a virtual environment:
 
@@ -473,7 +489,7 @@ python3.7 -m venv .env
 source .env/bin/activate
 
 # Install the dependencies
-pip install cython==0.29.22
+pip install cython==0.29.30
 pip install -r src/requirements.txt
 
 # Install the valiant package
@@ -489,6 +505,102 @@ docker build -t valiant .
 ```
 
 ## File formats
+
+### Configuration file
+
+JSON file collecting the execution parameters.
+
+|Property|Format|Description|
+|-|-|-|
+|`appName`|`valiant`|Name of the application (constant).|
+|`appVersion`|`x.y.z`|Version of the application.|
+|`mode`|`sge`\|`cdna`|Execution mode.|
+|`params`|`object`|Execution parameters.|
+
+The execution parameters depend on the execution mode, and each corresponds to one of the command line arguments or options.
+
+#### Common parameters
+
+|CLI argument|JSON property|
+|-|-|
+|`oligo_info_fp`|`oligoInfoFilePath`|
+|`ref_fasta_fp`|`refFASTAFilePath`|
+|`output_dir`|`outputDirPath`|
+|`species`|`species`|
+|`assembly`|`assembly`|
+
+|CLI option|JSON property|
+|-|-|
+|`adaptor_5`|`adaptor5`|
+|`adaptor_3`|`adaptor3`|
+|`min_length`|`minOligoLength`|
+|`max_length`|`maxOligoLength`|
+|`codon_table_fp`|`codonTableFilePath`|
+
+
+#### SGE parameters
+
+|CLI option|JSON property|
+|-|-|
+|`revcomp_minus_strand`|`reverseComplementOnMinusStrand`|
+|`gff_fp`|`GFFFilePath`|
+|`pam_fp`|`PAMProtectionVCFFilePath`|
+|`vcf_fp`|`customVCFManifestFilePath`|
+
+Example:
+
+```json
+{
+    "appName": "valiant",
+    "appVersion": "3.0.0",
+    "mode": "sge",
+    "params": {
+        "species": "homo sapiens",
+        "assembly": "GRCh38",
+        "adaptor5": "AATGATACGGCGACCACCGA",
+        "adaptor3": "TCGTATGCCGTCTTCTGCTTG",
+        "minOligoLength": 1,
+        "maxOligoLength": 300,
+        "codonTableFilePath": null,
+        "oligoInfoFilePath": "parameter_input_files/brca1_nuc_targeton_input.txt",
+        "refFASTAFilePath": "reference_input_files/chr17.fa",
+        "outputDirPath": "brca1_nuc_output",
+        "reverseComplementOnMinusStrand": true,
+        "GFFFilePath": "reference_input_files/ENST00000357654.9.gtf",
+        "PAMProtectionVCFFilePath": "parameter_input_files/brca1_protection_edits.vcf",
+        "customVCFManifestFilePath": "reference_input_files/brca1_custom_variants_manifest.csv"
+    }
+}
+```
+
+#### cDNA parameters
+
+|CLI option|JSON property|
+|-|-|
+|`annot_fp`|`annotationFilePath`|
+
+Example:
+
+```json
+{
+    "appName": "valiant",
+    "appVersion": "3.0.0",
+    "mode": "cdna",
+    "params": {
+        "species": "human",
+        "assembly": "pCW57.1",
+        "adaptor5": "AATGATACGGCGACCACCGA",
+        "adaptor3": "TCGTATGCCGTCTTCTGCTTG",
+        "minOligoLength": 1,
+        "maxOligoLength": 300,
+        "codonTableFilePath": null,
+        "oligoInfoFilePath": "examples/cdna/input/cdna_targeton.tsv",
+        "refFASTAFilePath": "examples/cdna/input/BRCA1_NP_009225_1_pCW57_1.fa",
+        "outputDirPath": "examples/cdna/output",
+        "annotationFilePath": "examples/cdna/input/cdna_annot.tsv"
+    }
+}
+```
 
 ### SGE targeton file
 
@@ -635,7 +747,7 @@ Array fields use the semicolon as separator.
 |`mseq`|DNA sequence|Full oligonucleotide sequence (with adaptors, if any).|
 |`mseq_no_adapt`|DNA sequence|Oligonucleotide sequence excluding adaptors.|
 |`pam_mut_annot`|Array of `syn`\|`mis`\|`non`\|`ncd`|Applied PAM protection variant [mutation types](#mutation-types) (or `ncd` if affecting a noncoding region).|
-|`pam_mut_sgrna_id`|Array of sgRNA ID's|sgRNA ID's bound to the PAM protection variants affecting the same codons as the mutation, if any (CDS only).|
+|`pam_mut_sgrna_id`|Array of sgRNA ID's|sgRNA ID's bound to the PAM protection variants spanned by the mutation or affecting the same codons as the mutation, if any.|
 |`mave_nt`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation.|
 |`mave_nt_ref`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation, where `REF` does not include PAM protection.|
 |`vcf_var_in_const`|0\|1|Whether the variant is in a region defined as constant (custom mutations only).|
@@ -643,14 +755,13 @@ Array fields use the semicolon as separator.
 Example:
 
 ```
-oligo_name,species,assembly,gene_id,transcript_id,src_type,ref_chr,ref_strand,ref_start,ref_end,revc,ref_seq,pam_seq,vcf_alias,vcf_var_id,mut_position,ref,new,ref_aa,alt_aa,mut_type,mutator,oligo_length,mseq
-ENST00000357654.9.ENSG00000012048.23_chr17:43104121_1del_rc,homo sapiens,GRCh38,ENSG00000012048.23,ENST00000357654.9,ref,chr17,-,43104080,43104330,1,AGAAAAGAAGAAGAAGAAGAAGAAGAAAACAAATGGTTTTACCAAGGAAGGATTTTCGGGTTCACTCTGTAGAAGTCTTTTGGCACGGTTTCTGTAGCCCATACTTTGGATGATAGAAACTTCATCTTTTAGATGTTCAGGAGAGTTATTTTCCTTTTTTGCAAAATTATAGCTGTTTGCATCTGTAAAATACAAGGGAAAACATTATGTTTGCAGTTAGAGAAAAATGTATGAATTATAATCAAAGAAAC,AGAAAAGAAGAAGAAGAAGAAGAAGAAAACAAATGGTTTTACCAAGGAAGGATTTTCGGGTTCACTCTGTAGAAGTCTTTTGGCGCGATTTCTGTAGCCCATACTTTGGATGATAGAAACTTCATCTTTTAGATGTTCAGGAGAGTTATTTTCCTTTTTTGCAAAATTATAGCTGTTTGCATCTGTAAAATACAAGGGAAAACATTATGTTTGCAGTTAGAGAAAAATGTATGAATTATAATCAAAGAAAC,,,43104121,C,,,,,1del,291,AATGATACGGCGACCACCGAGTTTCTTTGATTATAATTCATACATTTTTCTCTAACTGCAAACATAATGTTTTCCCTTGTATTTTACAGATGCAAACAGCTATAATTTTGCAAAAAAGGAAAATAACTCTCCTGAACATCTAAAAGATGAAGTTTCTATCATCCAAAGTATGGGCTACAGAAATCGCGCCAAAAGACTTCTACAGAGTGAACCCGAAAATCCTTCCTTGTAAAACCATTTGTTTTCTTCTTCTTCTTCTTCTTCTTTTCTTCGTATGCCGTCTTCTGCTTG
-ENST00000357654.9.ENSG00000012048.23_chr17:43104102_A>T_snv_rc,homo sapiens,GRCh38,ENSG00000012048.23,ENST00000357654.9,ref,chr17,-,43104080,43104330,1,AGAAAAGAAGAAGAAGAAGAAGAAGAAAACAAATGGTTTTACCAAGGAAGGATTTTCGGGTTCACTCTGTAGAAGTCTTTTGGCACGGTTTCTGTAGCCCATACTTTGGATGATAGAAACTTCATCTTTTAGATGTTCAGGAGAGTTATTTTCCTTTTTTGCAAAATTATAGCTGTTTGCATCTGTAAAATACAAGGGAAAACATTATGTTTGCAGTTAGAGAAAAATGTATGAATTATAATCAAAGAAAC,AGAAAAGAAGAAGAAGAAGAAGAAGAAAACAAATGGTTTTACCAAGGAAGGATTTTCGGGTTCACTCTGTAGAAGTCTTTTGGCGCGATTTCTGTAGCCCATACTTTGGATGATAGAAACTTCATCTTTTAGATGTTCAGGAGAGTTATTTTCCTTTTTTGCAAAATTATAGCTGTTTGCATCTGTAAAATACAAGGGAAAACATTATGTTTGCAGTTAGAGAAAAATGTATGAATTATAATCAAAGAAAC,,,43104102,A,T,,,,snv,292,AATGATACGGCGACCACCGAGTTTCTTTGATTATAATTCATACATTTTTCTCTAACTGCAAACATAATGTTTTCCCTTGTATTTTACAGATGCAAACAGCTATAATTTTGCAAAAAAGGAAAATAACTCTCCTGAACATCTAAAAGATGAAGTTTCTATCATCCAAAGTATGGGCTACAGAAATCGCGCCAAAAGACTTCTACAGAGTGAACCCGAAAATCCTTCCTTGGTAAAACCATTTGTTTTCTACTTCTTCTTCTTCTTCTTTTCTTCGTATGCCGTCTTCTGCTTG
+oligo_name,species,assembly,gene_id,transcript_id,src_type,ref_chr,ref_strand,ref_start,ref_end,revc,ref_seq,pam_seq,vcf_alias,vcf_var_id,mut_position,ref,new,ref_aa,alt_aa,mut_type,mutator,oligo_length,mseq,mseq_no_adapt,pam_mut_annot,pam_mut_sgrna_id,mave_nt,mave_nt_ref,vcf_var_in_const
+ENST00000357654.9.ENSG00000012048.23_chr17:43104102_A>T_snv_rc,homo sapiens,GRCh38,ENSG00000012048.23,ENST00000357654.9,ref,chr17,-,43104080,43104330,1,AGAAAAGAAGAAGAAGAAGAAGAAGAAAACAAATGGTTTTACCAAGGAAGGATTTTCGGGTTCACTCTGTAGAAGTCTTTTGGCACGGTTTCTGTAGCCCATACTTTGGATGATAGAAACTTCATCTTTTAGATGTTCAGGAGAGTTATTTTCCTTTTTTGCAAAATTATAGCTGTTTGCATCTGTAAAATACAAGGGAAAACATTATGTTTGCAGTTAGAGAAAAATGTATGAATTATAATCAAAGAAAC,AGAAAAGAAGAAGAAGAAGAAGAAGAAAACAAATGGTTTTACCAAGGAAGGATTTTCGGGTTCACTCTGTAGAAGTCTTTTGGCGCGATTTCTGTAGCCCATACTTTGGATGATAGAAACTTCATCTTTTAGATGTTCAGGAGAGTTATTTTCCTTTTTTGCAAAATTATAGCTGTTTGCATCTGTAAAATACAAGGGAAAACATTATGTTTGCAGTTAGAGAAAAATGTATGAATTATAATCAAAGAAAC,,,43104102,A,T,,,,snv,292,AATGATACGGCGACCACCGAGTTTCTTTGATTATAATTCATACATTTTTCTCTAACTGCAAACATAATGTTTTCCCTTGTATTTTACAGATGCAAACAGCTATAATTTTGCAAAAAAGGAAAATAACTCTCCTGAACATCTAAAAGATGAAGTTTCTATCATCCAAAGTATGGGCTACAGAAATCGCGCCAAAAGACTTCTACAGAGTGAACCCGAAAATCCTTCCTTGGTAAAACCATTTGTTTTCTACTTCTTCTTCTTCTTCTTTTCTTCGTATGCCGTCTTCTGCTTG,GTTTCTTTGATTATAATTCATACATTTTTCTCTAACTGCAAACATAATGTTTTCCCTTGTATTTTACAGATGCAAACAGCTATAATTTTGCAAAAAAGGAAAATAACTCTCCTGAACATCTAAAAGATGAAGTTTCTATCATCCAAAGTATGGGCTACAGAAATCGCGCCAAAAGACTTCTACAGAGTGAACCCGAAAATCCTTCCTTGGTAAAACCATTTGTTTTCTACTTCTTCTTCTTCTTCTTTTCT,syn;syn,,g.23A>T,g.23A>T,0
 ```
 
 ### Variant file
 
-VCF file containing a subset of the metadata in VCF format. The metadata are stored in the `INFO` field. The `REF` field reports the reference sequence including PAM protection edits.
+VCF files containing a subset of the metadata in VCF format. The metadata are stored in the `INFO` field. The `REF` field reports the reference sequence including (`*_pam.vcf`) or excluding (`*_ref.vcf`) PAM protection edits.
 
 The variants can be linked to the corresponding oligonucleotides via the `SGE_OLIGO` tag, and, for custom variants, to the original VCF files via the `SGE_VCF_ALIAS` and `SGE_VCF_VAR_ID` tags.
 
@@ -660,7 +771,7 @@ The variants can be linked to the corresponding oligonucleotides via the `SGE_OL
 |-|-|-|
 |`SGE_OLIGO`|`oligo_name`|Corresponding oligonucleotide name.|
 |`SGE_SRC`|`mutator`|Variant source.|
-|`SGE_REF`|`ref`|(Optional) Reference sequence, only if different from the PAM-protected reference sequence.|
+|`SGE_REF`|`ref`|(Optional) Reference sequence, if different from the PAM-protected reference sequence (PAM VCF only).|
 |`SGE_VCF_ALIAS`|`vcf_alias`|(Optional) VCF variant identifier, only for `custom` variants.|
 |`SGE_VCF_VAR_ID`|`vcf_var_id`|(Optional) VCF variant source file alias, only for `custom` variants.|
 
