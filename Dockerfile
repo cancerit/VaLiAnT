@@ -1,6 +1,6 @@
 FROM python:3.9-slim as builder
 
-ENV CYTHON_VERSION 0.29.22
+ENV CYTHON_VERSION 0.29.30
 
 # Install build dependencies
 RUN apt-get update && \
