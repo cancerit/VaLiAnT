@@ -508,7 +508,11 @@ docker build -t valiant .
 
 ### Configuration file
 
-JSON file collecting the execution parameters.
+JSON file collecting the execution parameters. It is always generated as an output (`config.json`) and can optionally be used as input by the main command, *e.g.*:
+
+```sh
+valiant -c config.json
+```
 
 |Property|Format|Description|
 |-|-|-|
@@ -516,6 +520,8 @@ JSON file collecting the execution parameters.
 |`appVersion`|`x.y.z`|Version of the application.|
 |`mode`|`sge`\|`cdna`|Execution mode.|
 |`params`|`object`|Execution parameters.|
+
+An application version mismatch will result in a warning.
 
 The execution parameters depend on the execution mode, and each corresponds to one of the command line arguments or options.
 
