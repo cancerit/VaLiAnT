@@ -531,21 +531,21 @@ The execution parameters depend on the execution mode, and each corresponds to o
 
 |CLI option|JSON property|
 |-|-|
-|`adaptor_5`|`adaptor5`|
-|`adaptor_3`|`adaptor3`|
-|`min_length`|`minOligoLength`|
-|`max_length`|`maxOligoLength`|
-|`codon_table_fp`|`codonTableFilePath`|
+|`adaptor-5`|`adaptor5`|
+|`adaptor-3`|`adaptor3`|
+|`min-length`|`minOligoLength`|
+|`max-length`|`maxOligoLength`|
+|`codon-table`|`codonTableFilePath`|
 
 
 #### SGE parameters
 
 |CLI option|JSON property|
 |-|-|
-|`revcomp_minus_strand`|`reverseComplementOnMinusStrand`|
-|`gff_fp`|`GFFFilePath`|
-|`pam_fp`|`PAMProtectionVCFFilePath`|
-|`vcf_fp`|`customVCFManifestFilePath`|
+|`revcomp-minus-strand`|`reverseComplementOnMinusStrand`|
+|`gff`|`GFFFilePath`|
+|`pam`|`PAMProtectionVCFFilePath`|
+|`vcf`|`customVCFManifestFilePath`|
 
 Example:
 
@@ -577,7 +577,7 @@ Example:
 
 |CLI option|JSON property|
 |-|-|
-|`annot_fp`|`annotationFilePath`|
+|`annot`|`annotationFilePath`|
 
 Example:
 
