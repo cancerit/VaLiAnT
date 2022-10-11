@@ -19,7 +19,7 @@
 import logging
 import sys
 from valiant.models.base import GenomicRange
-from valiant.models.refseq_repository import ReferenceSequenceRepository, fetch_reference_sequences, get_fasta_file
+from valiant.models.refseq_repository import ReferenceSequenceRepository, get_fasta_file
 
 
 def test_reference_sequence_retrieval(ref_fp):
@@ -69,7 +69,7 @@ def test_reference_subsequence(ref_fp):
     print(seq)
     print(pre)
     print(len(pre))
-    assert pre == seq[:offset]
+    assert pre == seq[:offset + 1]
 
 
 if __name__ == '__main__':
