@@ -341,7 +341,7 @@ class OligoTemplate:
     def get_mutation_table(self, aux: AuxiliaryTables, options: Options) -> pd.DataFrame:
 
         # Compute mutations per region
-        region_mutations: pd.DataFrame = pd.concat([
+        region_mutations: Optional[pd.DataFrame] = pd.concat([
             pd.concat([
                 self._get_mutation_collection(
                     i, segment, mutator, mutation_collection).get_metadata_table(options)
@@ -349,16 +349,26 @@ class OligoTemplate:
                     aux, sgrna_ids=self.sgrna_ids).items()
             ])
             for i, segment in self.target_segments
-        ], ignore_index=True) if self.target_segments else get_empty_mutation_table()
+        ], ignore_index=True) if self.target_segments else None
 
         # Compute global mutations (custom variants)
         if self.custom_variants:
             global_mutations: pd.DataFrame = self._get_custom_variant_collection(options)
             if global_mutations.shape[0] != len(self.custom_variants):
                 raise RuntimeError("Unexpected number of custom variants!")
-            all_mutations = pd.concat([region_mutations, global_mutations])
+
+            # Concatenate to region mutations, if any
+            all_mutations = (
+                pd.concat([
+                    region_mutations,
+                    global_mutations
+                ]) if region_mutations is not None else
+                global_mutations
+            )
+
         else:
-            all_mutations = region_mutations
+            # BEWARE: if empty, the table won't have the expected dtypes
+            all_mutations = region_mutations or get_empty_mutation_table()
 
         # Decode mutation type
         if 'mut_type' in all_mutations.columns:
