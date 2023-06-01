@@ -339,8 +339,6 @@ class OligoTemplate:
         return get_constant_category(s, n, categories=[s])
 
     def get_mutation_table(self, aux: AuxiliaryTables, options: Options) -> pd.DataFrame:
-        if not self.target_segments:
-            return get_empty_mutation_table()
 
         # Compute mutations per region
         region_mutations: pd.DataFrame = pd.concat([
@@ -351,7 +349,7 @@ class OligoTemplate:
                     aux, sgrna_ids=self.sgrna_ids).items()
             ])
             for i, segment in self.target_segments
-        ], ignore_index=True)
+        ], ignore_index=True) if self.target_segments else get_empty_mutation_table()
 
         # Compute global mutations (custom variants)
         if self.custom_variants:
