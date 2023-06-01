@@ -293,9 +293,6 @@ def set_pam_extended_ref_alt(
     # Initialise required new fields
     _init_pam_extended_required_fields(all_mutations)
 
-    if not pam_prot_cds_targetons:
-        logging.debug("No PAM-protected CDS targetons.")
-        return
 
     # Filter for mutations that overlap at least one PAM-protected codon
     pam_codon_mask: pd.Series = all_mutations[META_PAM_MUT_SGRNA_ID].str.len() > 0
