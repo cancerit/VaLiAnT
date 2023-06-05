@@ -570,9 +570,13 @@ class VCFRecordParams:
     @classmethod
     def from_meta(cls, pam_mode: bool, meta: namedtuple) -> VCFRecordParams:
         f = (
-            cls.from_meta_pam_ext if meta.pam_codon_mask else
+            cls.from_meta_pam_ext if (
+                pam_mode
+                and meta.pam_codon_mask
+                and meta.pam_mut_start is not None
+            ) else
             cls.from_meta_no_pam
-        ) if pam_mode else cls.from_meta_no_pam
+        )
         return f(meta)
 
     @classmethod
