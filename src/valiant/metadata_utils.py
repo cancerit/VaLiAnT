@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -35,6 +35,10 @@ def is_metadata_row_cds(r: pd.Series) -> bool:
     return META_CDS_PROBE_FIELD in r and not pd.isna(r[META_CDS_PROBE_FIELD])
 
 
+def nullable_str(x: str) -> Optional[str]:
+    return x if pd.notnull(x) and x != '' else None
+
+
 def _get_mave_nt_from_row(r: pd.Series, ref_start_field: str, ref_field: str, alt_field: str) -> str:
     """Generate MAVE-HGVS string with targeton-relative position"""
 
@@ -42,8 +46,8 @@ def _get_mave_nt_from_row(r: pd.Series, ref_start_field: str, ref_field: str, al
         MAVEPrefix.LINEAR_GENOMIC,
         r.var_type,
         r[ref_start_field] - r.ref_start + 1,
-        r[ref_field],
-        r[alt_field])
+        nullable_str(r[ref_field]),
+        nullable_str(r[alt_field]))
 
 
 def get_mave_nt_from_row(r: pd.Series) -> str:
