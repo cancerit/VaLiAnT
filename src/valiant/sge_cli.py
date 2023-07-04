@@ -333,12 +333,14 @@ def get_oligo_template_qc_info(
 def generate_oligos(output: str, ref_repository: ReferenceSequenceRepository, aux: AuxiliaryTables, ot: OligoTemplate, species: str, assembly: str, options: Options) -> OligoGenerationInfo:
 
     # Generate metadata table
+    mutation_df = ot.get_mutation_table(aux, options)
     metadata = MetadataTable.from_partial(
         species,
         assembly,
-        ot.get_mutation_table(aux, options),
+        mutation_df,
         options.oligo_min_length,
-        options.oligo_max_length)
+        options.oligo_max_length
+    ) if mutation_df is not None else MetadataTable.empty()
 
     # Generate file name prefix
     base_fn = (
