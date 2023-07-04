@@ -27,7 +27,7 @@ from ..metadata_utils import get_mave_nt_pam_from_row, get_mave_nt_ref_from_row,
 from .codon_table import CodonTable
 from .oligo_segment import OligoSegment, TargetonOligoSegment
 from .refseq_ranges import ReferenceSequenceRanges
-from .targeton import ITargeton, PamProtCDSTargeton
+from .targeton import PamProtCDSTargeton
 from .base import GenomicRange, TranscriptInfo
 from .custom_variants import CustomVariantMutation, CustomVariantMutationCollection, CustomVariantOligoRenderer
 from .mutated_sequences import MutationCollection
