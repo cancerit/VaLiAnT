@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -64,17 +64,6 @@ MUTATION_TYPE_LABELS: Dict[int, str] = {
 MUTATION_TYPE_CATEGORIES = sorted(MUTATION_TYPE_LABELS.values())
 MUTATION_TYPE_CATEGORIES_T = tuple(MUTATION_TYPE_CATEGORIES)
 
-EMPTY_MUTATION_TABLE_FIELDS = [
-    META_OLIGO_NAME,
-    META_VAR_TYPE,
-    META_MUT_POSITION,
-    META_REF,
-    META_NEW,
-    META_MUTATOR,
-    META_MSEQ,
-    META_OLIGO_LENGTH
-]
-
 
 def _decode_mut_type(x) -> str:
     return MUTATION_TYPE_LABELS[x] if not pd.isnull(x) else x
@@ -88,10 +77,6 @@ def decode_mut_types_cat(mut_type: pd.Series) -> pd.Categorical:
     return pd.Categorical(
         decode_mut_types(mut_type),
         categories=MUTATION_TYPE_CATEGORIES)
-
-
-def get_empty_mutation_table() -> pd.DataFrame:
-    return pd.DataFrame(columns=EMPTY_MUTATION_TABLE_FIELDS)
 
 
 def encode_pam_mutation_types(mutation_types: Iterable[Optional[MutationType]]) -> str:
@@ -338,7 +323,8 @@ class OligoTemplate:
         ]))
         return get_constant_category(s, n, categories=[s])
 
-    def get_mutation_table(self, aux: AuxiliaryTables, options: Options) -> pd.DataFrame:
+    def get_mutation_table(self, aux: AuxiliaryTables, options: Options) -> Optional[pd.DataFrame]:
+        all_mutations: Optional[pd.DataFrame]
 
         # Compute mutations per region
         region_mutations: Optional[pd.DataFrame] = pd.concat([
@@ -368,7 +354,10 @@ class OligoTemplate:
 
         else:
             # BEWARE: if empty, the table won't have the expected dtypes
-            all_mutations = region_mutations or get_empty_mutation_table()
+            all_mutations = region_mutations
+
+        if all_mutations is None or all_mutations.empty:
+            return None
 
         # Decode mutation type
         if 'mut_type' in all_mutations.columns:
