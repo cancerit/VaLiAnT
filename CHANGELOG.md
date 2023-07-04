@@ -9,6 +9,7 @@
 ### Fixed
 
 - Fix custom variants being ignored when no targeton region is set as mutable
+- Metadata table: fix MAVE-HGVS strings (`mave_nt` field) to correctly report as deletion-insertions those deletions that occur in codons affected by PAM protection edits where the edit itself is preserved
 
 ## [3.0.0] - 2022-10-11
 
