@@ -404,9 +404,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
     if exons:
 
-        # NEW >3.0.0: include constant regions to enable transcript information
-        # retrieval irrespective of the presence of mutators
-        exons.register_target_ranges(rsrs.region_ranges)
+        exons.register_target_ranges(rsrs.target_ranges)
 
         # Retrieve CDS context (if any) for target regions
         # Only exonic sequences will have a CDS context
