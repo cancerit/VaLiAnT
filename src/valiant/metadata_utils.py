@@ -325,8 +325,10 @@ def set_pam_extended_ref_alt(
         if targeton:
             df[META_PAM_MUT_START] = df[META_MUT_POSITION].apply(
                 lambda x: targeton.get_pam_ext_start(x)).astype(np.int32)
+        else:
+            df[META_PAM_MUT_START] = df[META_MUT_POSITION]
 
-            df[META_START_OFFSET] = df[META_PAM_MUT_START].sub(df[META_REF_START])
+        df[META_START_OFFSET] = df[META_PAM_MUT_START].sub(df[META_REF_START])
 
         return df
 
@@ -404,6 +406,7 @@ def set_pam_extended_ref_alt(
 
     # Add mask (to inform the MAVE-HGVS string creation)
     all_mutations.loc[pam_ext_mask, META_PAM_EXT_MASK] = 1
+
     # Fill NA's in mask for custom variants in constant regions
     all_mutations[META_VCF_VAR_IN_CONST] = (
         all_mutations[META_VCF_VAR_IN_CONST].fillna(0) if META_VCF_VAR_IN_CONST in all_mutations else
