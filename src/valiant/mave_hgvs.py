@@ -103,9 +103,6 @@ def _get_deletion_mave_nt_suffix(start: int, ref: Optional[str], alt: Optional[s
     if n == 0:
         _raise_invalid_deletion()
 
-    if is_delin:
-        print(_get_delin_mave_nt_suffix(start, ref_length, alt))
-
     return (
         _get_delin_mave_nt_suffix(start, ref_length, alt) if is_delin else
         _get_del_position(start, n) + 'del'
