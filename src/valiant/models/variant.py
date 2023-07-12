@@ -124,6 +124,20 @@ class BaseVariant:
             seq, self._get_relative_position(seq_start), ref_check=ref_check)
 
 
+def apply_variants(ref_seq: ReferenceSequence, variants: List[BaseVariant], ref_check: bool = False) -> str:
+    alt_seq: str = ref_seq.sequence
+
+    for variant in variants:
+
+        # Validate variant genomic position relative to the sequence's
+        offset: int = variant.get_ref_offset(ref_seq)
+
+        # Update altered sequence
+        alt_seq = variant.mutate_from(alt_seq, offset, ref_check=ref_check)
+
+    return alt_seq
+
+
 @dataclass(frozen=True)
 class SubstitutionVariant(BaseVariant):
     __slots__ = {'genomic_position', 'ref', 'alt'}

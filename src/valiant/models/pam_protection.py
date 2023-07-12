@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -26,21 +26,7 @@ from ..loaders.vcf import get_vcf
 from ..utils import get_id_column
 from .base import GenomicRange
 from .sequences import ReferenceSequence
-from .variant import BaseVariant, get_variant, SubstitutionVariant
-
-
-def apply_pam_variants(ref_seq: ReferenceSequence, pam_variants: List[PamVariant]) -> str:
-    pam_seq: str = ref_seq.sequence
-
-    for variant in pam_variants:
-
-        # Validate variant genomic position relative to the sequence's
-        offset: int = variant.get_ref_offset(ref_seq)
-
-        # Update PAM-protected sequence
-        pam_seq = variant.mutate_from(pam_seq, offset, ref_check=True)
-
-    return pam_seq
+from .variant import BaseVariant, get_variant, SubstitutionVariant, apply_variants
 
 
 @dataclass(frozen=True)
@@ -59,7 +45,8 @@ class PamProtectedReferenceSequence(ReferenceSequence):
     def from_reference_sequence(cls, ref_seq: ReferenceSequence, pam_variants_: Iterable[PamVariant]) -> PamProtectedReferenceSequence:
         pam_variants: List[PamVariant] = sorted(
             pam_variants_, key=lambda x: x.genomic_position.position)
-        pam_seq: str = apply_pam_variants(ref_seq, pam_variants)
+        # TODO: check the reference if no background variants are applied
+        pam_seq: str = apply_variants(ref_seq, pam_variants, ref_check=False)
 
         return cls(
             ref_seq.sequence,
