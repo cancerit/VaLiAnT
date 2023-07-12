@@ -2,13 +2,10 @@
 
 ## [UNRELEASED]
 
-### Changed
-
-- Allow transcript information to be extracted from the CDS annotation of constant regions as well
-
 ### Fixed
 
 - Fix custom variants being ignored when no targeton region is set as mutable
+- Fix error on mutations that end but do not start in codons affected by PAM protection edits
 - Metadata table: fix MAVE-HGVS strings (`mave_nt` field) to correctly report as deletion-insertions those deletions that occur in codons affected by PAM protection edits where the edit itself is preserved
 
 ## [3.0.0] - 2022-10-11
