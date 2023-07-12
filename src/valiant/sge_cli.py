@@ -367,6 +367,26 @@ def generate_oligos(output: str, ref_repository: ReferenceSequenceRepository, au
     return metadata.get_info()
 
 
+def load_variant_repository(vcf_fp: Optional[str], ref_ranges: PyRanges, label: str, from_manifest: bool = False) -> Optional[VariantRepository]:
+    if not vcf_fp:
+        return None
+
+    logging.debug(f"Loading {label} variants...")
+    try:
+        return (
+            VariantRepository.load if from_manifest else
+            VariantRepository.load_vcf
+        )(vcf_fp, ref_ranges)
+    except ValueError as ex:
+        logging.critical(ex.args[0])
+        logging.critical(f"Failed to load {label} variants!")
+        sys.exit(1)
+    except FileNotFoundError as ex:
+        logging.critical(ex.args[0])
+        logging.critical(f"Failed to load {label} variants!")
+        sys.exit(1)
+
+
 def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     options = config.get_options()
 
@@ -387,20 +407,24 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     # Collect all genomic ranges for which reference sequences have to be fetched
     ref_ranges = rsrs.ref_ranges
 
+    # Load background variants
+    background_variant_repository: Optional[VariantRepository] = (
+        load_variant_repository(
+            config.bg_fp,
+            rsrs._ref_ranges,
+            'background'
+        )
+    )
+
     # Load custom variants
-    variant_repository: Optional[VariantRepository] = None
-    if config.vcf_fp:
-        logging.debug("Loading custom variants...")
-        try:
-            variant_repository = VariantRepository.load(config.vcf_fp, rsrs._ref_ranges)
-        except ValueError as ex:
-            logging.critical(ex.args[0])
-            logging.critical("Failed to load custom variants!")
-            sys.exit(1)
-        except FileNotFoundError as ex:
-            logging.critical(ex.args[0])
-            logging.critical("Failed to load custom variants!")
-            sys.exit(1)
+    variant_repository: Optional[VariantRepository] = (
+        load_variant_repository(
+            config.vcf_fp,
+            rsrs._ref_ranges,
+            'custom',
+            from_manifest=True
+        )
+    )
 
     if exons:
 
@@ -481,6 +505,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 @click.command()
 @common_params
 @click.option('--gff', 'gff_fp', type=existing_file, help="Annotation GFF file path")
+@click.option('--bg', 'bg_fp', type=existing_file, help="Background variant VCF file path")
 @click.option('--pam', 'pam_fp', type=existing_file, help="PAM protection VCF file path")
 @click.option('--vcf', 'vcf_fp', type=existing_file, help="Custom variant VCF manifest file path")
 @click.option(
@@ -498,6 +523,7 @@ def sge(
     ref_fasta_fp: str,
     codon_table_fp: Optional[str],
     gff_fp: Optional[str],
+    bg_fp: Optional[str],
     pam_fp: Optional[str],
     vcf_fp: Optional[str],
 
@@ -544,6 +570,7 @@ def sge(
             output_dir=output_dir,
             revcomp_minus_strand=revcomp_minus_strand,
             gff_fp=gff_fp,
+            bg_fp=bg_fp,
             pam_fp=pam_fp,
             vcf_fp=vcf_fp),
         sequences_only)

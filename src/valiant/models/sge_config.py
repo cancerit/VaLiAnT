@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,6 +25,7 @@ from .options import Options
 class SGEConfig(BaseConfig):
     revcomp_minus_strand: bool
     gff_fp: Optional[str]
+    bg_fp: Optional[str]
     pam_fp: Optional[str]
     vcf_fp: Optional[str]
 
@@ -32,6 +33,7 @@ class SGEConfig(BaseConfig):
         fields = {
             'revcomp_minus_strand': 'reverseComplementOnMinusStrand',
             'gff_fp': 'GFFFilePath',
+            'bg_fp': 'backgroundVCFFilePath',
             'pam_fp': 'PAMProtectionVCFFilePath',
             'vcf_fp': 'customVCFManifestFilePath'
         }
@@ -40,6 +42,7 @@ class SGEConfig(BaseConfig):
     def input_file_paths(self) -> List[str]:
         return super().input_file_paths + get_not_none([
             self.gff_fp,
+            self.bg_fp,
             self.pam_fp,
             self.vcf_fp
         ])

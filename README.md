@@ -224,6 +224,7 @@ The `REF_FASTA` path is expected to point to a reference genome in FASTA format.
 |Option|Format|Default|Description|
 |-|-|-|-|
 |`gff`|file path|-|Path to GTF/GFF2 file containing CDS and UTR features; one transcript per gene only.|
+|`bg`|file path|-|Path to a background variant VCF file.|
 |`pam`|file path|-|Path to a [PAM protection file](#pam-protection-vcf-file).|
 |`vcf`|file path|-|Path to a [VCF manifest file](#vcf-manifest-file).|
 |`revcomp-minus-strand`|flag|`false`|For minus strand targets, include the reverse complement of the mutated reference sequence in the oligonucleotide.|
@@ -563,6 +564,7 @@ The execution parameters depend on the execution mode, and each corresponds to o
 |-|-|
 |`revcomp-minus-strand`|`reverseComplementOnMinusStrand`|
 |`gff`|`GFFFilePath`|
+|`bg`|`backgroundVCFFilePath`|
 |`pam`|`PAMProtectionVCFFilePath`|
 |`vcf`|`customVCFManifestFilePath`|
 
@@ -581,6 +583,7 @@ Example:
         "minOligoLength": 1,
         "maxOligoLength": 300,
         "codonTableFilePath": null,
+        "backgroundVCFFilePath": null,
         "oligoInfoFilePath": "parameter_input_files/brca1_nuc_targeton_input.txt",
         "refFASTAFilePath": "reference_input_files/chr17.fa",
         "outputDirPath": "brca1_nuc_output",

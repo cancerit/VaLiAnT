@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -31,7 +31,7 @@ from .base import GenomicPosition, GenomicRange, StrandedPositionRange
 from .refseq_repository import ReferenceSequenceRepository
 from .sequences import ReferenceSequence
 from ..enums import VariantType
-from ..loaders.vcf import load_vcf_manifest, var_type_sub, var_type_del, var_type_ins, var_class_unclass, var_class_mono
+from ..loaders.vcf import load_vcf, load_vcf_manifest, var_type_sub, var_type_del, var_type_ins, var_class_unclass, var_class_mono
 from ..string_mutators import delete_nucleotides, insert_nucleotides, replace_nucleotides
 from ..utils import get_id_column, is_dna, get_var_types
 
@@ -231,20 +231,38 @@ def _map_variants(variants: pd.DataFrame, var_type: int, mask: bool = True) -> D
     }
 
 
+def _regions_to_chromosome_boundaries(regions: PyRanges) -> Dict[str, Tuple[int, int]]:
+    return {
+        chromosome: (df.Start.min() + 1, df.End.max())
+        for chromosome, df in regions.dfs.items()
+    }
+
+
 @dataclass
 class VariantRepository:
     _variants: Dict[int, CustomVariant]
     _region_variants: Dict[Tuple[str, int, int], Set[int]]
 
     @classmethod
+    def load_vcf(cls, vcf_fp: str, regions: PyRanges) -> VariantRepository:
+        # TODO: verify variant filtering criteria being applied at this stage (if any)
+        chromosome_boundaries = _regions_to_chromosome_boundaries(regions)
+        df = load_vcf(vcf_fp, chromosome_boundaries)
+        # TODO: discuss variant identifiers
+        df['vcf_alias'] = None
+        df['vcf_var_id'] = None
+        return cls.from_df(regions, df)
+
+    @classmethod
     def load(cls, manifest_fp: str, regions: PyRanges) -> VariantRepository:
 
         # Load all permitted variants from multiple VCF files
-        chromosome_boundaries: Dict[str, Tuple[int, int]] = {
-            chromosome: (df.Start.min() + 1, df.End.max())
-            for chromosome, df in regions.dfs.items()
-        }
-        custom_variants: pd.DataFrame = load_vcf_manifest(manifest_fp, chromosome_boundaries)
+        chromosome_boundaries = _regions_to_chromosome_boundaries(regions)
+        df = load_vcf_manifest(manifest_fp, chromosome_boundaries)
+        return cls.from_df(regions, df)
+
+    @classmethod
+    def from_df(cls, regions: PyRanges, custom_variants: pd.DataFrame) -> VariantRepository:
         custom_variants_n: int = custom_variants.shape[0]
 
         if custom_variants_n == 0:
@@ -307,7 +325,7 @@ class VariantRepository:
         var_types_n: int = len(var_types)
 
         if not var_types_n:
-            raise RuntimeError("No variant types in custom variant table!")
+            raise RuntimeError("No variant types in variant table!")
 
         # Map variant indices to variant objects
         var_types_gt_one: bool = var_types_n > 1
