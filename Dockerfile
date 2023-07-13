@@ -1,4 +1,4 @@
-FROM python:3.9-slim as builder
+FROM python:3.9-slim AS builder
 
 ENV CYTHON_VERSION 0.29.30
 
@@ -16,6 +16,10 @@ RUN pip wheel --no-cache-dir -r requirements.txt && \
     rm requirements.txt
 
 FROM python:3.9-slim
+
+# Install ps
+RUN apt-get update && \
+    apt-get install -yq --no-install-recommends procps
 
 WORKDIR /tmp
 
