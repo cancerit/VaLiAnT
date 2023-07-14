@@ -20,7 +20,7 @@ from itertools import chain
 import logging
 import os
 import sys
-from typing import Dict, Iterable, List, Optional, FrozenSet, Set, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, FrozenSet, Set, Tuple
 import click
 from pyranges import PyRanges
 
@@ -41,7 +41,7 @@ from .models.sequences import ReferenceSequence
 from .models.snv_table import AuxiliaryTables
 from .models.stats import Stats
 from .models.targeton import ITargeton, PamProtCDSTargeton, PamProtTargeton
-from .models.variant import CustomVariant
+from .models.variant import BaseVariant, CustomVariant
 from .models.variant_repository_collection import VariantRepositoryCollection
 from .common_cli import common_params, existing_file, finalise
 from .cli_utils import load_codon_table
@@ -75,6 +75,7 @@ def get_oligo_template(
     rsr: ReferenceSequenceRanges,
     ref: ReferenceSequenceRepository,
     cds: Optional[CDSContextRepository],
+    bg_variants: Set[BaseVariant],
     pam_variants: Set[PamVariant],
     custom_variants: Set[CustomVariant],
     adaptor_5: Optional[str] = None,
@@ -91,7 +92,7 @@ def get_oligo_template(
         return ReferenceSequence(seq, genomic_range)
 
     pam_ref_seq: PamProtectedReferenceSequence = compute_pam_protected_sequence(
-        get_sequence(rsr.ref_range), pam_variants)
+        get_sequence(rsr.ref_range), pam_variants, bg_variants)
 
     # 2. Get constant regions
 
@@ -228,20 +229,29 @@ def get_oligo_templates(
         # Retrieve PAM protection variants
         return set(variants.pam.get_sgrna_variants_bulk(rsr.sgrna_ids))
 
+    def get_bg_variants(rsr: ReferenceSequenceRanges) -> Set[BaseVariant]:
+        return variants.background.get_variants(rsr.ref_range)
+
     def get_rsr_oligo_template(rsr: ReferenceSequenceRanges) -> OligoTemplate:
-        try:
-            pam_variants: Set[PamVariant] = get_pam_variants(rsr) if pam_variants_available else set()
-        except ValueError as ex:
-            logging.critical(ex.args[0])
-            logging.critical(
-                "Failed to retrieve PAM protection variants "
-                "for region %s!" % rsr.ref_range.region)
-            sys.exit(1)
+
+        def get_vars(label: str, cond: bool, f: Callable[[ReferenceSequenceRanges], Set]) -> Set[BaseVariant]:
+            try:
+                return f(rsr) if cond else set()
+            except ValueError as ex:
+                logging.critical(ex.args[0])
+                logging.critical(
+                    "Failed to retrieve %s variants "
+                    "for region %s!" % (label, rsr.ref_range.region))
+                sys.exit(1)
+
+        bg_variants: Set[BaseVariant] = get_vars('background', bg_variants_available, get_bg_variants)
+        pam_variants: Set[PamVariant] = get_vars('PAM protection', pam_variants_available, get_pam_variants)
 
         return get_oligo_template(
             rsr,
             ref,
             annotation.cds if annotation else None,
+            bg_variants,
             pam_variants,
             variants.custom.get_variants(rsr.ref_range) if variants.custom else set(),
             adaptor_5=adaptor_5,
@@ -249,6 +259,7 @@ def get_oligo_templates(
 
     # Pass sgRNA variants to oligonucleotide template generation
     pam_variants_available: bool = variants.pam.count > 0
+    bg_variants_available: bool = variants.background is not None
     ref_ranges_sgrna_ids = match_ref_regions_pam_variants()
 
     # Generate oligonucleotide templates

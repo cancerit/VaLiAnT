@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,12 +16,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from contextlib import nullcontext
 import pytest
 from valiant.cli_utils import load_codon_table
-from valiant.sge_cli import _load_gff_file, _load_pam_protection_vcf
+from valiant.sge_cli import _load_gff_file
 from valiant.models.codon_table import CodonTable
 from valiant.models.exon import AnnotationRepository
+from valiant.models.variant_repository_collection import _load_pam_protection_vcf
 from .constants import CODON_TABLE_FP, GTF_SINGLE, GTF_MULTI, PAM_VCF_FP
 from .utils import get_data_file_path
 

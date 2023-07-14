@@ -31,10 +31,19 @@ from .variant import BaseVariant, get_variant, SubstitutionVariant, apply_varian
 
 @dataclass(frozen=True)
 class PamProtectedReferenceSequence(ReferenceSequence):
-    __slots__ = {'sequence', 'genomic_range', 'pam_protected_sequence', 'pam_variants'}
+    __slots__ = [
+        'sequence',
+        'genomic_range',
+        'pam_protected_sequence',
+        'bg_sequence',
+        'pam_variants',
+        'bg_variants'
+    ]
 
     pam_protected_sequence: str
+    bg_sequence: str
     pam_variants: List[PamVariant]
+    bg_variants: List[BaseVariant]
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -42,17 +51,35 @@ class PamProtectedReferenceSequence(ReferenceSequence):
             raise ValueError("PAM protected sequence and genomic range have different lengths!")
 
     @classmethod
-    def from_reference_sequence(cls, ref_seq: ReferenceSequence, pam_variants_: Iterable[PamVariant]) -> PamProtectedReferenceSequence:
+    def from_reference_sequence(
+        cls,
+        ref_seq: ReferenceSequence,
+        pam_variants_: Iterable[PamVariant],
+        bg_variants_: Iterable[BaseVariant] = list()
+    ) -> PamProtectedReferenceSequence:
         pam_variants: List[PamVariant] = sorted(
             pam_variants_, key=lambda x: x.genomic_position.position)
-        # TODO: check the reference if no background variants are applied
-        pam_seq: str = apply_variants(ref_seq, pam_variants, ref_check=False)
+        bg_variants: List[BaseVariant] = sorted(
+            bg_variants_, key=lambda x: x.genomic_position.position)
+
+        # Apply background variants
+        bg_seq: str = apply_variants(ref_seq, bg_variants, ref_check=True)
+        if len(bg_seq) != len(ref_seq):
+            raise NotImplementedError("Background variants altering the length of the reference sequence!")
+
+        # Apply PAM sequence variants
+        pam_seq: str = apply_variants(
+            ReferenceSequence(bg_seq, ref_seq.genomic_range),
+            pam_variants,
+            ref_check=not bool(bg_variants))
 
         return cls(
             ref_seq.sequence,
             ref_seq.genomic_range,
             pam_seq,
-            pam_variants)
+            bg_seq,
+            pam_variants,
+            bg_variants)
 
     def get_subsequence(self, genomic_range: GenomicRange) -> PamProtectedReferenceSequence:
         ref_seq: ReferenceSequence = super().get_subsequence(genomic_range)
@@ -61,7 +88,12 @@ class PamProtectedReferenceSequence(ReferenceSequence):
             for variant in self.pam_variants
             if genomic_range.contains_position(variant.genomic_position)
         ]
-        return PamProtectedReferenceSequence.from_reference_sequence(ref_seq, pam_variants)
+        bg_variants = [
+            variant
+            for variant in self.bg_variants
+            if genomic_range.contains_position(variant.genomic_position)
+        ]
+        return PamProtectedReferenceSequence.from_reference_sequence(ref_seq, pam_variants, bg_variants)
 
     def _validate_variant_position(self, variant: BaseVariant) -> None:
         if not self.genomic_range.contains_position(variant.genomic_position):
@@ -159,9 +191,11 @@ class PamProtectionVariantRepository:
 
 def compute_pam_protected_sequence(
     ref_seq: ReferenceSequence,
-    pam_variants: Set[PamVariant]
+    pam_variants: Set[PamVariant],
+    bg_variants: Set[BaseVariant]
 ) -> PamProtectedReferenceSequence:
-    return PamProtectedReferenceSequence.from_reference_sequence(ref_seq, pam_variants)
+    return PamProtectedReferenceSequence.from_reference_sequence(
+        ref_seq, pam_variants, bg_variants)
 
 
 def get_position_to_sgrna_ids(pam_variants: List[PamVariant]) -> Dict[int, str]:
