@@ -292,23 +292,22 @@ def set_ref(meta: pd.DataFrame) -> None:
         META_REF_NO_PAM)
 
 
-def set_pam_extended_ref_alt(
+def _set_pam_extended_ref_alt(
     all_mutations: pd.DataFrame,
-    pam_prot_cds_targetons: List[PamProtCDSTargeton]
+    pam_prot_cds_targetons: List[PamProtCDSTargeton],
+    pam_ext_mask: pd.Series
 ) -> None:
+    """
+    Set the mutation start and end extended to the PAM sequence variants
+    that may occur at either end
 
-    # Initialise required new fields
-    _init_pam_extended_required_fields(all_mutations)
+    Set fields:
+    - META_PAM_CODON_REF
+    - META_PAM_CODON_ALT
 
-    # Filter for mutations that overlap at least one PAM-protected codon
-    pam_codon_mask: pd.Series = all_mutations[META_PAM_MUT_SGRNA_ID].str.len() > 0
-
-    if not pam_codon_mask.any():
-        logging.warning("No sgRNA ID's assigned to PAM-protected CDS targetons!")
-        return
-
-    # Initialise extra fields
-    _init_pam_extended_fields(all_mutations)
+    The mask is expected to contain at least one element (otherwise,
+    implicit casting occurs).
+    """
 
     def get_targeton(targeton_index: int) -> Optional[PamProtCDSTargeton]:
         assert targeton_index >= -1  # DEBUG
@@ -344,22 +343,6 @@ def set_pam_extended_ref_alt(
         df[META_ALT_END_OFFSET] = df[META_REF_END_OFFSET].add(df[META_ALT_REF_DIFF])
 
         return df
-
-    def set_length_field(string_col_name: str, length_col_name: str) -> None:
-        set_string_length_field(
-            all_mutations, string_col_name, length_col_name, mask=pam_codon_mask)
-
-    # Compute ALT length
-    set_length_field(META_NEW, META_ALT_LENGTH)
-
-    _set_targeton_at_ref_start_end(
-        all_mutations, pam_codon_mask, pam_prot_cds_targetons)
-
-    # Requires the liminal CDS targetons to be set
-    pam_ext_mask: pd.Series = (
-        (all_mutations[META_CDS_START] != NO_CATEGORY) |
-        (all_mutations[META_CDS_END] != NO_CATEGORY)
-    )
 
     # Compute length difference between ALT and REF
     all_mutations.loc[pam_ext_mask, META_ALT_REF_DIFF] = (
@@ -401,11 +384,49 @@ def set_pam_extended_ref_alt(
         META_ALT_END_OFFSET,
         META_PAM_CODON_ALT)
 
+
+def set_pam_extended_ref_alt(
+    all_mutations: pd.DataFrame,
+    pam_prot_cds_targetons: List[PamProtCDSTargeton]
+) -> None:
+
+    # Initialise required new fields
+    _init_pam_extended_required_fields(all_mutations)
+
+    # Filter for mutations that overlap at least one PAM-protected codon
+    pam_codon_mask: pd.Series = all_mutations[META_PAM_MUT_SGRNA_ID].str.len() > 0
+
+    if not pam_codon_mask.any():
+        logging.warning("No sgRNA ID's assigned to PAM-protected CDS targetons!")
+        return
+
+    # Initialise extra fields
+    _init_pam_extended_fields(all_mutations)
+
+    # Compute ALT length
+    set_string_length_field(
+        all_mutations, META_NEW, META_ALT_LENGTH, mask=pam_codon_mask)
+
+    # Assign mutation boundaries to CDS regions
+    _set_targeton_at_ref_start_end(
+        all_mutations, pam_codon_mask, pam_prot_cds_targetons)
+
+    # Requires the liminal CDS targetons to be set
+    pam_ext_mask: pd.Series = (
+        (all_mutations[META_CDS_START] != NO_CATEGORY) |
+        (all_mutations[META_CDS_END] != NO_CATEGORY)
+    )
+
+    if pam_ext_mask.any():
+
+        # Set the extended REF and ALT
+        _set_pam_extended_ref_alt(all_mutations, pam_prot_cds_targetons, pam_ext_mask)
+
+        # Report the mask on the table to inform the MAVE-HGVS string creation
+        all_mutations.loc[pam_ext_mask, META_PAM_EXT_MASK] = 1
+
     # Add mask (to filter when generating the VCF)
     all_mutations.loc[pam_codon_mask, META_PAM_CODON_MASK] = 1
-
-    # Add mask (to inform the MAVE-HGVS string creation)
-    all_mutations.loc[pam_ext_mask, META_PAM_EXT_MASK] = 1
 
     # Fill NA's in mask for custom variants in constant regions
     all_mutations[META_VCF_VAR_IN_CONST] = (
