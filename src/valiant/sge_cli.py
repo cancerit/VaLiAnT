@@ -34,14 +34,15 @@ from .models.oligo_generation_info import OligoGenerationInfo
 from .models.oligo_segment import InvariantOligoSegment, OligoSegment, TargetonOligoSegment
 from .models.oligo_template import OligoTemplate
 from .models.options import Options
-from .models.pam_protection import compute_pam_protected_sequence, PamProtectedReferenceSequence, PamProtectionVariantRepository, PamVariant
+from .models.pam_protection import compute_pam_protected_sequence, PamProtectedReferenceSequence, PamVariant
 from .models.refseq_ranges import genomic_ranges_to_pyranges, ReferenceSequenceRangeCollection, ReferenceSequenceRanges, TargetReferenceRegion
 from .models.refseq_repository import fetch_reference_sequences, ReferenceSequenceRepository
 from .models.sequences import ReferenceSequence
 from .models.snv_table import AuxiliaryTables
 from .models.stats import Stats
 from .models.targeton import ITargeton, PamProtCDSTargeton, PamProtTargeton
-from .models.variant import CustomVariant, VariantRepository
+from .models.variant import CustomVariant
+from .models.variant_repository_collection import VariantRepositoryCollection
 from .common_cli import common_params, existing_file, finalise
 from .cli_utils import load_codon_table
 from .writers import write_reference_sequences
@@ -68,26 +69,6 @@ def _load_oligo_templates(fp: str) -> ReferenceSequenceRangeCollection:
         logging.critical(ex.args[0])
         logging.critical("Failed to load oligonucleotide templates!")
         sys.exit(1)
-
-
-def _load_pam_protection_vcf(sgrna_ids: FrozenSet[str], pam: Optional[str]) -> PamProtectionVariantRepository:
-    logging.debug("sgRNA ID's: %s" % ', '.join(sorted(sgrna_ids)) if sgrna_ids else "No sgRNA ID's.")
-
-    vr = PamProtectionVariantRepository(sgrna_ids=sgrna_ids)
-
-    if pam:
-        if len(sgrna_ids) > 0:
-            try:
-                vr.load(pam)
-            except ValueError as ex:
-                logging.critical(ex.args[0])
-                logging.critical("Failed to load the PAM protection variants!")
-                sys.exit(1)
-        else:
-            logging.warning(
-                "PAM protection variant file ignored: "
-                "no sgRNA ID's associated to any targeton!")
-    return vr
 
 
 def get_oligo_template(
@@ -193,8 +174,7 @@ def get_oligo_template(
 def get_oligo_templates(
     rsrs: ReferenceSequenceRangeCollection,
     ref: ReferenceSequenceRepository,
-    pam: PamProtectionVariantRepository,
-    variant_repository: Optional[VariantRepository],
+    variants: VariantRepositoryCollection,
     annotation: Optional[AnnotationRepository],
     adaptor_5: Optional[str] = None,
     adaptor_3: Optional[str] = None
@@ -208,7 +188,8 @@ def get_oligo_templates(
             }
 
         # Map sgRNA variants to regions (ignoring their strandedness)
-        range_variants: PyRanges = rsrs._ref_ranges.join(pam._ranges, strandedness=False)
+        range_variants: PyRanges = rsrs._ref_ranges.join(
+            variants.pam._ranges, strandedness=False)
 
         # Count the number of variants per sgRNA per region for validation purposes
         # (chromosome, start, end) -> sgRNA ID -> variant count
@@ -245,7 +226,7 @@ def get_oligo_templates(
             raise get_missing_sgrna_err(rsr.ref_range, rsr.sgrna_ids - matching_sgrna_ids)
 
         # Retrieve PAM protection variants
-        return set(pam.get_sgrna_variants_bulk(rsr.sgrna_ids))
+        return set(variants.pam.get_sgrna_variants_bulk(rsr.sgrna_ids))
 
     def get_rsr_oligo_template(rsr: ReferenceSequenceRanges) -> OligoTemplate:
         try:
@@ -262,12 +243,12 @@ def get_oligo_templates(
             ref,
             annotation.cds if annotation else None,
             pam_variants,
-            variant_repository.get_variants(rsr.ref_range) if variant_repository else set(),
+            variants.custom.get_variants(rsr.ref_range) if variants.custom else set(),
             adaptor_5=adaptor_5,
             adaptor_3=adaptor_3)
 
     # Pass sgRNA variants to oligonucleotide template generation
-    pam_variants_available: bool = pam.count > 0
+    pam_variants_available: bool = variants.pam.count > 0
     ref_ranges_sgrna_ids = match_ref_regions_pam_variants()
 
     # Generate oligonucleotide templates
@@ -367,26 +348,6 @@ def generate_oligos(output: str, ref_repository: ReferenceSequenceRepository, au
     return metadata.get_info()
 
 
-def load_variant_repository(vcf_fp: Optional[str], ref_ranges: PyRanges, label: str, from_manifest: bool = False) -> Optional[VariantRepository]:
-    if not vcf_fp:
-        return None
-
-    logging.debug(f"Loading {label} variants...")
-    try:
-        return (
-            VariantRepository.load if from_manifest else
-            VariantRepository.load_vcf
-        )(vcf_fp, ref_ranges)
-    except ValueError as ex:
-        logging.critical(ex.args[0])
-        logging.critical(f"Failed to load {label} variants!")
-        sys.exit(1)
-    except FileNotFoundError as ex:
-        logging.critical(ex.args[0])
-        logging.critical(f"Failed to load {label} variants!")
-        sys.exit(1)
-
-
 def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     options = config.get_options()
 
@@ -401,30 +362,10 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     # Load oligonucleotide templates
     rsrs: ReferenceSequenceRangeCollection = _load_oligo_templates(config.oligo_info_fp)
 
-    # Load PAM protection variants
-    pam_repository: PamProtectionVariantRepository = _load_pam_protection_vcf(rsrs.sgrna_ids, config.pam_fp)
-
     # Collect all genomic ranges for which reference sequences have to be fetched
     ref_ranges = rsrs.ref_ranges
 
-    # Load background variants
-    background_variant_repository: Optional[VariantRepository] = (
-        load_variant_repository(
-            config.bg_fp,
-            rsrs._ref_ranges,
-            'background'
-        )
-    )
-
-    # Load custom variants
-    variant_repository: Optional[VariantRepository] = (
-        load_variant_repository(
-            config.vcf_fp,
-            rsrs._ref_ranges,
-            'custom',
-            from_manifest=True
-        )
-    )
+    variants = VariantRepositoryCollection.load(config, rsrs)
 
     if exons:
 
@@ -467,8 +408,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     oligo_templates: List[OligoTemplate] = get_oligo_templates(
         rsrs,
         ref,
-        pam_repository,
-        variant_repository,
+        variants,
         annotation,
         adaptor_5=config.adaptor_5,
         adaptor_3=config.adaptor_3)
