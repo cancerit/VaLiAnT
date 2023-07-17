@@ -21,7 +21,7 @@ from collections import namedtuple
 from dataclasses import dataclass
 from functools import partial
 import logging
-from typing import Dict, List, Optional, Set, Tuple, ClassVar, Any, Callable, TypeVar
+from typing import Dict, Iterable, List, Optional, Set, Tuple, ClassVar, Any, Callable, TypeVar
 import pandas as pd
 from pyranges import PyRanges
 from pysam import VariantRecord
@@ -125,6 +125,12 @@ class BaseVariant:
 
 
 BaseVariantT = TypeVar('BaseVariantT', bound='BaseVariant')
+
+
+def sort_variants(variants: Iterable[BaseVariantT]) -> List[BaseVariantT]:
+    """Sort variants by genomic position"""
+
+    return sorted(variants, key=lambda x: x.genomic_position.position)
 
 
 def apply_variants(ref_seq: ReferenceSequence, variants: List[BaseVariant], ref_check: bool = False) -> str:

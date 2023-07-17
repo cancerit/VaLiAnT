@@ -26,13 +26,7 @@ from ..loaders.vcf import get_vcf
 from ..utils import get_id_column
 from .base import GenomicRange
 from .sequences import ReferenceSequence
-from .variant import BaseVariant, get_variant, SubstitutionVariant, apply_variants, BaseVariantT
-
-
-def sort_variants(variants: Iterable[BaseVariantT]) -> List[BaseVariantT]:
-    """Sort variants by genomic position"""
-
-    return sorted(variants, key=lambda x: x.genomic_position.position)
+from .variant import BaseVariant, get_variant, SubstitutionVariant, apply_variants, sort_variants
 
 
 @dataclass(frozen=True)
