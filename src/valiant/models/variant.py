@@ -33,7 +33,7 @@ from .sequences import ReferenceSequence
 from ..enums import VariantType
 from ..loaders.vcf import load_vcf, load_vcf_manifest, var_type_sub, var_type_del, var_type_ins, var_class_unclass, var_class_mono
 from ..string_mutators import delete_nucleotides, insert_nucleotides, replace_nucleotides
-from ..utils import get_id_column, is_dna, get_var_types
+from ..utils import get_id_column, is_dna, get_var_types, opt_str_length
 
 # Metadata table fields used to generate the VCF output
 VCF_RECORD_METADATA_FIELDS: List[str] = [
@@ -85,12 +85,22 @@ class BaseVariant:
     type: ClassVar[VariantType]
 
     def get_ref(self) -> Optional[str]:
-        return self.ref if hasattr(self, 'ref') else None
+        return getattr(self, 'ref', None)
+
+    def get_alt(self) -> Optional[str]:
+        return getattr(self, 'alt', None)
 
     @property
     def ref_length(self) -> int:
-        ref = self.get_ref()
-        return len(ref) if ref is not None else 0
+        return opt_str_length(self.get_ref())
+
+    @property
+    def alt_length(self) -> int:
+        return opt_str_length(self.get_alt())
+
+    @property
+    def alt_ref_delta(self) -> int:
+        return self.alt_length - self.ref_length
 
     def get_ref_offset(self, ref_seq: ReferenceSequence) -> int:
         if not ref_seq.genomic_range.contains_position(self.genomic_position):

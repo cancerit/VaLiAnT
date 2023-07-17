@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -38,6 +38,10 @@ i8_2: np.int8 = np.int8(2)
 
 i8_1_2: List[np.int8] = [i8_1, i8_2]
 i8_2_1: List[np.int8] = [i8_2, i8_1]
+
+
+def opt_str_length(s: Optional[str]) -> int:
+    return len(s) if s is not None else 0
 
 
 def get_data_file_path(fp: str) -> str:
