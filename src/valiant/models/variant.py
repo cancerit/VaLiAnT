@@ -124,6 +124,9 @@ class BaseVariant:
             seq, self._get_relative_position(seq_start), ref_check=ref_check)
 
 
+BaseVariantT = TypeVar('BaseVariantT', bound='BaseVariant')
+
+
 def apply_variants(ref_seq: ReferenceSequence, variants: List[BaseVariant], ref_check: bool = False) -> str:
     alt_seq: str = ref_seq.sequence
 

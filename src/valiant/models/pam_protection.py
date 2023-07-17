@@ -26,7 +26,13 @@ from ..loaders.vcf import get_vcf
 from ..utils import get_id_column
 from .base import GenomicRange
 from .sequences import ReferenceSequence
-from .variant import BaseVariant, get_variant, SubstitutionVariant, apply_variants
+from .variant import BaseVariant, get_variant, SubstitutionVariant, apply_variants, BaseVariantT
+
+
+def sort_variants(variants: Iterable[BaseVariantT]) -> List[BaseVariantT]:
+    """Sort variants by genomic position"""
+
+    return sorted(variants, key=lambda x: x.genomic_position.position)
 
 
 @dataclass(frozen=True)
@@ -57,10 +63,8 @@ class PamProtectedReferenceSequence(ReferenceSequence):
         pam_variants_: Iterable[PamVariant],
         bg_variants_: Iterable[BaseVariant] = list()
     ) -> PamProtectedReferenceSequence:
-        pam_variants: List[PamVariant] = sorted(
-            pam_variants_, key=lambda x: x.genomic_position.position)
-        bg_variants: List[BaseVariant] = sorted(
-            bg_variants_, key=lambda x: x.genomic_position.position)
+        pam_variants: List[PamVariant] = sort_variants(pam_variants_)
+        bg_variants: List[BaseVariant] = sort_variants(bg_variants_)
 
         # Apply background variants
         bg_seq: str = apply_variants(ref_seq, bg_variants, ref_check=True)
