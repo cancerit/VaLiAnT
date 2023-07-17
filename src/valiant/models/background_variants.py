@@ -33,12 +33,17 @@ def compute_genomic_offset(variants: List[BaseVariantT]) -> int:
     )
 
 
-def compute_alt_offsets(ref_start: int, ref_length: int, variants: List[BaseVariantT]) -> np.ndarray:
-    variants_in_range: List[BaseVariantT] = sort_variants([
+def filter_variants_by_range(ref_start: int, ref_length: int, variants: List[BaseVariantT]) -> List[BaseVariantT]:
+    return [
         variant
         for variant in variants
         if 0 <= (variant.genomic_position.position - ref_start) < ref_length
-    ])
+    ]
+
+
+def compute_alt_offsets(ref_start: int, ref_length: int, variants: List[BaseVariantT]) -> np.ndarray:
+    variants_in_range: List[BaseVariantT] = sort_variants(
+        filter_variants_by_range(ref_start, ref_length, variants))
     alt_length: int = ref_length + compute_genomic_offset(variants_in_range)
 
     alt_offsets: np.ndarray = np.zeros(alt_length, dtype=np.int32)
