@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -38,7 +38,7 @@ def test_compute_pam_protected_sequence(seq, pos, ref, alt, ppseq, valid):
     gr = GenomicRange(chromosome, start, end, '+')
     ref_seq = ReferenceSequence(seq, gr)
     with pytest.raises(Exception) if not valid else nullcontext():
-        pam_ref_seq = compute_pam_protected_sequence(ref_seq, {variant})
+        pam_ref_seq = compute_pam_protected_sequence(ref_seq, {variant}, set())
 
     if valid:
         assert pam_ref_seq.sequence == ref_seq.sequence
