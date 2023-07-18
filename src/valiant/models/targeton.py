@@ -696,7 +696,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         aux: AuxiliaryTables,
         **kwargs
     ) -> Dict[TargetonMutator, MutationCollection]:
-        f"""
+        """
         Compute all mutations
 
         sgRNA ID's should be provided unless no PAM protection was applied.
