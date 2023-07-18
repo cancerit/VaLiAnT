@@ -21,7 +21,7 @@
 from setuptools import setup, find_packages
 
 PACKAGE_NAME = 'valiant'
-VERSION = '3.0.0'
+VERSION = '3.0.1'
 
 config = {
     'name': PACKAGE_NAME,
