@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+import pytest
 from valiant.models.background_variants import GenomicPositionOffsets, _filter_variants_by_range, _get_alt_length, compute_genomic_offset, _compute_alt_offsets
 from valiant.models.base import GenomicPosition
 from valiant.models.variant import DeletionVariant, InsertionVariant
@@ -67,3 +68,34 @@ def test_genomic_position_offsets_from_variants():
     assert len(gpo.variants_in_range) == 3
     assert len(gpo._pos_offsets) == len(gpo.variants_in_range)
     assert gpo._ins_offsets.shape[0] == gpo._alt_length
+
+
+def test_genomic_position_offsets_alt_to_ref_position():
+    variants = [
+        InsertionVariant(get_pos(110), 'AAA'),
+        DeletionVariant(get_pos(120), 'AA'),
+        InsertionVariant(get_pos(130), 'AAA')
+    ]
+    ref_start = 100
+    ref_length = 40
+    gpo = GenomicPositionOffsets.from_variants(
+        ref_start, ref_length, variants)
+
+    positions = [
+        variant.genomic_position.position
+        for variant in variants
+    ]
+
+    with pytest.raises(ValueError):
+        gpo.alt_to_ref_position(ref_start + gpo.alt_length)
+
+    with pytest.raises(ValueError):
+        gpo.alt_to_ref_position(ref_start - 1)
+
+    for alt_pos, offset in [
+        (ref_start, 0),
+        (positions[0] + 3, 3),
+        (positions[1] - 1, 3),
+        (positions[2] + 3, 6),
+    ]:
+        assert gpo.alt_to_ref_position(alt_pos) == alt_pos - offset

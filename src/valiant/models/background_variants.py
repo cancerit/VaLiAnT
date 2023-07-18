@@ -111,6 +111,10 @@ class GenomicPositionOffsets:
         return self._alt_length
 
     def __post_init__(self) -> None:
+        if self.ref_start < 0:
+            raise ValueError(f"Invalid REF start {self.ref_start}!")
+        if self.ref_length < 0:
+            raise ValueError(f"Invalid REF length {self.ref_length}!")
         self._alt_length = _get_alt_length(self.ref_length, self.variants_in_range)
         self._pos_offsets = self._compute_ref_offsets()
         self._ins_offsets = self._compute_ins_offsets()
@@ -135,3 +139,9 @@ class GenomicPositionOffsets:
         for p, offset in self._pos_offsets:
             if pos >= p:
                 return offset
+
+    def alt_to_ref_position(self, alt_pos: int) -> int:
+        if not (self.ref_start <= alt_pos < self.ref_start + self._alt_length):
+            raise ValueError(f"Invalid ALT position {alt_pos}: out of bounds!")
+
+        return alt_pos - self._ins_offsets[alt_pos - self.ref_start]
