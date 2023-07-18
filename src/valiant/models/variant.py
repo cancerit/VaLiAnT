@@ -102,6 +102,10 @@ class BaseVariant:
     def alt_ref_delta(self) -> int:
         return self.alt_length - self.ref_length
 
+    @property
+    def start(self) -> int:
+        return self.genomic_position.position
+
     def get_ref_offset(self, ref_seq: ReferenceSequence) -> int:
         if not ref_seq.genomic_range.contains_position(self.genomic_position):
             raise ValueError(
