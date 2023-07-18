@@ -26,7 +26,7 @@ import pandas as pd
 from pyranges import PyRanges
 from pysam import VariantRecord
 
-from valiant.constants import META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, META_PAM_CODON_REF, META_PAM_MUT_START, META_REF, META_VCF_ALIAS, META_VCF_VAR_ID, METADATA_PAM_FIELDS
+from valiant.constants import META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_REF, META_REF, META_VCF_ALIAS, META_VCF_VAR_ID, METADATA_PAM_FIELDS
 from .base import GenomicPosition, GenomicRange, StrandedPositionRange
 from .refseq_repository import ReferenceSequenceRepository
 from .sequences import ReferenceSequence
@@ -570,9 +570,13 @@ class VCFRecordParams:
     @classmethod
     def from_meta(cls, pam_mode: bool, meta: namedtuple) -> VCFRecordParams:
         f = (
-            cls.from_meta_pam_ext if meta.pam_codon_mask else
+            cls.from_meta_pam_ext if (
+                pam_mode
+                and meta.pam_codon_mask
+                and meta.pam_mut_start is not None
+            ) else
             cls.from_meta_no_pam
-        ) if pam_mode else cls.from_meta_no_pam
+        )
         return f(meta)
 
     @classmethod

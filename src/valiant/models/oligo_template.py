@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -27,7 +27,7 @@ from ..metadata_utils import get_mave_nt_pam_from_row, get_mave_nt_ref_from_row,
 from .codon_table import CodonTable
 from .oligo_segment import OligoSegment, TargetonOligoSegment
 from .refseq_ranges import ReferenceSequenceRanges
-from .targeton import ITargeton, PamProtCDSTargeton
+from .targeton import PamProtCDSTargeton
 from .base import GenomicRange, TranscriptInfo
 from .custom_variants import CustomVariantMutation, CustomVariantMutationCollection, CustomVariantOligoRenderer
 from .mutated_sequences import MutationCollection
@@ -64,17 +64,6 @@ MUTATION_TYPE_LABELS: Dict[int, str] = {
 MUTATION_TYPE_CATEGORIES = sorted(MUTATION_TYPE_LABELS.values())
 MUTATION_TYPE_CATEGORIES_T = tuple(MUTATION_TYPE_CATEGORIES)
 
-EMPTY_MUTATION_TABLE_FIELDS = [
-    META_OLIGO_NAME,
-    META_VAR_TYPE,
-    META_MUT_POSITION,
-    META_REF,
-    META_NEW,
-    META_MUTATOR,
-    META_MSEQ,
-    META_OLIGO_LENGTH
-]
-
 
 def _decode_mut_type(x) -> str:
     return MUTATION_TYPE_LABELS[x] if not pd.isnull(x) else x
@@ -88,10 +77,6 @@ def decode_mut_types_cat(mut_type: pd.Series) -> pd.Categorical:
     return pd.Categorical(
         decode_mut_types(mut_type),
         categories=MUTATION_TYPE_CATEGORIES)
-
-
-def get_empty_mutation_table() -> pd.DataFrame:
-    return pd.DataFrame(columns=EMPTY_MUTATION_TABLE_FIELDS)
 
 
 def encode_pam_mutation_types(mutation_types: Iterable[Optional[MutationType]]) -> str:
@@ -338,12 +323,11 @@ class OligoTemplate:
         ]))
         return get_constant_category(s, n, categories=[s])
 
-    def get_mutation_table(self, aux: AuxiliaryTables, options: Options) -> pd.DataFrame:
-        if not self.target_segments:
-            return get_empty_mutation_table()
+    def get_mutation_table(self, aux: AuxiliaryTables, options: Options) -> Optional[pd.DataFrame]:
+        all_mutations: Optional[pd.DataFrame]
 
         # Compute mutations per region
-        region_mutations: pd.DataFrame = pd.concat([
+        region_mutations: Optional[pd.DataFrame] = pd.concat([
             pd.concat([
                 self._get_mutation_collection(
                     i, segment, mutator, mutation_collection).get_metadata_table(options)
@@ -351,16 +335,29 @@ class OligoTemplate:
                     aux, sgrna_ids=self.sgrna_ids).items()
             ])
             for i, segment in self.target_segments
-        ], ignore_index=True)
+        ], ignore_index=True) if self.target_segments else None
 
         # Compute global mutations (custom variants)
         if self.custom_variants:
             global_mutations: pd.DataFrame = self._get_custom_variant_collection(options)
             if global_mutations.shape[0] != len(self.custom_variants):
                 raise RuntimeError("Unexpected number of custom variants!")
-            all_mutations = pd.concat([region_mutations, global_mutations])
+
+            # Concatenate to region mutations, if any
+            all_mutations = (
+                pd.concat([
+                    region_mutations,
+                    global_mutations
+                ]) if region_mutations is not None else
+                global_mutations
+            )
+
         else:
+            # BEWARE: if empty, the table won't have the expected dtypes
             all_mutations = region_mutations
+
+        if all_mutations is None or all_mutations.empty:
+            return None
 
         # Decode mutation type
         if 'mut_type' in all_mutations.columns:

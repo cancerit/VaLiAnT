@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,7 +22,9 @@ import numpy as np
 import pandas as pd
 
 from .models.targeton import PamProtCDSTargeton
-from .constants import META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, META_PAM_CODON_REF, META_PAM_MUT_SGRNA_ID, META_PAM_MUT_START, META_PAM_SEQ, META_REF, META_REF_AA, META_REF_SEQ, META_REF_START, META_VCF_VAR_IN_CONST, METADATA_PAM_FIELDS
+from .constants import META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_MASK, \
+    META_PAM_CODON_REF, META_PAM_EXT_MASK, META_PAM_MUT_SGRNA_ID, META_PAM_MUT_START, META_PAM_SEQ, META_REF, \
+    META_REF_AA, META_REF_SEQ, META_REF_START, META_VCF_VAR_IN_CONST, METADATA_PAM_FIELDS
 from .mave_hgvs import MAVEPrefix, get_mave_nt
 from .utils import init_nullable_int_field, init_string_field
 
@@ -35,6 +37,10 @@ def is_metadata_row_cds(r: pd.Series) -> bool:
     return META_CDS_PROBE_FIELD in r and not pd.isna(r[META_CDS_PROBE_FIELD])
 
 
+def nullable_str(x: str) -> Optional[str]:
+    return x if pd.notnull(x) and x != '' else None
+
+
 def _get_mave_nt_from_row(r: pd.Series, ref_start_field: str, ref_field: str, alt_field: str) -> str:
     """Generate MAVE-HGVS string with targeton-relative position"""
 
@@ -42,8 +48,8 @@ def _get_mave_nt_from_row(r: pd.Series, ref_start_field: str, ref_field: str, al
         MAVEPrefix.LINEAR_GENOMIC,
         r.var_type,
         r[ref_start_field] - r.ref_start + 1,
-        r[ref_field],
-        r[alt_field])
+        nullable_str(r[ref_field]),
+        nullable_str(r[alt_field]))
 
 
 def get_mave_nt_from_row(r: pd.Series) -> str:
@@ -56,7 +62,7 @@ def _get_mave_nt_pam_from_row(r: pd.Series) -> str:
 
 def get_mave_nt_pam_from_row(r: pd.Series) -> str:
     return (
-        _get_mave_nt_pam_from_row if r[META_PAM_CODON_MASK] == 1 else
+        _get_mave_nt_pam_from_row if r[META_PAM_EXT_MASK] == 1 else
         get_mave_nt_from_row
     )(r)
 
@@ -157,8 +163,9 @@ NO_CATEGORY: int = -1
 def _init_pam_extended_required_fields(all_mutations: pd.DataFrame) -> None:
     rown: int = all_mutations.shape[0]
 
-    # Initialise mask
+    # Initialise masks
     all_mutations[META_PAM_CODON_MASK] = np.zeros(rown, dtype=np.int8)
+    all_mutations[META_PAM_EXT_MASK] = np.zeros(rown, dtype=np.int8)
 
     # Initialise extended REF start positions
     init_nullable_int_field(all_mutations, META_PAM_MUT_START)
@@ -285,27 +292,22 @@ def set_ref(meta: pd.DataFrame) -> None:
         META_REF_NO_PAM)
 
 
-def set_pam_extended_ref_alt(
+def _set_pam_extended_ref_alt(
     all_mutations: pd.DataFrame,
-    pam_prot_cds_targetons: List[PamProtCDSTargeton]
+    pam_prot_cds_targetons: List[PamProtCDSTargeton],
+    pam_ext_mask: pd.Series
 ) -> None:
+    """
+    Set the mutation start and end extended to the PAM sequence variants
+    that may occur at either end
 
-    # Initialise required new fields
-    _init_pam_extended_required_fields(all_mutations)
+    Set fields:
+    - META_PAM_CODON_REF
+    - META_PAM_CODON_ALT
 
-    if not pam_prot_cds_targetons:
-        logging.debug("No PAM-protected CDS targetons.")
-        return
-
-    # Filter for mutations that overlap at least one PAM-protected codon
-    pam_codon_mask: pd.Series = all_mutations[META_PAM_MUT_SGRNA_ID].str.len() > 0
-
-    if not pam_codon_mask.any():
-        logging.warning("No sgRNA ID's assigned to PAM-protected CDS targetons!")
-        return
-
-    # Initialise extra fields
-    _init_pam_extended_fields(all_mutations)
+    The mask is expected to contain at least one element (otherwise,
+    implicit casting occurs).
+    """
 
     def get_targeton(targeton_index: int) -> Optional[PamProtCDSTargeton]:
         assert targeton_index >= -1  # DEBUG
@@ -322,12 +324,14 @@ def set_pam_extended_ref_alt(
         if targeton:
             df[META_PAM_MUT_START] = df[META_MUT_POSITION].apply(
                 lambda x: targeton.get_pam_ext_start(x)).astype(np.int32)
+        else:
+            df[META_PAM_MUT_START] = df[META_MUT_POSITION]
 
-            df[META_START_OFFSET] = df[META_PAM_MUT_START].sub(df[META_REF_START])
+        df[META_START_OFFSET] = df[META_PAM_MUT_START].sub(df[META_REF_START])
 
         return df
 
-    def assign_pam_ref_alt_end(df: pd.DataFrame) -> pd.Series:
+    def assign_pam_ref_alt_end(df: pd.DataFrame) -> pd.DataFrame:
         """Given a dataframe grouped by the end targeton, set the REF and ALT ends"""
 
         targeton = get_targeton(df.name)
@@ -340,32 +344,22 @@ def set_pam_extended_ref_alt(
 
         return df
 
-    def set_length_field(string_col_name: str, length_col_name: str) -> None:
-        set_string_length_field(
-            all_mutations, string_col_name, length_col_name, mask=pam_codon_mask)
-
-    # Compute ALT length
-    set_length_field(META_NEW, META_ALT_LENGTH)
-
     # Compute length difference between ALT and REF
-    all_mutations.loc[pam_codon_mask, META_ALT_REF_DIFF] = (
-        all_mutations.loc[pam_codon_mask, META_ALT_LENGTH] -
-        all_mutations.loc[pam_codon_mask, META_REF_LENGTH]
+    all_mutations.loc[pam_ext_mask, META_ALT_REF_DIFF] = (
+        all_mutations.loc[pam_ext_mask, META_ALT_LENGTH] -
+        all_mutations.loc[pam_ext_mask, META_REF_LENGTH]
     )
 
-    _set_targeton_at_ref_start_end(
-        all_mutations, pam_codon_mask, pam_prot_cds_targetons)
-
     # Assign extended REF and ALT start offsets
-    all_mutations.loc[pam_codon_mask, :] = (
-        all_mutations.loc[pam_codon_mask, :]
+    all_mutations.loc[pam_ext_mask, :] = (
+        all_mutations.loc[pam_ext_mask, :]
         .groupby(META_CDS_START, group_keys=False)
         .apply(assign_pam_ref_alt_start)
     )
 
     # Assign extended REF and ALT end offsets
-    all_mutations.loc[pam_codon_mask, :] = (
-        all_mutations.loc[pam_codon_mask, :]
+    all_mutations.loc[pam_ext_mask, :] = (
+        all_mutations.loc[pam_ext_mask, :]
         .groupby(META_CDS_END, group_keys=False)
         .apply(assign_pam_ref_alt_end)
     )
@@ -377,7 +371,7 @@ def set_pam_extended_ref_alt(
             META_START_OFFSET,
             end_col_name,
             slice_col_name,
-            mask=pam_codon_mask)
+            mask=pam_ext_mask)
 
     logging.debug("Assigning extended REF and ALT slices...")
     set_slice(
@@ -389,6 +383,47 @@ def set_pam_extended_ref_alt(
         META_MSEQ_NO_ADAPT_NO_RC,
         META_ALT_END_OFFSET,
         META_PAM_CODON_ALT)
+
+
+def set_pam_extended_ref_alt(
+    all_mutations: pd.DataFrame,
+    pam_prot_cds_targetons: List[PamProtCDSTargeton]
+) -> None:
+
+    # Initialise required new fields
+    _init_pam_extended_required_fields(all_mutations)
+
+    # Filter for mutations that overlap at least one PAM-protected codon
+    pam_codon_mask: pd.Series = all_mutations[META_PAM_MUT_SGRNA_ID].str.len() > 0
+
+    if not pam_codon_mask.any():
+        logging.warning("No sgRNA ID's assigned to PAM-protected CDS targetons!")
+        return
+
+    # Initialise extra fields
+    _init_pam_extended_fields(all_mutations)
+
+    # Compute ALT length
+    set_string_length_field(
+        all_mutations, META_NEW, META_ALT_LENGTH, mask=pam_codon_mask)
+
+    # Assign mutation boundaries to CDS regions
+    _set_targeton_at_ref_start_end(
+        all_mutations, pam_codon_mask, pam_prot_cds_targetons)
+
+    # Requires the liminal CDS targetons to be set
+    pam_ext_mask: pd.Series = (
+        (all_mutations[META_CDS_START] != NO_CATEGORY) |
+        (all_mutations[META_CDS_END] != NO_CATEGORY)
+    )
+
+    if pam_ext_mask.any():
+
+        # Set the extended REF and ALT
+        _set_pam_extended_ref_alt(all_mutations, pam_prot_cds_targetons, pam_ext_mask)
+
+        # Report the mask on the table to inform the MAVE-HGVS string creation
+        all_mutations.loc[pam_ext_mask, META_PAM_EXT_MASK] = 1
 
     # Add mask (to filter when generating the VCF)
     all_mutations.loc[pam_codon_mask, META_PAM_CODON_MASK] = 1

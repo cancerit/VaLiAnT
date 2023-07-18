@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.1] - 2023-07-18
+
+### Added
+
+- Docker: add `ps` executable to support NextFlow
+
+### Fixed
+
+- Fix custom variants being ignored when no targeton region is set as mutable
+- Fix error on mutations that end but do not start in codons affected by PAM protection edits
+- Metadata table: fix MAVE-HGVS strings (`mave_nt` field) to correctly report as deletion-insertions those deletions that occur in codons affected by PAM protection edits where the edit itself is preserved
+
 ## [3.0.0] - 2022-10-11
 
 ### Added

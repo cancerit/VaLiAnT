@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -333,12 +333,14 @@ def get_oligo_template_qc_info(
 def generate_oligos(output: str, ref_repository: ReferenceSequenceRepository, aux: AuxiliaryTables, ot: OligoTemplate, species: str, assembly: str, options: Options) -> OligoGenerationInfo:
 
     # Generate metadata table
+    mutation_df = ot.get_mutation_table(aux, options)
     metadata = MetadataTable.from_partial(
         species,
         assembly,
-        ot.get_mutation_table(aux, options),
+        mutation_df,
         options.oligo_min_length,
-        options.oligo_max_length)
+        options.oligo_max_length
+    ) if mutation_df is not None else MetadataTable.empty()
 
     # Generate file name prefix
     base_fn = (
@@ -401,6 +403,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             sys.exit(1)
 
     if exons:
+
         exons.register_target_ranges(rsrs.target_ranges)
 
         # Retrieve CDS context (if any) for target regions

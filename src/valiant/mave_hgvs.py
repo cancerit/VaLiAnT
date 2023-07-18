@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -90,18 +90,23 @@ def _raise_invalid_deletion() -> NoReturn:
     raise ValueError("Invalid deletion: missing reference!")
 
 
-def _get_deletion_mave_nt_suffix(start: int, ref: Optional[str]) -> str:
+def _get_deletion_mave_nt_suffix(start: int, ref: Optional[str], alt: Optional[str]) -> str:
     """Generate MAVE-HGVS name for a deletion"""
 
     if ref is None:
         _raise_invalid_deletion()
 
+    ref_length: int = len(ref)
     n: int = len(ref)
+    is_delin: bool = alt is not None
 
     if n == 0:
         _raise_invalid_deletion()
 
-    return _get_del_position(start, n) + 'del'
+    return (
+        _get_delin_mave_nt_suffix(start, ref_length, alt) if is_delin else
+        _get_del_position(start, n) + 'del'
+    )
 
 
 def get_mave_nt(
@@ -121,7 +126,7 @@ def get_mave_nt(
     suffix: Optional[str] = (
         _get_substitution_mave_nt_suffix(start, ref, alt) if var_type == var_type_sub else
         _get_insertion_mave_nt_suffix(start, alt) if var_type == var_type_ins else
-        _get_deletion_mave_nt_suffix(start, ref) if var_type == var_type_del else
+        _get_deletion_mave_nt_suffix(start, ref, alt) if var_type == var_type_del else
         None
     )
 

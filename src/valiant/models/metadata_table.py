@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -86,6 +86,10 @@ class MetadataTable:
         self._setattr('too_short_oligo_n', n - self._oligo_min_length_mask.sum())
         self._setattr('long_oligo_n', n - self._oligo_max_length_mask.sum())
         self._setattr('short_oligo_n', n - self.too_short_oligo_n - self.long_oligo_n)
+
+    @classmethod
+    def empty(cls) -> MetadataTable:
+        return cls(pd.DataFrame(), pd.Series(), pd.Series(), pd.Series(), 0, 0, 0)
 
     @classmethod
     def from_partial(

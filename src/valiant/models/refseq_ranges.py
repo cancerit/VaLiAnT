@@ -266,6 +266,10 @@ class ReferenceSequenceRangeCollection:
         return frozenset.union(*[rsr.sgrna_ids for rsr in self._rsrs.values()])
 
     @property
+    def region_ranges(self) -> PyRanges:
+        return self._region_ranges
+
+    @property
     def target_ranges(self) -> PyRanges:
         return self._region_ranges[~self._region_ranges.is_const]
 

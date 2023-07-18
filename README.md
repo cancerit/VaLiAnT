@@ -7,6 +7,7 @@ A selection of libraries is included in the `examples` directory, including all 
 Please also see the [VaLiAnT Wiki](https://github.com/cancerit/VaLiAnT/wiki) for more information on use cases.
 
 - [VaLiAnT](#valiant)
+  - [Citation](#citation)
   - [Usage](#usage)
     - [Python package](#python-package)
     - [Docker image](#docker-image)
@@ -45,6 +46,18 @@ Please also see the [VaLiAnT Wiki](https://github.com/cancerit/VaLiAnT/wiki) for
     - [Reference sequence retrieval quality check file](#reference-sequence-retrieval-quality-check-file)
   - [Development](#development)
   - [LICENSE](#license)
+
+## Citation
+
+Please cite this paper when using VaLiAnT for your publications:
+
+> **Variant Library Annotation Tool (VaLiAnT): an oligonucleotide library design and annotation tool for saturation genome editing and other deep mutational scanning experiments.**
+>
+> Barbon L, Offord V, Radford EJ, Butler AP, Gerety SS, Adams DJ, Tan HK, Waters AJ.
+>
+> *Bioinformatics. 2022 Jan 27;38(4):892-899.*
+>
+> DOI: [10.1093/bioinformatics/btab776](https://doi.org/10.1093/bioinformatics/btab776). PMID: 34791067; PMCID: [PMC8796380](http://www.ncbi.nlm.nih.gov/pmc/articles/pmc8796380/).
 
 ## Usage
 
