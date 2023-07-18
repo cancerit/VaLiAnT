@@ -1,6 +1,10 @@
 # Changelog
 
-## [UNRELEASED]
+## [3.0.1] - 2023-07-18
+
+### Added
+
+- Docker: add `ps` executable to support NextFlow
 
 ### Fixed
 
