@@ -48,15 +48,20 @@ def _filter_variants_by_range(
     return sort_variants(a) if sort else a
 
 
-def _compute_alt_offsets(ref_start: int, ref_length: int, variants_in_range: List[BaseVariantT]) -> np.ndarray:
+def _get_alt_length(ref_length: int, variants_in_range: List[BaseVariantT]) -> int:
+    alt_length = ref_length + compute_genomic_offset(variants_in_range)
+    if alt_length < 0:
+        raise ValueError("Negative ALT length: verify the variants!")
+    return alt_length
+
+
+def _compute_alt_offsets(ref_start: int, alt_length: int, variants_in_range: List[BaseVariantT]) -> np.ndarray:
     """
     Generate an array of position offsets to convert relative positions in ALT to
     reference positions
 
     The variants are assumed to be in range and sorted by position.
     """
-
-    alt_length: int = ref_length + compute_genomic_offset(variants_in_range)
 
     alt_offsets: np.ndarray = np.zeros(alt_length, dtype=np.int32)
     alt_offset: int = 0
@@ -97,16 +102,22 @@ class GenomicPositionOffsets:
     ref_start: int
     ref_length: int
     variants_in_range: List[BaseVariantT]
+    _alt_length: int = field(init=False)
     _pos_offsets: List[Tuple[int, int]] = field(init=False)
     _ins_offsets: np.ndarray = field(init=False)
 
+    @property
+    def alt_length(self) -> int:
+        return self._alt_length
+
     def __post_init__(self) -> None:
+        self._alt_length = _get_alt_length(self.ref_length, self.variants_in_range)
         self._pos_offsets = self._compute_ref_offsets()
         self._ins_offsets = self._compute_ins_offsets()
 
     def _compute_ins_offsets(self) -> List[Tuple[int, int]]:
         return _compute_alt_offsets(
-            self.ref_start, self.ref_length, self.variants_in_range)
+            self.ref_start, self._alt_length, self.variants_in_range)
 
     def _compute_ref_offsets(self) -> List[Tuple[int, int]]:
         return _compute_ref_offsets(self.variants_in_range)
