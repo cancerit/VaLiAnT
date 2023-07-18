@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from valiant.models.background_variants import _filter_variants_by_range, _get_alt_length, compute_genomic_offset, _compute_alt_offsets
+from valiant.models.background_variants import GenomicPositionOffsets, _filter_variants_by_range, _get_alt_length, compute_genomic_offset, _compute_alt_offsets
 from valiant.models.base import GenomicPosition
 from valiant.models.variant import DeletionVariant, InsertionVariant
 
@@ -47,3 +47,23 @@ def test_compute_alt_offsets():
     alt_offsets = _compute_alt_offsets(ref_start, alt_length, variants_in_range)
     assert alt_offsets.shape[0] == ref_length + compute_genomic_offset(variants_in_range)
     assert alt_offsets.tolist() == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
+
+
+def test_genomic_position_offsets_from_variants():
+    variants = [
+        DeletionVariant(get_pos(120), 'AA'),
+        InsertionVariant(get_pos(110), 'AAA'),
+        InsertionVariant(get_pos(130), 'AAA'),
+        InsertionVariant(get_pos(999), 'AAA')
+    ]
+    ref_start = 100
+    ref_length = 40
+    gpo = GenomicPositionOffsets.from_variants(
+        ref_start, ref_length, variants)
+
+    assert gpo.ref_start == ref_start
+    assert gpo.ref_length == ref_length
+    assert gpo._alt_length == ref_length + 3 + 3 - 2
+    assert len(gpo.variants_in_range) == 3
+    assert len(gpo._pos_offsets) == len(gpo.variants_in_range)
+    assert gpo._ins_offsets.shape[0] == gpo._alt_length
