@@ -2,6 +2,10 @@
 
 ## [3.0.1] - 2023-07-18
 
+### Added
+
+- Docker: add `ps` executable to support NextFlow
+
 ### Fixed
 
 - Fix custom variants being ignored when no targeton region is set as mutable
