@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from valiant.models.background_variants import compute_genomic_offset, compute_alt_offsets
+from valiant.models.background_variants import _filter_variants_by_range, compute_genomic_offset, _compute_alt_offsets
 from valiant.models.base import GenomicPosition
 from valiant.models.variant import DeletionVariant, InsertionVariant
 
@@ -39,7 +39,10 @@ def test_compute_alt_offsets():
         InsertionVariant(get_pos(130), 'AAA'),
         InsertionVariant(get_pos(999), 'AAA')
     ]
+    ref_start = 100
     ref_length = 40
-    alt_offsets = compute_alt_offsets(100, ref_length, variants)
-    assert alt_offsets.shape[0] == ref_length + compute_genomic_offset(variants[:3])
+    variants_in_range = _filter_variants_by_range(
+        ref_start, ref_length, variants, sort=True)
+    alt_offsets = _compute_alt_offsets(ref_start, ref_length, variants_in_range)
+    assert alt_offsets.shape[0] == ref_length + compute_genomic_offset(variants_in_range)
     assert alt_offsets.tolist() == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]

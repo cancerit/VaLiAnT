@@ -16,7 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from typing import List
+from dataclasses import dataclass, field
+from typing import List, Tuple
 
 import numpy as np
 
@@ -33,17 +34,28 @@ def compute_genomic_offset(variants: List[BaseVariantT]) -> int:
     )
 
 
-def filter_variants_by_range(ref_start: int, ref_length: int, variants: List[BaseVariantT]) -> List[BaseVariantT]:
-    return [
+def _filter_variants_by_range(
+    ref_start: int,
+    ref_length: int,
+    variants: List[BaseVariantT],
+    sort: bool = False
+) -> List[BaseVariantT]:
+    a: List[BaseVariantT] = [
         variant
         for variant in variants
         if 0 <= (variant.genomic_position.position - ref_start) < ref_length
     ]
+    return sort_variants(a) if sort else a
 
 
-def compute_alt_offsets(ref_start: int, ref_length: int, variants: List[BaseVariantT]) -> np.ndarray:
-    variants_in_range: List[BaseVariantT] = sort_variants(
-        filter_variants_by_range(ref_start, ref_length, variants))
+def _compute_alt_offsets(ref_start: int, ref_length: int, variants_in_range: List[BaseVariantT]) -> np.ndarray:
+    """
+    Generate an array of position offsets to convert relative positions in ALT to
+    reference positions
+
+    The variants are assumed to be in range and sorted by position.
+    """
+
     alt_length: int = ref_length + compute_genomic_offset(variants_in_range)
 
     alt_offsets: np.ndarray = np.zeros(alt_length, dtype=np.int32)
@@ -63,3 +75,52 @@ def compute_alt_offsets(ref_start: int, ref_length: int, variants: List[BaseVari
             alt_offsets[ref_offset + variant.alt_length:] = alt_offset
 
     return alt_offsets
+
+
+def _compute_ref_offsets(variants_in_range: List[BaseVariantT]) -> List[Tuple[int, int]]:
+    """
+    Map sorted positions to the cumulative offsets the corresponding variants introduce
+
+    The variants are assumed to be in range and sorted by position.
+    """
+
+    offset: int = 0
+    pos_offset = []
+    for variant in variants_in_range:
+        offset += variant.alt_ref_delta
+        pos_offset.append((variant.genomic_position.position, offset))
+    return pos_offset
+
+
+@dataclass
+class GenomicPositionOffsets:
+    ref_start: int
+    ref_length: int
+    variants_in_range: List[BaseVariantT]
+    _pos_offsets: List[Tuple[int, int]] = field(init=False)
+    _ins_offsets: np.ndarray = field(init=False)
+
+    def __post_init__(self) -> None:
+        self._pos_offsets = self._compute_ref_offsets()
+        self._ins_offsets = self._compute_ins_offsets()
+
+    def _compute_ins_offsets(self) -> List[Tuple[int, int]]:
+        return _compute_alt_offsets(
+            self.ref_start, self.ref_length, self.variants_in_range)
+
+    def _compute_ref_offsets(self) -> List[Tuple[int, int]]:
+        return _compute_ref_offsets(self.variants_in_range)
+
+    @classmethod
+    def from_variants(cls, ref_start: int, ref_length: int, variants: List[BaseVariantT]):
+        variants_in_range = _filter_variants_by_range(
+            ref_start, ref_length, variants, sort=True)
+        return cls(ref_start, ref_length, variants_in_range)
+
+    def get_offset(self, pos: int) -> int:
+        if not self._pos_offsets or pos < self._pos_offsets[0]:
+            return 0
+
+        for p, offset in self._pos_offsets:
+            if pos >= p:
+                return offset
