@@ -19,6 +19,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
+from .base import GenomicRange
 from .dna_str import DnaStr
 from .uint_range import UIntRange
 from .variant_group import VariantGroup
@@ -30,9 +31,13 @@ def is_valid_index(range_length: int, value: int) -> bool:
 
 @dataclass(frozen=True)
 class AltSeqBuilder:
-    start: int
+    gr: GenomicRange
     sequence: DnaStr
     variant_groups: List[VariantGroup]
+
+    @property
+    def start(self) -> int:
+        return self.gr.start
 
     @property
     def ext_sequence(self) -> str:

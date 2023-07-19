@@ -25,6 +25,10 @@ from .sequences import ReferenceSequence
 from .variant import BaseVariantT
 
 
+LAYER_BG = 0
+LAYER_PAM = 1
+
+
 @dataclass(frozen=True, init=False)
 class PamBgAltSeqBuilder(AltSeqBuilder):
     @classmethod
@@ -35,7 +39,7 @@ class PamBgAltSeqBuilder(AltSeqBuilder):
         pam_variants: List[PamVariant]
     ) -> 'PamBgAltSeqBuilder':
         return cls(
-            ref_seq.start,
+            ref_seq.genomic_range,
             DnaStr(ref_seq.sequence), [
                 VariantGroup.from_variants(variants)
                 for variants in [
@@ -43,6 +47,20 @@ class PamBgAltSeqBuilder(AltSeqBuilder):
                     pam_variants
                 ]
             ])
+
+    @property
+    def bg_variants(self) -> List[BaseVariantT]:
+        return self.variant_groups[LAYER_BG]
+
+    @property
+    def pam_variants(self) -> List[PamVariant]:
+        return self.variant_groups[LAYER_PAM]
+
+    def get_bg_seq(self, extend: bool = False) -> str:
+        return self.get_alt(extend=extend, variant_layer=LAYER_BG)
+
+    def get_pam_seq(self, extend: bool = False) -> str:
+        return self.get_alt(extend=extend, variant_layer=LAYER_PAM)
 
 
 @dataclass(frozen=True, init=False)
@@ -57,7 +75,7 @@ class CdsPamBgAltSeqBuilder(CdsAltSeqBuilder):
         cds_suffix: str = ''
     ) -> 'CdsPamBgAltSeqBuilder':
         return cls(
-            ref_seq.start,
+            ref_seq.genomic_range,
             DnaStr(ref_seq.sequence), [
                 VariantGroup.from_variants(variants)
                 for variants in [
