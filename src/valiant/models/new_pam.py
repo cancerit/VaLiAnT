@@ -19,8 +19,9 @@
 from dataclasses import dataclass
 from typing import List
 
-from .new_seq import AltSeqBuilder
+from .new_seq import AltSeqBuilder, DnaStr, VariantGroup
 from .pam_protection import PamVariant
+from .sequences import ReferenceSequence
 from .variant import BaseVariantT
 
 
@@ -28,8 +29,7 @@ from .variant import BaseVariantT
 class PamBgAltSeqBuilder(AltSeqBuilder):
     def __init__(
         self,
-        start: int,
-        sequence: str,
+        ref_seq: ReferenceSequence,
         bg_variants: List[BaseVariantT],
         pam_variants: List[PamVariant],
         cds_prefix: str = '',
@@ -39,10 +39,13 @@ class PamBgAltSeqBuilder(AltSeqBuilder):
             raise ValueError("Invalid CDS extension!")
 
         super().__init__(
-            start,
-            sequence, [
-                bg_variants,
-                pam_variants
+            ref_seq.start,
+            DnaStr(ref_seq.sequence), [
+                VariantGroup.from_variants(variants)
+                for variants in [
+                    bg_variants,
+                    pam_variants
+                ]
             ],
-            prefix=cds_prefix,
-            suffix=cds_suffix)
+            prefix=DnaStr(cds_prefix),
+            suffix=DnaStr(cds_suffix))

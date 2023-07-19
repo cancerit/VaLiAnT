@@ -19,7 +19,19 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
+from ..utils import is_dna
 from .variant import BaseVariantT, sort_variants
+
+
+class DnaStr(str):
+    def __init__(self, s: str) -> None:
+        super().__init__()
+        if self and not is_dna(self):
+            raise ValueError(f"Invalid DNA sequence '{self}'!")
+
+    @classmethod
+    def empty(cls):
+        return cls('')
 
 
 @dataclass(frozen=True)
@@ -42,13 +54,21 @@ class VariantGroup:
         return alt_seq
 
 
+def is_valid_index(range_length: int, value: int) -> bool:
+    return 0 <= value < range_length
+
+
 @dataclass(frozen=True)
 class AltSeqBuilder:
     start: int
-    sequence: str
-    variant_groups: List[List[BaseVariantT]]
-    prefix: str = ''
-    suffix: str = ''
+    sequence: DnaStr
+    variant_groups: List[VariantGroup]
+    prefix: DnaStr = DnaStr.empty()
+    suffix: DnaStr = DnaStr.empty()
+
+    def __post_init__(self) -> None:
+        if self.start < 0:
+            raise ValueError(f"Invalid ALT sequence builder start {self.start}!")
 
     @property
     def ext_sequence(self) -> str:
@@ -60,8 +80,8 @@ class AltSeqBuilder:
             variant_layer if variant_layer is not None else
             n - 1
         )
-        if last_group_index >= n:
-            raise ValueError(f"Invalid variant group index {variant_layer}!")
+        if not is_valid_index(n, last_group_index):
+            raise IndexError(f"Invalid variant group index {variant_layer}!")
 
         alt_seq: str = self.ext_sequence if extend else self.sequence
         for g in self.variant_groups[:last_group_index + 1]:
