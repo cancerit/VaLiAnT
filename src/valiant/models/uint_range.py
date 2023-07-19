@@ -17,10 +17,11 @@
 #############################
 
 from dataclasses import dataclass
+from collections.abc import Container, Sized
 
 
 @dataclass(frozen=True)
-class UIntRange:
+class UIntRange(Sized, Container):
     """End-inclusive integer range"""
 
     __slots__ = ['start', 'end']
@@ -29,6 +30,8 @@ class UIntRange:
     end: int
 
     def __post_init__(self) -> None:
+        if not isinstance(self.start, int) or not isinstance(self.end, int):
+            raise TypeError("Invalid range boundary types!")
         if self.start < 0:
             raise ValueError("Invalid range start!")
         if self.end < 0:
@@ -37,11 +40,16 @@ class UIntRange:
             raise ValueError("Invalid range!")
 
     def __len__(self) -> int:
-        return self.end - self.start
+        return self.end - self.start + 1
 
     def __contains__(self, b) -> bool:
         if isinstance(b, int):
-            return b >= self.start or b <= self.end
+            return b >= self.start and b <= self.end
+        raise TypeError("Unsupported operand type!")
+
+    def __eq__(self, b) -> bool:
+        if isinstance(b, UIntRange):
+            return self.start == b.start and self.end == b.end
         raise TypeError("Unsupported operand type!")
 
     def __sub__(self, b) -> 'UIntRange':

@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,36 +17,27 @@
 #############################
 
 from __future__ import annotations
-from collections.abc import Container, Sized
 from dataclasses import dataclass
 from typing import Tuple, Optional
+
 from ..utils import get_region, is_strand
+from .uint_range import UIntRange
 
 
 @dataclass(frozen=True)
-class PositionRange(Sized, Container):
+class PositionRange(UIntRange):
     __slots__ = {'start', 'end'}
 
     start: int
     end: int
 
     def __post_init__(self) -> None:
-        if not isinstance(self.start, int) or not isinstance(self.end, int):
-            raise TypeError("Invalid position range!")
-        if self.start < 1 or self.end < self.start:
+        super().__post_init__()
+        if self.start < 1:
             raise ValueError("Invalid position range!")
-
-    def __len__(self) -> int:
-        return self.end - self.start + 1
 
     def __contains__(self, other) -> bool:
         return other.start >= self.start and other.end <= self.end
-
-    def __eq__(self, other) -> bool:
-        if not isinstance(other, PositionRange):
-            raise TypeError("Unsupported operation!")
-
-        return self.start == other.start and self.end == other.end
 
     # Required to allow multiprocessing to pickle the object
     def __setstate__(self, state: Tuple) -> None:
