@@ -50,6 +50,7 @@ from ..constants import (
     META_MUTATOR,
     META_MSEQ,
     META_OLIGO_LENGTH,
+    META_VCF_ALIAS,
     MUTATION_TYPE_NON_CDS
 )
 from ..enums import MutationType, TargetonMutator
@@ -308,11 +309,11 @@ class OligoTemplate:
         df: pd.DataFrame = mc.df
         df['oligo_name'] = pd.Series(
             df.apply(lambda r: renderer.get_oligo_name(
-                r.vcf_alias,
-                r.var_type,
-                r.mut_position,
-                r.ref if not pd.isnull(r.ref) else None,
-                r.new if not pd.isnull(r.new) else None), axis=1), dtype='string')
+                r[META_VCF_ALIAS],
+                r[META_VAR_TYPE],
+                r[META_MUT_POSITION],
+                r[META_REF] if not pd.isnull(r[META_REF]) else None,
+                r[META_NEW] if not pd.isnull(r[META_NEW]) else None), axis=1), dtype='string')
         df['mutator'] = get_constant_category(CUSTOM_MUTATOR, df.shape[0])
         return renderer.get_metadata_table(df, options)
 
@@ -365,7 +366,7 @@ class OligoTemplate:
             all_mutations.mut_type = decode_mut_types(all_mutations.mut_type)
 
         # Compute oligonucleotide lengths
-        all_mutations['oligo_length'] = all_mutations.mseq.str.len().astype(np.int32)
+        all_mutations[META_OLIGO_LENGTH] = all_mutations[META_MSEQ].str.len().astype(np.int32)
 
         # Add PAM variant annotations
         rown: int = all_mutations.shape[0]
