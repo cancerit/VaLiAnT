@@ -40,12 +40,24 @@ class AltSeqBuilder:
         return self.gr.start
 
     @property
+    def end(self) -> int:
+        return self.gr.end
+
+    @property
     def ext_sequence(self) -> str:
         return self.sequence
 
+    @property
+    def seq_length(self) -> int:
+        return len(self.sequence)
+
+    @property
+    def ext_seq_length(self) -> int:
+        return self.seq_length
+
     def __post_init__(self) -> None:
-        if self.start < 0:
-            raise ValueError(f"Invalid ALT sequence builder start {self.start}!")
+        if self.seq_length != len(self.gr):
+            raise ValueError("Mismatching position range and sequence length!")
 
     def get_alt(self, extend: bool = False, variant_layer: Optional[int] = None) -> str:
         n: int = len(self.variant_groups)
@@ -75,30 +87,3 @@ class AltSeqBuilder:
                 g.get_sub(r)
                 for g in self.variant_groups
             ])
-
-
-@dataclass(frozen=True)
-class CdsAltSeqBuilder(AltSeqBuilder):
-    prefix: DnaStr = DnaStr.empty()
-    suffix: DnaStr = DnaStr.empty()
-
-    @property
-    def ext_sequence(self) -> str:
-        return f"{self.prefix}{self.sequence}{self.suffix}"
-
-    def __post_init__(self) -> None:
-        prefix_length: int = len(self.prefix)
-        suffix_length: int = len(self.suffix)
-        seq_length: int = len(self.sequence)
-        if (
-            prefix_length > 2 or
-            suffix_length > 2 or
-            (prefix_length + suffix_length + seq_length) % 3
-        ):
-            raise ValueError("Invalid CDS extension!")
-        if seq_length % 3:
-            raise ValueError("Invalid CDS sequence length: partial codons!")
-
-    def frame(self) -> int:
-        # TODO: to verify
-        return len(self.prefix)
