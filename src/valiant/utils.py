@@ -21,7 +21,7 @@ from functools import lru_cache
 import os
 import pathlib
 import re
-from typing import Any, List, Optional, Type, Tuple, FrozenSet, Iterable, TypeVar
+from typing import Any, List, Optional, Set, Type, Tuple, FrozenSet, Iterable, TypeVar
 import numpy as np
 import pandas as pd
 from .constants import SRC_TYPES
@@ -194,3 +194,13 @@ def init_nullable_int_field(df: pd.DataFrame, field: str) -> None:
 def init_string_field(df: pd.DataFrame, field: str) -> None:
     df[field] = ''
     df[field] = df[field].astype('string')
+
+
+def does_any_set_intersect(sets: Iterable[Set[T]]) -> bool:
+    items: Set[T] = set()
+    for s in sets:
+        if items & s:
+            return True
+        items |= s
+
+    return False

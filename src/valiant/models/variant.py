@@ -27,7 +27,7 @@ from pyranges import PyRanges
 from pysam import VariantRecord
 
 from valiant.constants import META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_REF, META_REF, META_VCF_ALIAS, META_VCF_VAR_ID, METADATA_PAM_FIELDS
-from .base import GenomicPosition, GenomicRange, StrandedPositionRange
+from .base import GenomicPosition, GenomicRange, PositionRange, StrandedPositionRange
 from .refseq_repository import ReferenceSequenceRepository
 from .sequences import ReferenceSequence
 from ..enums import VariantType
@@ -105,6 +105,14 @@ class BaseVariant:
     @property
     def start(self) -> int:
         return self.genomic_position.position
+
+    @property
+    def ref_end(self) -> int:
+        return self.start + min(0, self.ref_length - 1)
+
+    @property
+    def ref_range(self) -> PositionRange:
+        return PositionRange(self.start, self.ref_end)
 
     def get_ref_offset(self, ref_seq: ReferenceSequence) -> int:
         if not ref_seq.genomic_range.contains_position(self.genomic_position):

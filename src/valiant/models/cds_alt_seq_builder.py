@@ -19,17 +19,18 @@
 from dataclasses import dataclass
 from itertools import groupby
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set, Tuple
 
 from ..enums import MutationType
 from ..sgrna_utils import get_codon_index, get_codon_indices_in_range
-from ..utils import has_duplicates
+from ..utils import does_any_set_intersect, has_duplicates
 
 from .alt_seq_builder import AltSeqBuilder
 from .base import GenomicPosition, StrandedPositionRange
 from .codon_table import CodonTable
 from .dna_str import DnaStr
 from .variant import BaseVariantT
+from .variant_group import VariantGroup
 
 
 @dataclass(frozen=True)
@@ -163,3 +164,23 @@ class CdsAltSeqBuilder(AltSeqBuilder):
         if self.cds_suffix_length > 0:
             d[self.last_codon_index] = d[self.last_codon_index][:-self.cds_suffix_length]
         return d
+
+    def _get_variant_group_codon_indices(self, g: VariantGroup) -> Set[int]:
+        return set().union(*[
+            self.get_codon_indices_in_range(variant.ref_range)
+            for variant in g.variants
+        ])
+
+    def variant_group_codon_clash(self, variant_group_indices: List[int]) -> bool:
+        self.validate_variant_group_indices(variant_group_indices)
+
+        if self.variant_group_count < 2 or len(variant_group_indices) < 2:
+            return False
+
+        return does_any_set_intersect(
+            self._get_variant_group_codon_indices(variant_group)
+            for variant_group in (
+                self.variant_groups[i]
+                for i in variant_group_indices
+            )
+        )
