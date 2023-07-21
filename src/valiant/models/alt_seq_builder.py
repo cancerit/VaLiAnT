@@ -73,6 +73,10 @@ class AltSeqBuilder:
     def is_variant_group_index_valid(self, variant_group_index: int) -> bool:
         return is_valid_index(self.variant_group_count, variant_group_index)
 
+    def validate_variant_group_index(self, variant_group_index: int) -> None:
+        if not self.is_variant_group_index_valid(variant_group_index):
+            raise InvalidVariantGroupIndex(f"Invalid variant group index {variant_group_index}!")
+
     def are_variant_group_indices_valid(self, variant_group_indices: List[int]) -> bool:
         return all(map(self.is_variant_group_index_valid, variant_group_indices))
 
@@ -91,8 +95,7 @@ class AltSeqBuilder:
             variant_layer if variant_layer is not None else
             self.variant_group_count - 1
         )
-        if not self.is_variant_group_index_valid(last_group_index):
-            raise InvalidVariantGroupIndex(f"Invalid variant group index {variant_layer}!")
+        self.validate_variant_group_index(last_group_index)
 
         alt_seq: str = self.ext_sequence if extend else self.sequence
         for g in self.variant_groups[:last_group_index + 1]:
@@ -113,3 +116,7 @@ class AltSeqBuilder:
                 g.get_sub(r)
                 for g in self.variant_groups
             ])
+
+    def get_variant_group(self, variant_group_index: int) -> VariantGroup:
+        self.validate_variant_group_index(variant_group_index)
+        return self.variant_groups[variant_group_index]

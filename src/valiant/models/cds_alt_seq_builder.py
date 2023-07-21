@@ -110,9 +110,15 @@ class CdsAltSeqBuilder(AltSeqBuilder):
     def _get_codon_indices(self, positions: List[GenomicPosition]) -> List[int]:
         return [self._get_codon_index(x.position) for x in positions]
 
-    @property
-    def contains_same_codon_variants(self) -> bool:
-        codon_indices = self._get_codon_indices(self.variant_positions)
+    def get_variant_positions(self, variant_group_index: int) -> List[GenomicPosition]:
+        return [
+            variant.genomic_position
+            for variant in self.get_variant_group(variant_group_index).variants
+        ]
+
+    def contains_same_codon_variants(self, variant_group_index: int) -> bool:
+        codon_indices = self._get_codon_indices(
+            self.get_variant_positions(variant_group_index))
         return has_duplicates(codon_indices)
 
     def get_codon_indices(self, positions: List[GenomicPosition], **kwargs) -> List[int]:
@@ -147,12 +153,12 @@ class CdsAltSeqBuilder(AltSeqBuilder):
         return self.get_codon_mutation_types_at_codons(
             codon_table, self.get_codon_indices(positions, **kwargs))
 
-    def get_variant_codon_indices(self, **kwargs) -> List[int]:
-        return self.get_codon_indices(self.variant_positions, **kwargs)
+    def get_variant_codon_indices(self, variant_group_index: int, **kwargs) -> List[int]:
+        return self.get_codon_indices(self.get_variant_positions(variant_group_index), **kwargs)
 
-    def get_variant_mutation_types(self, codon_table: CodonTable, **kwargs) -> List[MutationType]:
+    def get_variant_mutation_types(self, codon_table: CodonTable, variant_group_index: int, **kwargs) -> List[MutationType]:
         return self.get_codon_mutation_types_at(
-            codon_table, self.variant_positions, **kwargs)
+            codon_table, self.get_variant_positions(variant_group_index), **kwargs)
 
     def get_indexed_alt_codons(self) -> Dict[int, str]:
         d = {
