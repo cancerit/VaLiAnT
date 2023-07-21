@@ -32,6 +32,20 @@ LAYER_BG = 0
 LAYER_PAM = 1
 
 
+def _get_variant_groups(
+    bg_variants: List[BaseVariantT],
+    pam_variants: List[PamVariant]
+) -> List[VariantGroup]:
+    # Beware: maintain the variant layer order!
+    return [
+        VariantGroup.from_variants(variants)
+        for variants in [
+            bg_variants,  # LAYER_BG
+            pam_variants  # LAYER_PAM
+        ]
+    ]
+
+
 @dataclass(frozen=True, init=False)
 class PamBgAltSeqBuilder(AltSeqBuilder):
     @classmethod
@@ -41,16 +55,10 @@ class PamBgAltSeqBuilder(AltSeqBuilder):
         bg_variants: List[BaseVariantT],
         pam_variants: List[PamVariant]
     ) -> 'PamBgAltSeqBuilder':
-        # Beware: maintain the variant layer order!
         return cls(
             ref_seq.genomic_range,
-            DnaStr(ref_seq.sequence), [
-                VariantGroup.from_variants(variants)
-                for variants in [
-                    bg_variants,  # LAYER_BG
-                    pam_variants  # LAYER_PAM
-                ]
-            ])
+            DnaStr(ref_seq.sequence),
+            _get_variant_groups(bg_variants, pam_variants))
 
     @property
     def bg_variants(self) -> List[BaseVariantT]:
@@ -80,13 +88,8 @@ class CdsPamBgAltSeqBuilder(CdsAltSeqBuilder):
     ) -> 'CdsPamBgAltSeqBuilder':
         return cls(
             ref_seq.genomic_range,
-            DnaStr(ref_seq.sequence), [
-                VariantGroup.from_variants(variants)
-                for variants in [
-                    bg_variants,
-                    pam_variants
-                ]
-            ],
+            DnaStr(ref_seq.sequence),
+            _get_variant_groups(bg_variants, pam_variants),
             prefix=DnaStr(cds_prefix),
             suffix=DnaStr(cds_suffix))
 
