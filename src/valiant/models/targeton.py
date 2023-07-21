@@ -31,7 +31,8 @@ from ..utils import get_constant_category, get_out_of_frame_offset
 from .annotated_sequence import AnnotatedSequencePair, AnnotatedSequenceT, CDSAnnotatedSequencePair, RangeT, VariantT
 from .base import GenomicRange, StrandedPositionRange
 from .codon_table import CodonTable, STOP_CODE
-from .pam_protection import PamProtectedReferenceSequence, PamVariant, get_position_to_sgrna_ids
+from .pam_protected_reference_sequence import PamProtectedReferenceSequence
+from .pam_protection import PamVariant, get_position_to_sgrna_ids
 from .mutated_sequences import (
     DeletionMutatedSequence,
     Deletion1MutatedSequence,
@@ -276,14 +277,6 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
     @property
     def frame(self) -> int:
         return self.annotated_seq.frame
-
-    @property
-    def cds_sequence_start(self) -> int:
-        return self.annotated_seq.cds_sequence_start
-
-    @property
-    def cds_sequence_end(self) -> int:
-        return self.annotated_seq.cds_sequence_end
 
     def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
         return self.annotated_seq.get_codon_indices_in_range(spr)

@@ -180,14 +180,6 @@ class CDSAnnotatedSequencePair(AnnotatedSequencePair, Generic[VariantT]):
     def end(self) -> int:
         return self.pos_range.end
 
-    @property
-    def cds_sequence_start(self) -> int:
-        return self.start - self.frame
-
-    @property
-    def cds_sequence_end(self) -> int:
-        return self.end + self.cds_suffix_length
-
     def log_same_codon_variants(self) -> None:
 
         def get_variant_codon(variant: VariantT) -> int:
