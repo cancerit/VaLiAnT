@@ -22,7 +22,7 @@ from typing import List, Optional, Tuple, Any
 import numpy as np
 import pandas as pd
 from .options import Options
-from .pam_protection import PamProtectedReferenceSequence
+from .pam_protected_reference_sequence import PamProtectedReferenceSequence
 from ..constants import META_MSEQ, META_MSEQ_NO_ADAPT, META_MSEQ_NO_ADAPT_NO_RC, REVCOMP_OLIGO_NAME_SUFFIX
 from ..enums import VariantType
 from ..utils import get_constant_category, reverse_complement, get_source_type_column, validate_strand

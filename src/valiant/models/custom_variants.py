@@ -25,7 +25,7 @@ from ..constants import META_PAM_MUT_SGRNA_ID, META_VCF_VAR_IN_CONST
 from ..sgrna_utils import sgrna_ids_to_string
 from .mutated_sequences import BaseMutationCollection
 from .oligo_renderer import BaseOligoRenderer
-from .pam_protection import PamProtectedReferenceSequence
+from .pam_protected_reference_sequence import PamProtectedReferenceSequence
 from .variant import BaseVariant, CustomVariant
 
 

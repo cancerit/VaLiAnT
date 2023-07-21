@@ -33,7 +33,7 @@ from .custom_variants import CustomVariantMutation, CustomVariantMutationCollect
 from .mutated_sequences import MutationCollection
 from .oligo_renderer import BaseOligoRenderer
 from .options import Options
-from .pam_protection import PamProtectedReferenceSequence
+from .pam_protected_reference_sequence import PamProtectedReferenceSequence
 from .snv_table import AuxiliaryTables
 from .variant import CustomVariant
 from ..constants import (

@@ -34,7 +34,8 @@ from .models.oligo_generation_info import OligoGenerationInfo
 from .models.oligo_segment import InvariantOligoSegment, OligoSegment, TargetonOligoSegment
 from .models.oligo_template import OligoTemplate
 from .models.options import Options
-from .models.pam_protection import compute_pam_protected_sequence, PamProtectedReferenceSequence, PamVariant
+from .models.pam_protection import PamVariant
+from .models.pam_protected_reference_sequence import PamProtectedReferenceSequence
 from .models.refseq_ranges import genomic_ranges_to_pyranges, ReferenceSequenceRangeCollection, ReferenceSequenceRanges, TargetReferenceRegion
 from .models.refseq_repository import fetch_reference_sequences, ReferenceSequenceRepository
 from .models.sequences import ReferenceSequence
@@ -91,7 +92,7 @@ def get_oligo_template(
             raise ValueError("Sequence not found!")
         return ReferenceSequence(seq, genomic_range)
 
-    pam_ref_seq: PamProtectedReferenceSequence = compute_pam_protected_sequence(
+    pam_ref_seq: PamProtectedReferenceSequence = PamProtectedReferenceSequence.from_reference_sequence(
         get_sequence(rsr.ref_range), pam_variants, bg_variants)
 
     # 2. Get constant regions

@@ -19,91 +19,13 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import logging
-from typing import Dict, Iterable, List, Optional, Set, FrozenSet
+from typing import Dict, List, Optional, Set, FrozenSet
 import pandas as pd
 from pyranges import PyRanges
+
 from ..loaders.vcf import get_vcf
 from ..utils import get_id_column
-from .base import GenomicRange
-from .sequences import ReferenceSequence
-from .variant import BaseVariant, get_variant, SubstitutionVariant, apply_variants, sort_variants
-
-
-@dataclass(frozen=True)
-class PamProtectedReferenceSequence(ReferenceSequence):
-    __slots__ = [
-        'sequence',
-        'genomic_range',
-        'pam_protected_sequence',
-        'bg_sequence',
-        'pam_variants',
-        'bg_variants'
-    ]
-
-    pam_protected_sequence: str
-    bg_sequence: str
-    pam_variants: List[PamVariant]
-    bg_variants: List[BaseVariant]
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        if len(self.pam_protected_sequence) != len(self.genomic_range):
-            raise ValueError("PAM protected sequence and genomic range have different lengths!")
-
-    @classmethod
-    def from_reference_sequence(
-        cls,
-        ref_seq: ReferenceSequence,
-        pam_variants_: Iterable[PamVariant],
-        bg_variants_: Iterable[BaseVariant] = list()
-    ) -> PamProtectedReferenceSequence:
-        pam_variants: List[PamVariant] = sort_variants(pam_variants_)
-        bg_variants: List[BaseVariant] = sort_variants(bg_variants_)
-
-        # Apply background variants
-        bg_seq: str = apply_variants(ref_seq, bg_variants, ref_check=True)
-        if len(bg_seq) != len(ref_seq):
-            raise NotImplementedError("Background variants altering the length of the reference sequence!")
-
-        # Apply PAM sequence variants
-        pam_seq: str = apply_variants(
-            ReferenceSequence(bg_seq, ref_seq.genomic_range),
-            pam_variants,
-            ref_check=not bool(bg_variants))
-
-        return cls(
-            ref_seq.sequence,
-            ref_seq.genomic_range,
-            pam_seq,
-            bg_seq,
-            pam_variants,
-            bg_variants)
-
-    def get_subsequence(self, genomic_range: GenomicRange) -> PamProtectedReferenceSequence:
-        ref_seq: ReferenceSequence = super().get_subsequence(genomic_range)
-        pam_variants = [
-            variant
-            for variant in self.pam_variants
-            if genomic_range.contains_position(variant.genomic_position)
-        ]
-        bg_variants = [
-            variant
-            for variant in self.bg_variants
-            if genomic_range.contains_position(variant.genomic_position)
-        ]
-        return PamProtectedReferenceSequence.from_reference_sequence(ref_seq, pam_variants, bg_variants)
-
-    def _validate_variant_position(self, variant: BaseVariant) -> None:
-        if not self.genomic_range.contains_position(variant.genomic_position):
-            raise ValueError("Variant not in genomic range!")
-
-    def apply_variant(self, variant: BaseVariant, ref_check: bool = False) -> str:
-        self._validate_variant_position(variant)
-        return variant.mutate(self.pam_protected_sequence, self.genomic_range.start, ref_check=ref_check)
-
-    def get_variant_corrected_ref(self, variant: BaseVariant) -> Optional[str]:
-        self._validate_variant_position(variant)
-        return variant.get_corrected_ref(self.pam_protected_sequence, self.genomic_range.start)
+from .variant import get_variant, SubstitutionVariant
 
 
 @dataclass(frozen=True)
@@ -185,15 +107,6 @@ class PamProtectionVariantRepository:
         df.sgrna_id = df.sgrna_id.astype('category')
         df['variant_id'] = get_id_column(df.shape[0])
         self._ranges = PyRanges(df)
-
-
-def compute_pam_protected_sequence(
-    ref_seq: ReferenceSequence,
-    pam_variants: Set[PamVariant],
-    bg_variants: Set[BaseVariant]
-) -> PamProtectedReferenceSequence:
-    return PamProtectedReferenceSequence.from_reference_sequence(
-        ref_seq, pam_variants, bg_variants)
 
 
 def get_position_to_sgrna_ids(pam_variants: List[PamVariant]) -> Dict[int, str]:
