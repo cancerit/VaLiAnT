@@ -50,11 +50,11 @@ class PamBgAltSeqBuilder(AltSeqBuilder):
 
     @property
     def bg_variants(self) -> List[BaseVariantT]:
-        return self.variant_groups[LAYER_BG]
+        return self.variant_groups[LAYER_BG].variants
 
     @property
     def pam_variants(self) -> List[PamVariant]:
-        return self.variant_groups[LAYER_PAM]
+        return self.variant_groups[LAYER_PAM].variants
 
     def get_bg_seq(self, extend: bool = False) -> str:
         return self.get_alt(extend=extend, variant_layer=LAYER_BG)
