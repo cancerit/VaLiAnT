@@ -19,10 +19,12 @@
 from dataclasses import dataclass
 from typing import List
 
-from .new_seq import AltSeqBuilder, CdsAltSeqBuilder, DnaStr, VariantGroup
+from .alt_seq_builder import AltSeqBuilder
+from .dna_str import DnaStr
 from .pam_protection import PamVariant
 from .sequences import ReferenceSequence
 from .variant import BaseVariantT
+from .variant_group import VariantGroup
 
 
 LAYER_BG = 0
