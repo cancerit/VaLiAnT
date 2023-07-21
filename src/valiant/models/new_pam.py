@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from typing import List
 
 from .alt_seq_builder import AltSeqBuilder
+from .cds_alt_seq_builder import CdsAltSeqBuilder
 from .dna_str import DnaStr
 from .pam_protection import PamVariant
 from .sequences import ReferenceSequence
@@ -40,13 +41,14 @@ class PamBgAltSeqBuilder(AltSeqBuilder):
         bg_variants: List[BaseVariantT],
         pam_variants: List[PamVariant]
     ) -> 'PamBgAltSeqBuilder':
+        # Beware: maintain the variant layer order!
         return cls(
             ref_seq.genomic_range,
             DnaStr(ref_seq.sequence), [
                 VariantGroup.from_variants(variants)
                 for variants in [
-                    bg_variants,
-                    pam_variants
+                    bg_variants,  # LAYER_BG
+                    pam_variants  # LAYER_PAM
                 ]
             ])
 
@@ -87,3 +89,10 @@ class CdsPamBgAltSeqBuilder(CdsAltSeqBuilder):
             ],
             prefix=DnaStr(cds_prefix),
             suffix=DnaStr(cds_suffix))
+
+    @property
+    def pam_bg_codon_clash(self) -> bool:
+        return self.variant_group_codon_clash([
+            LAYER_BG,
+            LAYER_PAM
+        ])
