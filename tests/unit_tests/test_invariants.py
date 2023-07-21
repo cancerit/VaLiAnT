@@ -17,9 +17,9 @@
 #############################
 
 from valiant.models.base import GenomicPosition
+from valiant.models.new_pam import LAYER_BG, LAYER_PAM, _get_variant_groups
 from valiant.models.pam_protection import PamVariant
 from valiant.models.variant import SubstitutionVariant
-from valiant.models.new_pam import LAYER_BG, LAYER_PAM, _get_variant_groups
 
 
 def test_alt_var_group_const():
