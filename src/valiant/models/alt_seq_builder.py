@@ -64,6 +64,14 @@ class AltSeqBuilder:
     def ext_seq_length(self) -> int:
         return self.seq_length
 
+    @property
+    def ext_ref_seq(self) -> str:
+        return self.ext_sequence
+
+    @property
+    def ext_alt_seq(self) -> str:
+        return self.get_alt(extend=True)
+
     # Variant group properties
 
     @property
