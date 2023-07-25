@@ -111,6 +111,14 @@ class BaseVariant:
         return self.start + min(0, self.ref_length - 1)
 
     @property
+    def ref_start_pos(self) -> GenomicPosition:
+        return self.genomic_position
+
+    @property
+    def ref_end_pos(self) -> GenomicPosition:
+        return GenomicPosition(self.genomic_position.chromosome, self.ref_end)
+
+    @property
     def ref_range(self) -> PositionRange:
         return PositionRange(self.start, self.ref_end)
 

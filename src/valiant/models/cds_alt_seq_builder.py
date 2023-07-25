@@ -75,7 +75,7 @@ class CdsAltSeqBuilder(AltSeqBuilder):
 
     @property
     def codon_count(self) -> int:
-        return self.ext_seq_length // 3
+        return self.ext_seq_length // CODON_LENGTH
 
     @property
     def last_codon_index(self) -> int:
@@ -117,12 +117,6 @@ class CdsAltSeqBuilder(AltSeqBuilder):
 
     def _get_codon_indices(self, positions: List[GenomicPosition]) -> List[int]:
         return [self._get_codon_index(x.position) for x in positions]
-
-    def get_variant_positions(self, variant_group_index: int) -> List[GenomicPosition]:
-        return [
-            variant.genomic_position
-            for variant in self.get_variant_group(variant_group_index).variants
-        ]
 
     def contains_same_codon_variants(self, variant_group_index: int) -> bool:
         codon_indices = self._get_codon_indices(

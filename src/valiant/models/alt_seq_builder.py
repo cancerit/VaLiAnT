@@ -17,13 +17,17 @@
 #############################
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List, Optional, TypeVar
 
 from ..utils import has_duplicates
-from .base import GenomicRange
+from .base import GenomicPosition, GenomicRange, StrandedPositionRange
 from .dna_str import DnaStr
 from .uint_range import UIntRange
+from .variant import BaseVariantT as VariantT
 from .variant_group import VariantGroup
+
+
+RangeT = TypeVar('RangeT', bound='StrandedPositionRange')
 
 
 class InvalidVariantGroupIndex(IndexError):
@@ -93,6 +97,28 @@ class AltSeqBuilder:
             raise ValueError("Duplicate variant group indices!")
         if not self.are_variant_group_indices_valid(variant_group_indices):
             raise InvalidVariantGroupIndex("Invalid variant group indices!")
+
+    def get_variants(self, variant_group_index: int, genomic_range: Optional[RangeT] = None) -> List[VariantT]:
+        def ft(variant: VariantT) -> bool:
+            return (
+                variant.ref_start_pos.in_range(genomic_range) or
+                variant.ref_end_pos.in_range(genomic_range)
+            )
+
+        variants = self.get_variant_group(variant_group_index).variants
+        return list(filter(ft, variants)) if genomic_range else variants
+
+    def get_variant_positions(self, variant_group_index: int) -> List[GenomicPosition]:
+        return [
+            variant.genomic_position
+            for variant in self.get_variants(variant_group_index)
+        ]
+
+    def get_variant_ref_ranges(self, variant_group_index: int) -> List[GenomicRange]:
+        return [
+            variant.ref_range
+            for variant in self.get_variants(variant_group_index)
+        ]
 
     def __post_init__(self) -> None:
         if self.seq_length != len(self.gr):
