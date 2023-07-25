@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,7 +23,7 @@ from typing import Any, Callable, ClassVar, Dict, Generic, List, FrozenSet, Opti
 import numpy as np
 import pandas as pd
 
-from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS
+from ..constants import GENERIC_MUTATORS, CDS_ONLY_MUTATORS, META_ALT_AA, META_MUT_POSITION, META_MUT_TYPE, META_NEW, META_REF, META_REF_AA, META_VAR_TYPE
 from ..enums import MutationType, TargetonMutator, VariantType
 from ..sgrna_utils import set_metadata_sgrna_ids, set_metadata_sgrna_ids_empty
 from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
@@ -305,14 +305,14 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
             'alt_aa',
             'mut_type'
         ]].rename(columns={
-            'pos': 'mut_position',
-            'alt': 'new',
-            'ref_aa': 'ref_aa',
-            'alt_aa': 'alt_aa',
-            'mut_type': 'mut_type'
-        }).set_index(['mut_position', 'new'])
+            'pos': META_MUT_POSITION,
+            'alt': META_NEW,
+            'ref_aa': META_REF_AA,
+            'alt_aa': META_ALT_AA,
+            'mut_type': META_MUT_TYPE
+        }).set_index([META_MUT_POSITION, META_NEW])
         snvs.df.mut_position += self.start
-        df = snvs.df.set_index(['mut_position', 'new'], drop=False)
+        df = snvs.df.set_index([META_MUT_POSITION, META_NEW], drop=False)
 
         # Join SNV data with pre-computed metadata
         snv_joint = df.join(snv_meta)
@@ -328,11 +328,11 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
         df: pd.DataFrame = aux.snvre_table.get_snvres(
             self.pos_range, self.frame, self.sequence, snvs).rename(
                 columns={
-                    'pos': 'mut_position',
-                    'alt': 'new',
-                    'ref_aa': 'ref_aa',
-                    'alt_aa': 'alt_aa',
-                    'mut_type': 'mut_type'
+                    'pos': META_MUT_POSITION,
+                    'alt': META_NEW,
+                    'ref_aa': META_REF_AA,
+                    'alt_aa': META_ALT_AA,
+                    'mut_type': META_MUT_TYPE
                 })
 
         return MutationCollection(df)
@@ -363,11 +363,11 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
         )
         rown: int = mc.df.shape[0]
         amino_acid_symbols: List[str] = codon_table.amino_acid_symbols
-        mc.df['ref_aa'] = pd.Categorical(mc.df.ref.apply(tr), categories=amino_acid_symbols)
-        mc.df['alt_aa'] = get_constant_category(aa, rown, amino_acid_symbols)
+        mc.df[META_REF_AA] = pd.Categorical(mc.df[META_REF].apply(tr), categories=amino_acid_symbols)
+        mc.df[META_ALT_AA] = get_constant_category(aa, rown, amino_acid_symbols)
 
         # Add variant type
-        mc.df['var_type'] = np.int8(VariantType.SUBSTITUTION.value)
+        mc.df[META_VAR_TYPE] = np.int8(VariantType.SUBSTITUTION.value)
 
         return mc
 
