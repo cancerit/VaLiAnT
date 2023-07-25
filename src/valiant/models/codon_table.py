@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,6 +24,7 @@ from ..enums import MutationType
 from ..globals import TRIPLET_RCS
 from ..utils import validate_strand
 
+CODON_LENGTH = 3
 STOP_CODE = 'STOP'
 
 
@@ -127,8 +128,8 @@ class CodonTable:
         tr = self.get_translate_f(strand)
 
         def get_mutation_type(codon_index: int) -> MutationType:
-            start: int = codon_index * 3
-            sl = slice(start, start + 3)
+            start: int = codon_index * CODON_LENGTH
+            sl = slice(start, start + CODON_LENGTH)
             return get_codon_mutation_type(tr, ref_seq[sl], alt_seq[sl])
 
         return list(map(get_mutation_type, codon_indices))

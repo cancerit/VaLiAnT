@@ -22,6 +22,11 @@ from valiant.models.cds_alt_seq_builder import CdsAltSeqBuilder
 from valiant.models.variant import SubstitutionVariant
 from valiant.models.variant_group import VariantGroup
 
+from .utils import get_aux_tables
+
+aux = get_aux_tables()
+codon_table = aux.codon_table
+
 
 def test_alt_seq_builder_get_alt_sub():
     gr = GenomicRange('X', 100, 150, '+')
@@ -58,3 +63,8 @@ def test_cds_alt_seq_builder_variant_group_codon_clash():
 
     assert alt_builder.variant_group_codon_clash([0, 1])
     assert alt_builder.variant_group_codon_clash([1, 0])
+
+    var_c = SubstitutionVariant(pos_b, ref_nt, ref_nt)
+    assert not alt_builder.is_variant_frame_shifting(var_a)
+    assert alt_builder.is_variant_nonsynonymous(codon_table, var_a)
+    assert not alt_builder.is_variant_nonsynonymous(codon_table, var_c)

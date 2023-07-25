@@ -27,7 +27,7 @@ from ..utils import does_any_set_intersect, has_duplicates
 
 from .alt_seq_builder import AltSeqBuilder
 from .base import GenomicPosition, StrandedPositionRange
-from .codon_table import CodonTable
+from .codon_table import CodonTable, CODON_LENGTH
 from .dna_str import DnaStr
 from .variant import BaseVariantT
 from .variant_group import VariantGroup
@@ -72,6 +72,14 @@ class CdsAltSeqBuilder(AltSeqBuilder):
     @property
     def frame(self) -> int:
         return self.cds_prefix_length
+
+    @property
+    def codon_count(self) -> int:
+        return self.ext_seq_length // 3
+
+    @property
+    def last_codon_index(self) -> int:
+        return self.codon_count - 1
 
     @classmethod
     def from_builder(cls, b: AltSeqBuilder, prefix: str, suffix: str) -> 'CdsAltSeqBuilder':
@@ -162,7 +170,7 @@ class CdsAltSeqBuilder(AltSeqBuilder):
 
     def get_indexed_alt_codons(self) -> Dict[int, str]:
         d = {
-            i: self.ext_alt_seq[i * 3:i * 3 + 3]
+            i: self.ext_alt_seq[i * CODON_LENGTH:i * CODON_LENGTH + CODON_LENGTH]
             for i in range(self.codon_count)
         }
         if self.frame > 0:
@@ -190,3 +198,26 @@ class CdsAltSeqBuilder(AltSeqBuilder):
                 for i in variant_group_indices
             )
         )
+
+    def is_variant_frame_shifting(self, variant: BaseVariantT) -> bool:
+        return variant.alt_length != variant.ref_length
+
+    def is_variant_nonsynonymous(self, codon_table: CodonTable, variant: BaseVariantT) -> bool:
+
+        # Frame-shifting
+        if self.is_variant_frame_shifting(variant):
+            return True
+
+        # Get liminal codons
+        start_codon_index = self.get_codon_index(variant.start)
+        end_codon_index = self.get_codon_index(variant.ref_end)
+        codon_indices = list(range(start_codon_index, end_codon_index + 1))
+
+        # Apply variant to reference sequence
+        alt_seq = variant.mutate(self.sequence, self.start, ref_check=False)
+
+        # Predict variant effect on the CDS
+        mut_types = codon_table.get_mutation_types_at(
+            self.gr.strand, self.sequence, alt_seq, codon_indices)
+
+        return any(m != MutationType.SYNONYMOUS for m in mut_types)
