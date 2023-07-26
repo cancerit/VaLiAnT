@@ -19,6 +19,7 @@
 from valiant.models.alt_seq_builder import AltSeqBuilder
 from valiant.models.base import GenomicPosition, GenomicRange
 from valiant.models.cds_alt_seq_builder import CdsAltSeqBuilder
+from valiant.models.dna_str import DnaStr
 from valiant.models.new_pam import PamBgAltSeqBuilder, CdsPamBgAltSeqBuilder
 from valiant.models.variant import SubstitutionVariant
 from valiant.models.variant_group import VariantGroup
@@ -62,7 +63,7 @@ def test_cds_alt_seq_builder_variant_group_codon_clash():
     alt_builder = CdsAltSeqBuilder(gr, 'A' * len(gr), [
         VariantGroup.from_variants([var_a]),
         VariantGroup.from_variants([var_b])
-    ])
+    ], DnaStr.empty(), DnaStr.empty())
 
     assert alt_builder.variant_group_codon_clash([0, 1])
     assert alt_builder.variant_group_codon_clash([1, 0])

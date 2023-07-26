@@ -35,8 +35,10 @@ from .variant_group import VariantGroup
 
 @dataclass(frozen=True)
 class CdsAltSeqBuilder(AltSeqBuilder):
-    cds_prefix: DnaStr = DnaStr.empty()
-    cds_suffix: DnaStr = DnaStr.empty()
+    __slots__ = ['gr', 'sequence', 'variant_groups', 'cds_prefix', 'cds_suffix']
+
+    cds_prefix: DnaStr
+    cds_suffix: DnaStr
 
     @property
     def ext_sequence(self) -> str:
@@ -47,10 +49,10 @@ class CdsAltSeqBuilder(AltSeqBuilder):
         if (
             self.cds_prefix_length > 2 or
             self.cds_suffix_length > 2 or
-            self.ext_seq_length % 3
+            self.ext_seq_length % CODON_LENGTH
         ):
             raise ValueError("Invalid CDS extension!")
-        if seq_length % 3:
+        if seq_length % CODON_LENGTH:
             raise ValueError("Invalid CDS sequence length: partial codons!")
 
     @property
@@ -87,8 +89,8 @@ class CdsAltSeqBuilder(AltSeqBuilder):
             b.gr,
             b.sequence,
             b.variant_groups,
-            cds_prefix=DnaStr(prefix),
-            cds_suffix=DnaStr(suffix))
+            DnaStr(prefix),
+            DnaStr(suffix))
 
     def log_same_codon_variants(self, variant_group_index: int) -> None:
 

@@ -41,6 +41,8 @@ def is_valid_index(range_length: int, value: int) -> bool:
 
 @dataclass(frozen=True)
 class AltSeqBuilder:
+    __slots__ = ['gr', 'sequence', 'variant_groups']
+
     gr: GenomicRange
     sequence: DnaStr
     variant_groups: List[VariantGroup]
