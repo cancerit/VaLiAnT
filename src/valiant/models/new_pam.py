@@ -142,8 +142,8 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
             ref_range,
             DnaStr(ref_seq),
             _get_variant_groups(bg_variants, pam_variants),
-            prefix=DnaStr(cds_prefix),
-            suffix=DnaStr(cds_suffix)))
+            DnaStr(cds_prefix),
+            DnaStr(cds_suffix)))
 
     @classmethod
     def from_ref_seq(
