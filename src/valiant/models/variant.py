@@ -103,6 +103,10 @@ class BaseVariant:
         return self.alt_length - self.ref_length
 
     @property
+    def is_frame_shifting(self) -> bool:
+        return self.alt_ref_delta % 3 != 0
+
+    @property
     def start(self) -> int:
         return self.genomic_position.position
 

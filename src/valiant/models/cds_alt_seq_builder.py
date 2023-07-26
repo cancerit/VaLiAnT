@@ -95,7 +95,7 @@ class CdsAltSeqBuilder(AltSeqBuilder):
     def log_same_codon_variants(self, variant_group_index: int) -> None:
 
         def get_variant_codon(variant: BaseVariantT) -> int:
-            return self._get_codon_index(variant.genomic_position.position)
+            return self.get_ref_codon_index(variant.genomic_position.position)
 
         def sort_key(t: Tuple[int, BaseVariantT]) -> int:
             return t[0]
@@ -109,24 +109,21 @@ class CdsAltSeqBuilder(AltSeqBuilder):
                     ', '.join([str(x.genomic_position) for _, x in variants]),
                     codon_index + 1))
 
-    def _get_codon_index(self, position: int) -> int:
+    def get_ref_codon_index(self, position: int) -> int:
         """Convert a genomic position into a codon index"""
 
         return get_codon_index(self.frame, self.start, position)
 
-    def get_codon_index(self, position: int) -> int:
-        return self._get_codon_index(position)
-
-    def _get_codon_indices(self, positions: List[GenomicPosition]) -> List[int]:
-        return [self._get_codon_index(x.position) for x in positions]
+    def get_ref_codon_indices(self, positions: List[GenomicPosition]) -> List[int]:
+        return [self.get_ref_codon_index(x.position) for x in positions]
 
     def contains_same_codon_variants(self, variant_group_index: int) -> bool:
-        codon_indices = self._get_codon_indices(
+        codon_indices = self.get_ref_codon_indices(
             self.get_variant_positions(variant_group_index))
         return has_duplicates(codon_indices)
 
     def get_codon_indices(self, variant_group_index: int, positions: List[GenomicPosition], **kwargs) -> List[int]:
-        codon_indices = self._get_codon_indices(positions)
+        codon_indices = self.get_ref_codon_indices(positions)
         no_duplicate_codons = kwargs.get('no_duplicate_codons', False)
 
         # Verify no two variants affect the same codon
@@ -195,18 +192,15 @@ class CdsAltSeqBuilder(AltSeqBuilder):
             )
         )
 
-    def is_variant_frame_shifting(self, variant: BaseVariantT) -> bool:
-        return variant.alt_length != variant.ref_length
-
     def is_variant_nonsynonymous(self, codon_table: CodonTable, variant: BaseVariantT) -> bool:
 
         # Frame-shifting
-        if self.is_variant_frame_shifting(variant):
+        if variant.is_frame_shifting:
             return True
 
         # Get liminal codons
-        start_codon_index = self.get_codon_index(variant.start)
-        end_codon_index = self.get_codon_index(variant.ref_end)
+        start_codon_index = self.get_ref_codon_index(variant.start)
+        end_codon_index = self.get_ref_codon_index(variant.ref_end)
         codon_indices = list(range(start_codon_index, end_codon_index + 1))
 
         # Apply variant to reference sequence
