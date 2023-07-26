@@ -45,15 +45,12 @@ class CdsAltSeqBuilder(AltSeqBuilder):
         return f"{self.cds_prefix}{self.sequence}{self.cds_suffix}"
 
     def __post_init__(self) -> None:
-        seq_length: int = len(self.sequence)
         if (
             self.cds_prefix_length > 2 or
             self.cds_suffix_length > 2 or
-            self.ext_seq_length % CODON_LENGTH
+            self.ext_seq_length % CODON_LENGTH != 0
         ):
-            raise ValueError("Invalid CDS extension!")
-        if seq_length % CODON_LENGTH:
-            raise ValueError("Invalid CDS sequence length: partial codons!")
+            raise ValueError("Invalid extended CDS sequence length: partial codons!")
 
     @property
     def seq_length(self) -> int:
