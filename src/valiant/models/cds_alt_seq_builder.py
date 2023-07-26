@@ -90,7 +90,7 @@ class CdsAltSeqBuilder(AltSeqBuilder):
             cds_prefix=DnaStr(prefix),
             cds_suffix=DnaStr(suffix))
 
-    def log_same_codon_variants(self) -> None:
+    def log_same_codon_variants(self, variant_group_index: int) -> None:
 
         def get_variant_codon(variant: BaseVariantT) -> int:
             return self._get_codon_index(variant.genomic_position.position)
@@ -100,7 +100,7 @@ class CdsAltSeqBuilder(AltSeqBuilder):
 
         for codon_index, variants in groupby(sorted([
             (get_variant_codon(variant), variant)
-            for variant in self.variants
+            for variant in self.get_variants(variant_group_index)
         ], key=sort_key), key=sort_key):
             if len(list(variants)) > 1:
                 logging.warning("Variants at %s affect the same codon (%d)!" % (
