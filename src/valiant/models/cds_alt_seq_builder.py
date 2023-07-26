@@ -125,13 +125,13 @@ class CdsAltSeqBuilder(AltSeqBuilder):
             self.get_variant_positions(variant_group_index))
         return has_duplicates(codon_indices)
 
-    def get_codon_indices(self, positions: List[GenomicPosition], **kwargs) -> List[int]:
+    def get_codon_indices(self, variant_group_index: int, positions: List[GenomicPosition], **kwargs) -> List[int]:
         codon_indices = self._get_codon_indices(positions)
         no_duplicate_codons = kwargs.get('no_duplicate_codons', False)
 
         # Verify no two variants affect the same codon
         if no_duplicate_codons and has_duplicates(codon_indices):
-            self.log_same_codon_variants()
+            self.log_same_codon_variants(variant_group_index)
             raise ValueError("Variant affecting the same codon!")
 
         return codon_indices
