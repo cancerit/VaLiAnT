@@ -28,11 +28,9 @@ from ..enums import MutationType, TargetonMutator, VariantType
 from ..sgrna_utils import set_metadata_sgrna_ids, set_metadata_sgrna_ids_empty
 from ..string_mutators import delete_non_overlapping_3_offset, replace_codons_const
 from ..utils import get_constant_category, get_out_of_frame_offset
-from .annotated_sequence import AnnotatedSequencePair, AnnotatedSequenceT, CDSAnnotatedSequencePair, RangeT, VariantT
 from .base import GenomicRange, StrandedPositionRange
 from .codon_table import CodonTable, STOP_CODE
-from .pam_protected_reference_sequence import PamProtectedReferenceSequence
-from .pam_protection import PamVariant, get_position_to_sgrna_ids
+from .new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder, PamBgAltSeqBuilderT
 from .mutated_sequences import (
     DeletionMutatedSequence,
     Deletion1MutatedSequence,
@@ -42,9 +40,13 @@ from .mutated_sequences import (
     SingleNucleotideMutatedSequence,
     SingleCodonMutatedSequence
 )
+from .pam_protection import PamVariant, get_position_to_sgrna_ids
 from .snv_table import AuxiliaryTables
+from .variant import SubstitutionVariant
 
 
+RangeT = TypeVar('RangeT', bound='StrandedPositionRange')
+VariantT = TypeVar('VariantT', bound='SubstitutionVariant')
 TargetonT = TypeVar('TargetonT', bound='ITargeton')
 NonCDSTargetonT = TypeVar('NonCDSTargetonT', bound='Targeton')
 CDSTargetonT = TypeVar('CDSTargetonT', bound='CDSTargeton')
@@ -115,33 +117,45 @@ class BaseTargeton(abc.ABC):
 
 
 @dataclass(frozen=True)
-class ITargeton(BaseTargeton, Generic[AnnotatedSequenceT], abc.ABC):
-    annotated_seq: AnnotatedSequenceT
+class ITargeton(BaseTargeton, Generic[PamBgAltSeqBuilderT], abc.ABC):
+    ab: PamBgAltSeqBuilderT
 
     @property
     def ref_seq(self) -> str:
-        return self.annotated_seq.ref_seq
+        return self.ab.ref_seq
 
     @property
     def alt_seq(self) -> str:
-        return self.annotated_seq.alt_seq
+        return self.ab.alt_seq
 
     @property
     def pos_range(self) -> StrandedPositionRange:
-        return self.annotated_seq.pos_range
+        return self.ab.pos_range
+
+    @property
+    def sequence(self) -> str:
+        return self.alt_seq
+
+    @property
+    def pam_seq(self) -> str:
+        return self.alt_seq
+
+    @property
+    def start(self) -> int:
+        return self.pos_range.start
 
     @property
     def variants(self) -> List[VariantT]:
-        return self.annotated_seq.variants
+        return self.ab.pam_variants
 
     @property
     def variant_count(self) -> int:
-        return self.annotated_seq.variant_count
+        return len(self.variants)
 
     def _get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
         return frozenset({
             variant.sgrna_id
-            for variant in self.annotated_seq.get_variants_in_range(spr)
+            for variant in self.ab.get_pam_variants_in_range(spr)
         })
 
     @abc.abstractmethod
@@ -154,43 +168,17 @@ class ITargeton(BaseTargeton, Generic[AnnotatedSequenceT], abc.ABC):
 
 
 @dataclass(frozen=True)
-class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT, RangeT]):
-    __slots__ = ['annotated_seq']
-
-    @property
-    def sequence(self) -> str:
-        return self.alt_seq
-
-    @property
-    def seq(self) -> str:
-        return self.ref_seq
-
-    @property
-    def pam_seq(self) -> str:
-        return self.alt_seq
-
-    @property
-    def start(self) -> int:
-        return self.pos_range.start
+class Targeton(ITargeton[PamBgAltSeqBuilder], Generic[VariantT, RangeT]):
+    __slots__ = ['ab']
 
     @classmethod
     def build_without_variants(
-        cls: Type[NonCDSTargetonT],
+        cls: Type[CDSTargetonT],
         pos_range: RangeT,
         ref_seq: str
     ) -> NonCDSTargetonT:
-        return cls(AnnotatedSequencePair(pos_range, ref_seq, ref_seq, []))
-
-    @classmethod
-    def from_pam_seq(
-        cls: Type[NonCDSTargetonT],
-        pam_seq: PamProtectedReferenceSequence
-    ) -> NonCDSTargetonT:
-        return cls(AnnotatedSequencePair(
-            pam_seq.genomic_range,
-            pam_seq.sequence,
-            pam_seq.pam_protected_sequence,
-            pam_seq.pam_variants))
+        return cls(PamBgAltSeqBuilder.from_ref(
+            pos_range, ref_seq, [], []))
 
     def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
         return []
@@ -203,8 +191,8 @@ class Targeton(ITargeton[AnnotatedSequencePair], Generic[VariantT, RangeT]):
 
 
 @dataclass(frozen=True)
-class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]):
-    __slots__ = ['annotated_seq']
+class CDSTargeton(ITargeton[CdsPamBgAltSeqBuilder], Generic[VariantT, RangeT]):
+    __slots__ = ['ab']
 
     MUTATORS: ClassVar[FrozenSet[TargetonMutator]] = GENERIC_MUTATORS | CDS_ONLY_MUTATORS
 
@@ -220,23 +208,8 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
         cds_prefix: str,
         cds_suffix: str
     ) -> CDSTargetonT:
-        return cls(CDSAnnotatedSequencePair(
-            pos_range, ref_seq, ref_seq, [], cds_prefix, cds_suffix))
-
-    @classmethod
-    def from_pam_seq(
-        cls: Type[CDSTargetonT],
-        pam_seq: PamProtectedReferenceSequence,
-        cds_prefix: str,
-        cds_suffix: str
-    ) -> CDSTargetonT:
-        return cls(CDSAnnotatedSequencePair(
-            pam_seq.genomic_range,
-            pam_seq.sequence,
-            pam_seq.pam_protected_sequence,
-            pam_seq.pam_variants,
-            cds_prefix,
-            cds_suffix))
+        return cls(CdsPamBgAltSeqBuilder.from_ref(
+            pos_range, ref_seq, [], [], cds_prefix=cds_prefix, cds_suffix=cds_suffix))
 
     @property
     def sequence(self) -> str:
@@ -256,34 +229,18 @@ class CDSTargeton(ITargeton[CDSAnnotatedSequencePair], Generic[VariantT, RangeT]
 
     @property
     def cds_sequence(self) -> str:
-        return self.annotated_seq.ext_alt_seq
+        return self.ab.ext_alt_seq
 
     @property
     def cds_prefix_length(self) -> int:
-        return self.annotated_seq.cds_prefix_length
+        return self.ab.cds_prefix_length
 
     @property
     def cds_suffix_length(self) -> int:
-        return self.annotated_seq.cds_suffix_length
-
-    @property
-    def start(self) -> int:
-        return self.annotated_seq.start
-
-    @property
-    def end(self) -> int:
-        return self.annotated_seq.end
-
-    @property
-    def frame(self) -> int:
-        return self.annotated_seq.frame
+        return self.ab.cds_suffix_length
 
     def get_codon_indices(self, spr: StrandedPositionRange) -> List[int]:
-        return self.annotated_seq.get_codon_indices_in_range(spr)
-
-    def get_liminal_codon_indices(self, spr: StrandedPositionRange) -> Tuple[int, int]:
-        codon_indices = self.get_codon_indices(spr)
-        return codon_indices[0], codon_indices[-1]
+        return self.ab.get_codon_indices_in_range(spr)
 
     def get_sgrna_ids(self, spr: StrandedPositionRange) -> FrozenSet[str]:
         return super()._get_sgrna_ids(spr)
@@ -468,7 +425,7 @@ class PamProtected(abc.ABC):
 
 @dataclass(frozen=True)
 class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
-    __slots__ = ['annotated_seq']
+    __slots__ = ['ab']
 
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
         return [None] * self.variant_count
@@ -491,7 +448,7 @@ class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
         mutators: FrozenSet[TargetonMutator],
         **kwargs
     ) -> Dict[TargetonMutator, MutationCollection]:
-        f"""
+        """
         Compute all mutations
 
         sgRNA ID's should be provided unless no PAM protection was applied.
@@ -507,7 +464,7 @@ class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
 
 @dataclass(frozen=True)
 class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
-    __slots__ = ['annotated_seq', '_codon_to_pam_variant', '_codon_to_pam_codon']
+    __slots__ = ['ab', '_codon_to_pam_variant', '_codon_to_pam_codon']
 
     def get_position_to_sgrna_ids(self) -> Dict[int, str]:
         return get_position_to_sgrna_ids(self.variants)
@@ -525,18 +482,19 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         chromosome: str = targeton.pos_range.chromosome
         strand: str = targeton.pos_range.strand
         start: int = targeton.pos_range.start
-        cds_prefix: str = targeton.annotated_seq.cds_prefix
-        ref_seq: str = targeton.annotated_seq.ref_seq
-        alt_seq: str = targeton.annotated_seq.alt_seq
-        pam_variants: List[PamVariant] = targeton.annotated_seq.variants
+        cds_prefix: str = targeton.ab.cds_prefix
+        ref_seq: str = targeton.ab.ref_seq
+        alt_seq: str = targeton.ab.alt_seq
+        pam_variants: List[PamVariant] = targeton.ab.pam_variants
+        bg_variants = targeton.ab.bg_variants
 
         prev_end: int = targeton.pos_range.end
-        prev_suffix: str = targeton.annotated_seq.cds_suffix
+        prev_suffix: str = targeton.ab.cds_suffix
 
         # Set variables based on the last targeton
         targeton = targetons[-1]
         end: int = targeton.pos_range.end
-        cds_suffix: str = targeton.annotated_seq.cds_suffix
+        cds_suffix: str = targeton.ab.cds_suffix
 
         pos_range: GenomicRange
         for i in range(1, n):
@@ -546,24 +504,25 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
                 pos_range.chromosome != chromosome
                 or pos_range.strand != strand
                 or pos_range.start != prev_end + 1
-                or targeton.annotated_seq.ref_seq[:len(prev_suffix)] != prev_suffix
+                or targeton.ref_seq[:len(prev_suffix)] != prev_suffix
             ):
                 raise ValueError("Non-consecutive targetons!")
 
-            ref_seq += targeton.annotated_seq.ref_seq
-            alt_seq += targeton.annotated_seq.alt_seq
-            pam_variants += targeton.annotated_seq.variants
+            ref_seq += targeton.ab.ref_seq
+            alt_seq += targeton.ab.alt_seq
+            pam_variants += targeton.ab.pam_variants
+            bg_variants += targeton.ab.bg_variants
 
             prev_end = pos_range.end
-            prev_suffix = targeton.annotated_seq.cds_suffix
+            prev_suffix = targeton.ab.cds_suffix
 
-        return PamProtCDSTargeton(CDSAnnotatedSequencePair(
+        return PamProtCDSTargeton(CdsPamBgAltSeqBuilder.from_ref(
             GenomicRange(chromosome, start, end, strand),
             ref_seq,
-            alt_seq,
+            bg_variants,
             pam_variants,
-            cds_prefix,
-            cds_suffix))
+            cds_prefix=cds_prefix,
+            cds_suffix=cds_suffix))
 
     def _get_codon_to_pam_variant(self, codon_indices: List[int]) -> Dict[int, PamVariant]:
         """Create mapping of codon indices to sgRNA identifiers"""
@@ -578,7 +537,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     def _get_codon_to_pam_codon(self, codon_indices: List[int]) -> Dict[int, str]:
         """Create mapping of codon indices to PAM-protected codon sequences"""
 
-        d = self.annotated_seq.get_indexed_alt_codons()
+        d = self.ab.get_indexed_alt_codons()
         return {
             codon_index: d[codon_index]
             for codon_index in codon_indices
@@ -588,15 +547,15 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         object.__setattr__(self, attr, value)
 
     def __post_init__(self) -> None:
-        if self.annotated_seq.contains_same_codon_variants:
-            self.annotated_seq.log_same_codon_variants()
+        if self.ab.contains_same_codon_variants:
+            self.ab.log_same_codon_variants()
             raise ValueError("Multiple PAM protection variants in a single codon!")
 
         codon_to_pam_variant: Dict[int, PamVariant] = {}
         codon_to_pam_codon: Dict[int, str] = {}
 
         if self.has_pam_variants:
-            codon_indices = self.annotated_seq.get_variant_codon_indices()
+            codon_indices = self.ab.get_pam_variant_codon_indices()
             codon_to_pam_variant = self._get_codon_to_pam_variant(codon_indices)
             codon_to_pam_codon = self._get_codon_to_pam_codon(codon_indices)
 
@@ -604,7 +563,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
         self._setattr('_codon_to_pam_codon', codon_to_pam_codon)
 
     def get_pam_variant_annotations(self, codon_table: CodonTable) -> List[Optional[MutationType]]:
-        return self.annotated_seq.get_variant_mutation_types(
+        return self.ab.get_variant_mutation_types(
             codon_table, no_duplicate_codons=True)
 
     def _get_pam_codon_length(self, codon_index: int) -> int:
@@ -636,7 +595,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     def get_pam_ext_start(self, pos: int) -> int:
         """Get genomic position at the start of the PAM-protected codon"""
 
-        codon_index: int = self.annotated_seq.get_codon_index(pos)
+        codon_index: int = self.ab.get_ref_codon_index(pos)
 
         return (
             min(
@@ -649,7 +608,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
     def get_pam_ext_ref_end(self, pos: int) -> int:
         """Get genomic position at the end of the PAM-protected codon"""
 
-        codon_index: int = self.annotated_seq.get_codon_index(pos)
+        codon_index: int = self.ab.get_ref_codon_index(pos)
 
         return (
             max(

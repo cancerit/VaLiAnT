@@ -60,6 +60,10 @@ class AltSeqBuilder:
     # Reference sequence properties
 
     @property
+    def ref_seq(self) -> str:
+        return self.sequence
+
+    @property
     def ext_sequence(self) -> str:
         return self.sequence
 
