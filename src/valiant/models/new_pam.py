@@ -106,8 +106,8 @@ class PamBgAltSeqBuilder(BasePamBgAltSeqBuilder[AltSeqBuilder]):
         ref_seq: str,
         bg_variants: List[BaseVariantT],
         pam_variants: List[PamVariant]
-    ) -> 'CdsPamBgAltSeqBuilder':
-        return cls(CdsAltSeqBuilder(
+    ) -> 'PamBgAltSeqBuilder':
+        return cls(AltSeqBuilder(
             ref_range,
             DnaStr(ref_seq),
             _get_variant_groups(bg_variants, pam_variants)))
@@ -121,7 +121,7 @@ class PamBgAltSeqBuilder(BasePamBgAltSeqBuilder[AltSeqBuilder]):
     ) -> 'PamBgAltSeqBuilder':
         return cls(AltSeqBuilder(
             ref_seq.genomic_range,
-            DnaStr(ref_seq.sequence),
+            ref_seq.sequence,
             _get_variant_groups(bg_variants, pam_variants)))
 
 
