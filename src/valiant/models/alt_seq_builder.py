@@ -28,6 +28,7 @@ from .variant_group import VariantGroup
 
 
 RangeT = TypeVar('RangeT', bound='StrandedPositionRange')
+AltSeqBuilderT = TypeVar('AltSeqBuilderT', bound='AltSeqBuilder')
 
 
 class InvalidVariantGroupIndex(IndexError):

@@ -19,6 +19,7 @@
 from valiant.models.alt_seq_builder import AltSeqBuilder
 from valiant.models.base import GenomicPosition, GenomicRange
 from valiant.models.cds_alt_seq_builder import CdsAltSeqBuilder
+from valiant.models.new_pam import PamBgAltSeqBuilder, CdsPamBgAltSeqBuilder
 from valiant.models.variant import SubstitutionVariant
 from valiant.models.variant_group import VariantGroup
 
@@ -47,6 +48,8 @@ def test_alt_seq_builder_get_alt_sub():
     assert alt[i] == var_a.alt
     assert alt[i + 1] == var_b.alt
 
+    PamBgAltSeqBuilder(alt_builder)
+
 
 def test_cds_alt_seq_builder_variant_group_codon_clash():
     gr = GenomicRange('X', 100, 123, '+')
@@ -68,3 +71,8 @@ def test_cds_alt_seq_builder_variant_group_codon_clash():
     assert not alt_builder.is_variant_frame_shifting(var_a)
     assert alt_builder.is_variant_nonsynonymous(codon_table, var_a)
     assert not alt_builder.is_variant_nonsynonymous(codon_table, var_c)
+
+    pam_bg = CdsPamBgAltSeqBuilder(alt_builder)
+    assert len(pam_bg.bg_variants) == 1
+    assert len(pam_bg.pam_variants) == 1
+    assert pam_bg.pam_bg_codon_clash

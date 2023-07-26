@@ -16,10 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+import abc
 from dataclasses import dataclass
-from typing import List
+from typing import Generic, List
 
-from .alt_seq_builder import AltSeqBuilder
+from .alt_seq_builder import AltSeqBuilderT, AltSeqBuilder
 from .cds_alt_seq_builder import CdsAltSeqBuilder
 from .dna_str import DnaStr
 from .pam_protection import PamVariant
@@ -30,6 +31,10 @@ from .variant_group import VariantGroup
 
 LAYER_BG = 0
 LAYER_PAM = 1
+LAYERS = [
+    LAYER_BG,
+    LAYER_PAM
+]
 
 
 def _get_variant_groups(
@@ -46,8 +51,27 @@ def _get_variant_groups(
     ]
 
 
-@dataclass(frozen=True, init=False)
-class PamBgAltSeqBuilder(AltSeqBuilder):
+@dataclass(frozen=True)
+class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
+    ab: AltSeqBuilderT
+
+    @property
+    def bg_variants(self) -> List[BaseVariantT]:
+        return self.ab.variant_groups[LAYER_BG].variants
+
+    @property
+    def pam_variants(self) -> List[PamVariant]:
+        return self.ab.variant_groups[LAYER_PAM].variants
+
+    def get_bg_seq(self, extend: bool = False) -> str:
+        return self.ab.get_alt(extend=extend, variant_layer=LAYER_BG)
+
+    def get_pam_seq(self, extend: bool = False) -> str:
+        return self.ab.get_alt(extend=extend, variant_layer=LAYER_PAM)
+
+
+@dataclass(frozen=True)
+class PamBgAltSeqBuilder(BasePamBgAltSeqBuilder[AltSeqBuilder]):
     @classmethod
     def from_ref_seq(
         cls,
@@ -55,28 +79,14 @@ class PamBgAltSeqBuilder(AltSeqBuilder):
         bg_variants: List[BaseVariantT],
         pam_variants: List[PamVariant]
     ) -> 'PamBgAltSeqBuilder':
-        return cls(
+        return cls(AltSeqBuilder(
             ref_seq.genomic_range,
             DnaStr(ref_seq.sequence),
-            _get_variant_groups(bg_variants, pam_variants))
-
-    @property
-    def bg_variants(self) -> List[BaseVariantT]:
-        return self.variant_groups[LAYER_BG].variants
-
-    @property
-    def pam_variants(self) -> List[PamVariant]:
-        return self.variant_groups[LAYER_PAM].variants
-
-    def get_bg_seq(self, extend: bool = False) -> str:
-        return self.get_alt(extend=extend, variant_layer=LAYER_BG)
-
-    def get_pam_seq(self, extend: bool = False) -> str:
-        return self.get_alt(extend=extend, variant_layer=LAYER_PAM)
+            _get_variant_groups(bg_variants, pam_variants)))
 
 
-@dataclass(frozen=True, init=False)
-class CdsPamBgAltSeqBuilder(CdsAltSeqBuilder):
+@dataclass(frozen=True)
+class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
     @classmethod
     def from_ref_seq(
         cls,
@@ -86,16 +96,13 @@ class CdsPamBgAltSeqBuilder(CdsAltSeqBuilder):
         cds_prefix: str = '',
         cds_suffix: str = ''
     ) -> 'CdsPamBgAltSeqBuilder':
-        return cls(
+        return cls(CdsAltSeqBuilder(
             ref_seq.genomic_range,
             DnaStr(ref_seq.sequence),
             _get_variant_groups(bg_variants, pam_variants),
             prefix=DnaStr(cds_prefix),
-            suffix=DnaStr(cds_suffix))
+            suffix=DnaStr(cds_suffix)))
 
     @property
     def pam_bg_codon_clash(self) -> bool:
-        return self.variant_group_codon_clash([
-            LAYER_BG,
-            LAYER_PAM
-        ])
+        return self.ab.variant_group_codon_clash(LAYERS)
