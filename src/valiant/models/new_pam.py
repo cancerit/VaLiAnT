@@ -67,6 +67,10 @@ class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
         return self.ab.gr
 
     @property
+    def start(self) -> int:
+        return self.ab.start
+
+    @property
     def ref_seq(self) -> str:
         return self.ab.ref_seq
 
@@ -89,11 +93,11 @@ class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
     def get_pam_variants_in_range(self, spr: StrandedPositionRange) -> List[PamVariant]:
         return self.ab.get_variants(LAYER_PAM, genomic_range=spr)
 
-    def get_bg_seq(self, extend: bool = False) -> str:
-        return self.ab.get_alt(extend=extend, variant_layer=LAYER_BG)
+    def get_bg_seq(self, extend: bool = False, ref_check: bool = False) -> str:
+        return self.ab.get_alt(extend=extend, variant_layer=LAYER_BG, ref_check=ref_check)
 
-    def get_pam_seq(self, extend: bool = False) -> str:
-        return self.ab.get_alt(extend=extend, variant_layer=LAYER_PAM)
+    def get_pam_seq(self, extend: bool = False, ref_check: bool = False) -> str:
+        return self.ab.get_alt(extend=extend, variant_layer=LAYER_PAM, ref_check=ref_check)
 
 
 @dataclass(frozen=True)
@@ -163,6 +167,18 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
             cds_suffix=cds_suffix)
 
     @property
+    def frame(self) -> int:
+        return self.ab.frame
+
+    @property
+    def cds_prefix(self) -> int:
+        return self.ab.cds_prefix
+
+    @property
+    def cds_suffix(self) -> int:
+        return self.ab.cds_suffix
+
+    @property
     def cds_prefix_length(self) -> int:
         return self.ab.cds_prefix_length
 
@@ -183,7 +199,7 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
         return self.ab.contains_same_codon_variants(LAYER_PAM)
 
     def get_pam_variant_codon_indices(self) -> List[int]:
-        return self.ab.get_variant_codon_indices(LAYER_PAM)
+        return self.ab.get_variant_group_codon_indices(LAYER_PAM)
 
     def get_indexed_alt_codons(self) -> Dict[int, str]:
         return self.ab.get_indexed_alt_codons()

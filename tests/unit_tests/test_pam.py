@@ -19,8 +19,9 @@
 import pytest
 from contextlib import nullcontext
 from valiant.models.base import GenomicPosition, GenomicRange
+from valiant.models.new_pam import PamBgAltSeqBuilder
 from valiant.models.sequences import ReferenceSequence
-from valiant.models.pam_protection import PamVariant, compute_pam_protected_sequence
+from valiant.models.pam_protected_reference_sequence import PamVariant
 
 
 @pytest.mark.parametrize('seq,pos,ref,alt,ppseq,valid', [
@@ -28,7 +29,7 @@ from valiant.models.pam_protection import PamVariant, compute_pam_protected_sequ
     ('AACAA', 102, 'G', 'T', 'AATAA', False),  # unexpected reference nucleotide
     ('AACAA', 1000, 'C', 'T', 'AATAA', False)  # variant out of range
 ])
-def test_compute_pam_protected_sequence(seq, pos, ref, alt, ppseq, valid):
+def test_pam_protected_sequence_from_reference_sequence(seq, pos, ref, alt, ppseq, valid):
     chromosome = 'X'
     start = 100
     end = start + len(seq) - 1
@@ -37,9 +38,11 @@ def test_compute_pam_protected_sequence(seq, pos, ref, alt, ppseq, valid):
 
     gr = GenomicRange(chromosome, start, end, '+')
     ref_seq = ReferenceSequence(seq, gr)
+    pam_ref_seq = PamBgAltSeqBuilder.from_ref_seq(
+        ref_seq, [], [variant])
     with pytest.raises(Exception) if not valid else nullcontext():
-        pam_ref_seq = compute_pam_protected_sequence(ref_seq, {variant}, set())
+        alt_seq = pam_ref_seq.get_pam_seq(ref_check=True)
 
     if valid:
-        assert pam_ref_seq.sequence == ref_seq.sequence
-        assert pam_ref_seq.pam_protected_sequence == ppseq
+        assert pam_ref_seq.ref_seq == ref_seq.sequence
+        assert alt_seq == ppseq

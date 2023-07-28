@@ -63,12 +63,7 @@ class BaseTargeton(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def sequence(self) -> str:
-        pass
-
-    @property
-    @abc.abstractmethod
-    def seq(self) -> str:
+    def alt_seq(self) -> str:
         pass
 
     @property
@@ -92,18 +87,18 @@ class BaseTargeton(abc.ABC):
 
     def get_1del_mutations(self, **kwargs) -> MutationCollection:
         return MutationCollection.from_variants(
-            Deletion1MutatedSequence.from_sequence(self.sequence))
+            Deletion1MutatedSequence.from_sequence(self.alt_seq))
 
     def get_2del0_mutations(self, **kwargs) -> MutationCollection:
         return MutationCollection.from_variants(
-            Deletion2Offset0MutatedSequence.from_sequence(self.sequence))
+            Deletion2Offset0MutatedSequence.from_sequence(self.alt_seq))
 
     def get_2del1_mutations(self, **kwargs) -> MutationCollection:
         return MutationCollection.from_variants(
-            Deletion2Offset1MutatedSequence.from_sequence(self.sequence))
+            Deletion2Offset1MutatedSequence.from_sequence(self.alt_seq))
 
     def get_snv_mutations(self, **kwargs) -> MutationCollection:
-        return get_snv_mutations(self.sequence)
+        return get_snv_mutations(self.alt_seq)
 
     def _compute_mutations(
         self,
@@ -212,6 +207,10 @@ class CDSTargeton(ITargeton[CdsPamBgAltSeqBuilder], Generic[VariantT, RangeT]):
             pos_range, ref_seq, [], [], cds_prefix=cds_prefix, cds_suffix=cds_suffix))
 
     @property
+    def frame(self) -> int:
+        return self.ab.frame
+
+    @property
     def sequence(self) -> str:
         return self.alt_seq
 
@@ -283,7 +282,7 @@ class CDSTargeton(ITargeton[CdsPamBgAltSeqBuilder], Generic[VariantT, RangeT]):
 
     def _get_snvres(self, aux: AuxiliaryTables, snvs: pd.DataFrame) -> MutationCollection:
         df: pd.DataFrame = aux.snvre_table.get_snvres(
-            self.pos_range, self.frame, self.sequence, snvs).rename(
+            self.pos_range, self.frame, self.alt_seq, snvs).rename(
                 columns={
                     'pos': META_MUT_POSITION,
                     'alt': META_NEW,
@@ -307,7 +306,7 @@ class CDSTargeton(ITargeton[CdsPamBgAltSeqBuilder], Generic[VariantT, RangeT]):
         offset: int = get_out_of_frame_offset(self.frame)
         mc: MutationCollection = MutationCollection.from_variants([
             SingleCodonMutatedSequence(pos, mseq, ref, alt)
-            for pos, ref, alt, mseq in replace_codons_const(self.sequence, offset, codon)
+            for pos, ref, alt, mseq in replace_codons_const(self.alt_seq, offset, codon)
         ])
 
         if mc.df is None:
@@ -344,7 +343,7 @@ class CDSTargeton(ITargeton[CdsPamBgAltSeqBuilder], Generic[VariantT, RangeT]):
         if not aux_tables:
             raise RuntimeError("Auxiliary tables not provided!")
         df: pd.DataFrame = aux_tables.all_aa_table.get_subs(
-            self.pos_range, self.frame, self.sequence)
+            self.pos_range, self.frame, self.alt_seq)
         return MutationCollection(df)
 
     def compute_mutations(
@@ -398,7 +397,7 @@ class CDSTargeton(ITargeton[CdsPamBgAltSeqBuilder], Generic[VariantT, RangeT]):
         return MutationCollection.from_variants([
             DeletionMutatedSequence(pos, mseq, ref_seq)
             for pos, ref_seq, mseq in delete_non_overlapping_3_offset(
-                self.sequence, start_offset, end_offset)
+                self.alt_seq, start_offset, end_offset)
         ])
 
 

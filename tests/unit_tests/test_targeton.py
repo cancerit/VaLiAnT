@@ -17,11 +17,10 @@
 #############################
 
 from contextlib import nullcontext
-import pandas as pd
 import pytest
 from valiant.constants import META_PAM_MUT_SGRNA_ID, META_MUT_POSITION
 from valiant.enums import MutationType, TargetonMutator
-from valiant.models.annotated_sequence import CDSAnnotatedSequencePair
+from valiant.models.new_pam import CdsPamBgAltSeqBuilder
 from valiant.models.base import GenomicPosition, GenomicRange
 from valiant.models.pam_protection import PamVariant
 from valiant.models.targeton import PamProtCDSTargeton
@@ -36,15 +35,20 @@ SGRNA_ID = 'some-id'
 TEST_CHROMOSOME = 'X'
 
 
+def get_cds_targeton(gr, seq, pam_variants, cds_prefix='', cds_suffix=''):
+    return PamProtCDSTargeton(CdsPamBgAltSeqBuilder.from_ref(
+        gr, seq, [], pam_variants, cds_prefix=cds_prefix, cds_suffix=cds_suffix))
+
+
 def test_pam_prot_targeton_from_reference_sequence():
     chromosome = TEST_CHROMOSOME
-    PamProtCDSTargeton(CDSAnnotatedSequencePair(
+    PamProtCDSTargeton(CdsPamBgAltSeqBuilder.from_ref(
         GenomicRange(chromosome, 500, 505, '+'),
         'ACGTCA',
-        'AGGTCA',
+        [],
         [PamVariant(GenomicPosition(chromosome, 501), 'C', 'G', SGRNA_ID)],
-        'AT',
-        'C'))
+        cds_prefix='AT',
+        cds_suffix='C'))
 
 
 @pytest.mark.parametrize('alt,mut_type', [
@@ -60,10 +64,10 @@ def test_pam_prot_targeton_get_pam_variant_annotations(alt, mut_type):
     # TGG -> W
 
     chromosome = TEST_CHROMOSOME
-    PamProtCDSTargeton(CDSAnnotatedSequencePair(
+    PamProtCDSTargeton(CdsPamBgAltSeqBuilder.from_ref(
         GenomicRange(chromosome, 500, 505, '+'),
         'GCGTGC',
-        f"G{alt}GTGC",
+        [],
         [PamVariant(GenomicPosition(chromosome, 501), 'C', alt, SGRNA_ID)],
         'T',
         'CA'))
@@ -89,9 +93,8 @@ def test_pam_prot_targeton_compute_mutations(pam_variant_clash):
 
     # Generate targeton
     with pytest.raises(ValueError) if pam_variant_clash else nullcontext():
-        targeton: PamProtCDSTargeton = PamProtCDSTargeton(
-            CDSAnnotatedSequencePair(
-                genomic_range, ref_seq, pam_seq, variants, cds_prefix, 'CG'))
+        targeton = get_cds_targeton(
+            genomic_range, ref_seq, variants, cds_prefix, 'CG')
 
     if not pam_variant_clash:
 
@@ -115,14 +118,12 @@ def test_pam_prot_targeton_compute_mutations(pam_variant_clash):
 
 def test_pam_prot_cds_targeton_concat():
     def get_targeton(start, end, ref_seq, variants=None, alt_seq=None, cds_prefix='', cds_suffix=''):
-        return PamProtCDSTargeton(
-            CDSAnnotatedSequencePair(
-                GenomicRange('X', start, end, '+'),
-                ref_seq,
-                alt_seq or ref_seq,
-                variants or [],
-                cds_prefix,
-                cds_suffix))
+        return get_cds_targeton(
+            GenomicRange('X', start, end, '+'),
+            ref_seq,
+            variants or [],
+            cds_prefix,
+            cds_suffix)
 
     pam_variant = PamVariant(GenomicPosition('X', 47), 'A', 'T', 'sgrna-1')
     pam_variants = [pam_variant]
@@ -132,10 +133,10 @@ def test_pam_prot_cds_targeton_concat():
     t3 = get_targeton(57, 62, 'GGGGGG', cds_prefix='C', cds_suffix='AA')
     ct = PamProtCDSTargeton.concat([t1, t2, t3])
 
-    assert ct.annotated_seq.cds_prefix == t1.annotated_seq.cds_prefix
-    assert ct.annotated_seq.cds_suffix == t3.annotated_seq.cds_suffix
+    assert ct.ab.cds_prefix == t1.ab.cds_prefix
+    assert ct.ab.cds_suffix == t3.ab.cds_suffix
     assert ct.pos_range.start == t1.pos_range.start
     assert ct.pos_range.end == t3.pos_range.end
-    assert ct.annotated_seq.ref_seq == 'AATAAACCCCCCGGGGGG'
+    assert ct.ab.ref_seq == 'AATAAACCCCCCGGGGGG'
     assert ct.variant_count == len(pam_variants)
-    assert ct.annotated_seq.variants == pam_variants
+    assert ct.ab.pam_variants == pam_variants

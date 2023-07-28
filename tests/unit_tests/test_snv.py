@@ -24,12 +24,9 @@ import pytest
 from valiant import snv
 from valiant.enums import MutationType
 from valiant.models.base import GenomicRange
-from valiant.models.pam_protection import PamProtectedReferenceSequence
-from valiant.models.snv_table import SnvTable, SnvReTable, AuxiliaryTables
-from valiant.models.targeton import CDSTargeton
-from valiant.utils import reverse_complement
+from valiant.models.snv_table import SnvTable, SnvReTable
 from .constants import STRANDS
-from .utils import get_aux_tables, md5sum, load_csv, trim_cds_extensions, seq2triplets
+from .utils import get_aux_tables, md5sum, load_csv, trim_cds_extensions
 
 SEQ = 'GGGGGG'
 SEQ_LENGTH = len(SEQ)

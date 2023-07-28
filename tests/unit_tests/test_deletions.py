@@ -20,9 +20,8 @@ import numpy as np
 import pytest
 from valiant.enums import VariantType
 from valiant.models.base import GenomicRange
-from valiant.models.pam_protection import PamProtectedReferenceSequence
+from valiant.models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
 from valiant.models.targeton import Targeton, CDSTargeton
-from .utils import get_no_op_pam_protected_sequence
 
 del_var_type = np.int8(VariantType.DELETION.value)
 
@@ -44,10 +43,12 @@ def test_get_2del_mutations(offset, seq, exp_pos, exp_ref, exp_mseq, cds):
 
     # Generate target
     gr = GenomicRange('X', 10, 10 + len(seq) - 1, '+')
-    pam_seq = get_no_op_pam_protected_sequence(seq, gr)
     t = (
-        CDSTargeton.from_pam_seq(pam_seq, 'AA', cds_suffix) if cds else
-        Targeton.from_pam_seq(pam_seq)
+        CDSTargeton(CdsPamBgAltSeqBuilder.from_ref(
+            gr, seq, [], [],
+            cds_prefix='AA',
+            cds_suffix=cds_suffix)) if cds else
+        Targeton(PamBgAltSeqBuilder.from_ref(gr, seq, [], []))
     )
 
     # Generate in-frame deletions
@@ -72,8 +73,8 @@ def test_get_inframe_mutations(seq, pre, suf, strand, exp_pos, exp_ref, exp_mseq
 
     # Generate target
     gr = GenomicRange('X', 10, 10 + len(seq) - 1, strand)
-    pam_seq = get_no_op_pam_protected_sequence(seq, gr)
-    t = CDSTargeton.from_pam_seq(pam_seq, pre, suf)
+    t = CDSTargeton(CdsPamBgAltSeqBuilder.from_ref(
+        gr, seq, [], [], cds_prefix=pre, cds_suffix=suf))
 
     # Generate in-frame deletions
     mc = t.get_inframe_mutations()

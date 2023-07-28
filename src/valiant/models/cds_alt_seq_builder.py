@@ -119,7 +119,8 @@ class CdsAltSeqBuilder(AltSeqBuilder):
             self.get_variant_positions(variant_group_index))
         return has_duplicates(codon_indices)
 
-    def get_codon_indices(self, variant_group_index: int, positions: List[GenomicPosition], **kwargs) -> List[int]:
+    def get_variant_group_codon_indices(self, variant_group_index: int, **kwargs) -> List[int]:
+        positions = self.get_variant_positions(variant_group_index)
         codon_indices = self.get_ref_codon_indices(positions)
         no_duplicate_codons = kwargs.get('no_duplicate_codons', False)
 
@@ -149,10 +150,7 @@ class CdsAltSeqBuilder(AltSeqBuilder):
 
     def get_codon_mutation_types_at(self, codon_table: CodonTable, positions: List[GenomicPosition], **kwargs) -> List[MutationType]:
         return self.get_codon_mutation_types_at_codons(
-            codon_table, self.get_codon_indices(positions, **kwargs))
-
-    def get_variant_codon_indices(self, variant_group_index: int, **kwargs) -> List[int]:
-        return self.get_codon_indices(self.get_variant_positions(variant_group_index), **kwargs)
+            codon_table, self.get_ref_codon_indices(positions, **kwargs))
 
     def get_variant_mutation_types(self, codon_table: CodonTable, variant_group_index: int, **kwargs) -> List[MutationType]:
         return self.get_codon_mutation_types_at(

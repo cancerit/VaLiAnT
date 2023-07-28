@@ -22,8 +22,6 @@ import pathlib
 import pandas as pd
 from valiant.models.base import GenomicRange
 from valiant.models.codon_table import CodonTable
-from valiant.models.pam_protection import PamProtectedReferenceSequence
-from valiant.models.sequences import ReferenceSequence
 from valiant.models.snv_table import AuxiliaryTables
 from valiant.models.targeton import Targeton
 from .constants import DUMMY_PAM_PROTECTION_NT, CODON_TABLE_FP, FRAMES, STRANDS
@@ -43,22 +41,9 @@ def get_dummy_pam_protected(seq):
     return DUMMY_PAM_PROTECTION_NT * len(seq)
 
 
-def get_no_op_pam_protected_sequence(seq, genomic_range):
-    return PamProtectedReferenceSequence.from_reference_sequence(
-        ReferenceSequence(seq, genomic_range), [])
-
-
-# TODO: make it valid (no same-codon PAM protection)?
-def get_pam_protected_sequence(seq, pam_protection, chromosome='X', strand='+', pos=1):
-    gr = GenomicRange(chromosome, pos, len(seq), strand)
-    pam_seq = get_dummy_pam_protected(seq) if pam_protection else seq
-    return PamProtectedReferenceSequence(seq, gr, pam_seq, seq, [], [])
-
-
-def get_targeton(seq, pam_protection, chromosome='X', strand='+', pos=1):
-    pam_ref_seq = get_pam_protected_sequence(
-        seq, pam_protection, chromosome=chromosome, strand=strand, pos=pos)
-    return Targeton.from_pam_seq(pam_ref_seq)
+def get_targeton(seq, chromosome='X', strand='+', pos=1):
+    return Targeton.build_without_variants(
+        GenomicRange(chromosome, pos, pos + len(seq) - 1, strand), seq)
 
 
 def load_codon_table():

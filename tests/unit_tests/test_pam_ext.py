@@ -22,8 +22,8 @@ import pytest
 
 from valiant.constants import META_PAM_MUT_SGRNA_ID, META_REF, META_NEW, META_MUT_POSITION, META_REF_START, META_REF_SEQ, META_PAM_SEQ, META_MSEQ_NO_ADAPT_NO_RC, META_PAM_CODON_REF, META_PAM_CODON_ALT
 from valiant.metadata_utils import set_pam_extended_ref_alt, set_ref_meta
-from valiant.models.annotated_sequence import CDSAnnotatedSequencePair
 from valiant.models.base import GenomicRange, GenomicPosition
+from valiant.models.new_pam import CdsPamBgAltSeqBuilder
 from valiant.models.pam_protection import PamVariant
 from valiant.models.targeton import PamProtCDSTargeton
 from valiant.models.variant import DeletionVariant
@@ -37,7 +37,7 @@ def _get_test_range(start: int, length: int):
     return GenomicRange('X', start, start + length - 1, '+')
 
 
-def seq_to_meta(seq: CDSAnnotatedSequencePair, mut: DeletionVariant):
+def seq_to_meta(seq: CdsPamBgAltSeqBuilder, mut: DeletionVariant):
     return {
         META_REF_START: seq.start,
         META_REF_SEQ: seq.ref_seq,
@@ -46,7 +46,7 @@ def seq_to_meta(seq: CDSAnnotatedSequencePair, mut: DeletionVariant):
         META_REF: mut.ref,
         META_NEW: None,
         META_MSEQ_NO_ADAPT_NO_RC: mut.mutate(seq.alt_seq, seq.start, ref_check=False),
-        META_PAM_MUT_SGRNA_ID: ','.join(x.sgrna_id for x in seq.variants)  # format?
+        META_PAM_MUT_SGRNA_ID: ','.join(x.sgrna_id for x in seq.pam_variants)  # format?
     }
 
 
@@ -83,10 +83,10 @@ def test_set_pam_extended_ref_alt(del_start, del_length, pam_ref_exp, pam_alt_ex
     pam_variant_b = PamVariant(_get_test_pos(gr.end), 'A', 'C', sgrna_id)
 
     # Apply PAM protection variants to the reference sequence
-    alt = pam_variant_b.mutate(pam_variant_a.mutate(ref, start), start)
-
-    # Annotate sequence
-    seq = CDSAnnotatedSequencePair(gr, ref, alt, [pam_variant_a, pam_variant_b], '', '')
+    seq = CdsPamBgAltSeqBuilder.from_ref(gr, ref, [], [
+        pam_variant_a,
+        pam_variant_b
+    ])
     targeton = PamProtCDSTargeton(seq)
 
     mut = DeletionVariant(_get_test_pos(del_start), 'G' * del_length)

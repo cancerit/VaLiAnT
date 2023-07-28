@@ -131,7 +131,7 @@ class AltSeqBuilder:
         if self.seq_length != len(self.gr):
             raise ValueError("Mismatching position range and sequence length!")
 
-    def get_alt(self, extend: bool = False, variant_layer: Optional[int] = None) -> str:
+    def get_alt(self, extend: bool = False, variant_layer: Optional[int] = None, ref_check: bool = False) -> str:
         last_group_index: int = (
             variant_layer if variant_layer is not None else
             self.variant_group_count - 1
@@ -140,7 +140,7 @@ class AltSeqBuilder:
 
         alt_seq: str = self.ext_sequence if extend else self.sequence
         for g in self.variant_groups[:last_group_index + 1]:
-            alt_seq = g.apply(self.start, alt_seq)
+            alt_seq = g.apply(self.start, alt_seq, ref_check=ref_check)
 
         return alt_seq
 

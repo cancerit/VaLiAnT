@@ -20,7 +20,8 @@ import numpy as np
 import pytest
 from valiant.enums import VariantType
 from valiant.models.base import GenomicRange
-from valiant.models.pam_protection import PamProtectedReferenceSequence
+from valiant.models.new_pam import CdsPamBgAltSeqBuilder
+from valiant.models.pam_protected_reference_sequence import PamProtectedReferenceSequence
 from valiant.models.sequences import ReferenceSequence
 from valiant.models.targeton import CDSTargeton
 from .utils import get_aux_tables, seq2triplets
@@ -46,9 +47,7 @@ def test_get_snvre_aa_mutations(aa, strand, seq, exp_mseq):
 
     # Generate target
     gr = GenomicRange('X', 10, 10 + len(seq) - 1, strand)
-    pam_seq = PamProtectedReferenceSequence.from_reference_sequence(
-        ReferenceSequence(seq, gr), set())
-    t = CDSTargeton.from_pam_seq(pam_seq, '', '')
+    t = CDSTargeton(CdsPamBgAltSeqBuilder.from_ref(gr, seq, [], []))
 
     # Generate codon substitution mutations
     mc = getattr(t, CONST_CODON_METHODS[aa])(aux_tables=aux)
