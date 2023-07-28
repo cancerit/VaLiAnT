@@ -107,10 +107,7 @@ class AltSeqBuilder:
 
     def get_variants(self, variant_group_index: int, genomic_range: Optional[RangeT] = None) -> List[VariantT]:
         def ft(variant: VariantT) -> bool:
-            return (
-                variant.ref_start_pos.in_range(genomic_range) or
-                variant.ref_end_pos.in_range(genomic_range)
-            )
+            return variant.in_range(genomic_range)
 
         variants = self.get_variant_group(variant_group_index).variants
         return list(filter(ft, variants)) if genomic_range else variants
@@ -161,3 +158,12 @@ class AltSeqBuilder:
     def get_variant_group(self, variant_group_index: int) -> VariantGroup:
         self.validate_variant_group_index(variant_group_index)
         return self.variant_groups[variant_group_index]
+
+    def mutate_alt(self, variant: VariantT, variant_layer: Optional[int] = None, ref_check: bool = False) -> str:
+        if not variant.in_range(self.gr):
+            raise RuntimeError("Variant out of bounds!")
+        # TODO: verify support for variants that begin before the reference start
+        return variant.mutate(
+            self.get_alt(variant_layer=variant_layer, ref_check=False),
+            self.ref_seq,
+            ref_check=ref_check)

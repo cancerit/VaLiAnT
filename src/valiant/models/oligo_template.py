@@ -31,9 +31,9 @@ from .targeton import PamProtCDSTargeton
 from .base import GenomicRange, TranscriptInfo
 from .custom_variants import CustomVariantMutation, CustomVariantMutationCollection, CustomVariantOligoRenderer
 from .mutated_sequences import MutationCollection
+from .new_pam import PamBgAltSeqBuilder, CdsPamBgAltSeqBuilder, PamBgAltSeqBuilderT
 from .oligo_renderer import BaseOligoRenderer
 from .options import Options
-from .pam_protected_reference_sequence import PamProtectedReferenceSequence
 from .snv_table import AuxiliaryTables
 from .variant import CustomVariant
 from ..constants import (
@@ -105,7 +105,7 @@ class RegionOligoRenderer(BaseOligoRenderer):
 
     def __init__(
         self,
-        ref_seq: PamProtectedReferenceSequence,
+        ref_seq: PamBgAltSeqBuilderT,
         gene_id: str,
         transcript_id: str,
         adaptor_5: str,
@@ -163,7 +163,7 @@ class OligoTemplate:
 
     ref_ranges: ReferenceSequenceRanges
     transcript_info: Optional[TranscriptInfo]
-    ref_seq: PamProtectedReferenceSequence
+    ref_seq: PamBgAltSeqBuilderT
     sgrna_ids: FrozenSet[str]
     custom_variants: Set[CustomVariant]
     adaptor_5: Optional[str]
@@ -180,7 +180,7 @@ class OligoTemplate:
 
     @property
     def ref_range(self) -> GenomicRange:
-        return self.ref_seq.genomic_range
+        return self.ref_seq.pos_range
 
     @property
     def strand(self) -> str:
@@ -257,7 +257,7 @@ class OligoTemplate:
             variant,
             self.ref_seq.get_variant_corrected_ref(
                 variant.base_variant),
-            self.ref_seq.apply_variant(
+            self.ref_seq.mutate(
                 variant.base_variant, ref_check=False),
             self.ref_ranges.is_range_in_constant_region(
                 variant.get_ref_range(self.strand)),

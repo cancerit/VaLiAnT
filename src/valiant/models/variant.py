@@ -126,6 +126,12 @@ class BaseVariant:
     def ref_range(self) -> PositionRange:
         return PositionRange(self.start, self.ref_end)
 
+    def in_range(self, genomic_range: GenomicRange) -> bool:
+        return (
+            self.ref_start_pos.in_range(genomic_range) or
+            self.ref_end_pos.in_range(genomic_range)
+        )
+
     def get_ref_offset(self, ref_seq: ReferenceSequence) -> int:
         if not ref_seq.genomic_range.contains_position(self.genomic_position):
             raise ValueError(

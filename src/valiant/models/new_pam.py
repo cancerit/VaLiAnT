@@ -99,6 +99,9 @@ class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
     def get_pam_seq(self, extend: bool = False, ref_check: bool = False) -> str:
         return self.ab.get_alt(extend=extend, variant_layer=LAYER_PAM, ref_check=ref_check)
 
+    def mutate(self, variant: BaseVariantT) -> str:
+        return self.ab.mutate_alt(variant)
+
 
 @dataclass(frozen=True)
 class PamBgAltSeqBuilder(BasePamBgAltSeqBuilder[AltSeqBuilder]):
