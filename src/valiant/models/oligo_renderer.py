@@ -18,12 +18,12 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import List, NoReturn, Optional, Tuple, Any
+from typing import List, NoReturn, Optional, Set, Tuple, Any
 import numpy as np
 import pandas as pd
 from .new_pam import PamBgAltSeqBuilderT
 from .options import Options
-from ..constants import META_MSEQ, META_MSEQ_NO_ADAPT, META_MSEQ_NO_ADAPT_NO_RC, REVCOMP_OLIGO_NAME_SUFFIX
+from ..constants import META_MSEQ, META_MSEQ_NO_ADAPT, META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_MUTATOR, META_NEW, META_OLIGO_NAME, META_REF, META_REF_END, META_REF_START, REVCOMP_OLIGO_NAME_SUFFIX
 from ..enums import VariantType
 from ..utils import get_constant_category, reverse_complement, get_source_type_column, validate_strand
 
@@ -34,6 +34,15 @@ ERR_MISSING_REF = 'missing reference'
 var_type_sub: int = VariantType.SUBSTITUTION.value
 var_type_del: int = VariantType.DELETION.value
 var_type_ins: int = VariantType.INSERTION.value
+
+MIN_METADATA: Set[str] = {
+    META_OLIGO_NAME,
+    META_MUT_POSITION,
+    META_REF,
+    META_NEW,
+    META_MUTATOR,
+    META_MSEQ
+}
 
 
 def raise_err_var_type(var_type_value: int, msg: str) -> NoReturn:
@@ -194,7 +203,7 @@ class BaseOligoRenderer:
         return self._get_mutated_sequence(mseq)
 
     def get_metadata_table(self, df: pd.DataFrame, options: Options) -> pd.DataFrame:
-        if set(df.columns.array) < {'oligo_name', 'mut_position', 'ref', 'new', 'mutator', 'mseq'}:
+        if set(df.columns.array) < MIN_METADATA:
             raise ValueError("Invalid mutation metadata data frame!")
 
         rown: int = df.shape[0]
@@ -204,8 +213,8 @@ class BaseOligoRenderer:
         df.mutator = df.mutator.astype('category')
 
         # Add global metadata
-        df['ref_start'] = np.int32(self.ref_seq.pos_range.start)
-        df['ref_end'] = np.int32(self.ref_seq.pos_range.end)
+        df[META_REF_START] = np.int32(self.ref_seq.pos_range.start)
+        df[META_REF_END] = np.int32(self.ref_seq.pos_range.end)
         for col_name, col_value in self._constant_fields:
             df[col_name] = get_constant_category(col_value, rown)
 
