@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,19 +18,30 @@
 
 from dataclasses import dataclass
 from functools import partial
-from typing import List, Optional, Tuple, Any
+from typing import List, NoReturn, Optional, Tuple, Any
 import numpy as np
 import pandas as pd
+from .new_pam import PamBgAltSeqBuilderT
 from .options import Options
-from .pam_protected_reference_sequence import PamProtectedReferenceSequence
 from ..constants import META_MSEQ, META_MSEQ_NO_ADAPT, META_MSEQ_NO_ADAPT_NO_RC, REVCOMP_OLIGO_NAME_SUFFIX
 from ..enums import VariantType
 from ..utils import get_constant_category, reverse_complement, get_source_type_column, validate_strand
 
 
+ERR_MISSING_ALT = 'missing alternative'
+ERR_MISSING_REF = 'missing reference'
+
 var_type_sub: int = VariantType.SUBSTITUTION.value
 var_type_del: int = VariantType.DELETION.value
 var_type_ins: int = VariantType.INSERTION.value
+
+
+def raise_err_var_type(var_type_value: int, msg: str) -> NoReturn:
+    raise ValueError(f"Invalid {VariantType(var_type_value).name.lower()}: {msg}!")
+
+
+def raise_err_invalid_var_type() -> NoReturn:
+    raise ValueError("Invalid variant type!")
 
 
 def get_oligo_name(
@@ -45,17 +56,17 @@ def get_oligo_name(
     # Insertion
     if var_type == var_type_ins:
         if not alt:
-            raise ValueError("Invalid insertion: missing alternative!")
+            raise_err_var_type(var_type, ERR_MISSING_ALT)
         return f"{oligo_name_prefix}{start}_{alt}_{source}"
 
     else:
         if not ref:
             if var_type == var_type_sub:
-                raise ValueError(f"Invalid substitution: missing reference!")
+                raise_err_var_type(var_type, ERR_MISSING_REF)
             if var_type == var_type_del:
-                raise ValueError(f"Invalid deletion: missing reference!")
+                raise_err_var_type(var_type, ERR_MISSING_REF)
             else:
-                raise ValueError("Invalid variant type!")
+                raise_err_invalid_var_type()
 
         ref_len: int = len(ref)
         end: int = (start + ref_len - 1) if ref_len > 1 else start
@@ -63,7 +74,7 @@ def get_oligo_name(
         # Substitution
         if var_type == var_type_sub:
             if not alt:
-                raise ValueError("Invalid substitution: missing alternative!")
+                raise_err_var_type(var_type, ERR_MISSING_ALT)
             return (
                 f"{oligo_name_prefix}{start}_{ref}>{alt}_{source}" if end == start else
                 f"{oligo_name_prefix}{start}_{end}_{ref}>{alt}_{source}"
@@ -76,7 +87,7 @@ def get_oligo_name(
                 f"{oligo_name_prefix}{start}_{end}_{source}"
             )
 
-        raise ValueError("Invalid variant type!")
+        raise_err_invalid_var_type()
 
 
 def get_oligo_name_from_row(oligo_name_prefix: str, r) -> str:
@@ -105,7 +116,7 @@ class BaseOligoRenderer:
         '_oligo_name_prefix'
     }
 
-    ref_seq: PamProtectedReferenceSequence
+    ref_seq: PamBgAltSeqBuilderT
     gene_id: str
     transcript_id: str
     adaptor_5: str
@@ -114,7 +125,7 @@ class BaseOligoRenderer:
 
     def __init__(
         self,
-        ref_seq: PamProtectedReferenceSequence,
+        ref_seq: PamBgAltSeqBuilderT,
         gene_id: str,
         transcript_id: str,
         adaptor_5: str,
@@ -133,15 +144,15 @@ class BaseOligoRenderer:
 
     @property
     def chromosome(self) -> str:
-        return self.ref_seq.genomic_range.chromosome
+        return self.ref_seq.pos_range.chromosome
 
     @property
     def start(self) -> int:
-        return self.ref_seq.genomic_range.start
+        return self.ref_seq.pos_range.start
 
     @property
     def strand(self) -> str:
-        return self.ref_seq.genomic_range.strand
+        return self.ref_seq.pos_range.strand
 
     @property
     def has_adaptors(self) -> bool:
@@ -149,13 +160,14 @@ class BaseOligoRenderer:
 
     @property
     def _constant_fields(self) -> List[Tuple[str, Any]]:
+        # TODO: background variants in `ref_seq`?
         return [
             ('gene_id', self.gene_id),
             ('transcript_id', self.transcript_id),
             ('ref_chr', self.chromosome),
-            ('ref_strand', self.ref_seq.genomic_range.strand),
-            ('ref_seq', self.ref_seq.sequence),
-            ('pam_seq', self.ref_seq.pam_protected_sequence)
+            ('ref_strand', self.ref_seq.pos_range.strand),
+            ('ref_seq', self.ref_seq.ref_seq),
+            ('pam_seq', self.ref_seq.get_pam_seq())
         ]
 
     def _add_adaptors(self, mseq: str) -> str:
@@ -192,8 +204,8 @@ class BaseOligoRenderer:
         df.mutator = df.mutator.astype('category')
 
         # Add global metadata
-        df['ref_start'] = np.int32(self.ref_seq.genomic_range.start)
-        df['ref_end'] = np.int32(self.ref_seq.genomic_range.end)
+        df['ref_start'] = np.int32(self.ref_seq.pos_range.start)
+        df['ref_end'] = np.int32(self.ref_seq.pos_range.end)
         for col_name, col_value in self._constant_fields:
             df[col_name] = get_constant_category(col_value, rown)
 

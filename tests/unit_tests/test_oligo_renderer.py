@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,10 +21,11 @@ import pandas as pd
 import pytest
 from valiant.enums import VariantType
 from valiant.enums import VariantType, TargetonMutator
+from valiant.models.base import GenomicRange
+from valiant.models.new_pam import PamBgAltSeqBuilder
 from valiant.models.options import Options
 from valiant.models.oligo_renderer import BaseOligoRenderer
 from valiant.utils import reverse_complement
-from .utils import get_pam_protected_sequence
 
 
 SEQ = 'AAAACGTACGTACGT'
@@ -42,23 +43,29 @@ META_COLUMNS = {
     'revc'
 }
 
+def get_pam_protected_sequence(strand = '+'):
+    seq = SEQ
+    start = 100
+    return PamBgAltSeqBuilder.from_ref(
+        GenomicRange('X', start, start + len(seq) - 1, strand), seq, [], [])
+
 
 def test_base_oligo_renderer_init():
-    pam_seq = get_pam_protected_sequence(SEQ, None)
+    pam_seq = get_pam_protected_sequence()
 
     # Initialise renderer
     renderer = BaseOligoRenderer(pam_seq, 'G1', 'T1', '', '')
 
     # Check renderer properties
-    assert renderer.chromosome == pam_seq.genomic_range.chromosome
-    assert renderer.start == pam_seq.genomic_range.start
-    assert renderer.strand == pam_seq.genomic_range.strand
+    assert renderer.chromosome == pam_seq.pos_range.chromosome
+    assert renderer.start == pam_seq.pos_range.start
+    assert renderer.strand == pam_seq.pos_range.strand
 
 
 def test_base_oligo_renderer_constant_fields():
     gene_id = GENE_ID
     transcript_id = TRANSCRIPT_ID
-    pam_seq = get_pam_protected_sequence(SEQ, None)
+    pam_seq = get_pam_protected_sequence()
 
     # Initialise renderer
     renderer = BaseOligoRenderer(pam_seq, gene_id, transcript_id, '', '')
@@ -68,16 +75,16 @@ def test_base_oligo_renderer_constant_fields():
     assert const_fields[0] == ('gene_id', gene_id)
     assert const_fields[1] == ('transcript_id', transcript_id)
     assert const_fields[2] == ('ref_chr', renderer.chromosome)
-    assert const_fields[3] == ('ref_strand', renderer.ref_seq.genomic_range.strand)
-    assert const_fields[4] == ('ref_seq', renderer.ref_seq.sequence)
-    assert const_fields[5] == ('pam_seq', renderer.ref_seq.pam_protected_sequence)
+    assert const_fields[3] == ('ref_strand', renderer.ref_seq.pos_range.strand)
+    assert const_fields[4] == ('ref_seq', renderer.ref_seq.ref_seq)
+    assert const_fields[5] == ('pam_seq', renderer.ref_seq.get_pam_seq())
 
 
 @pytest.mark.parametrize('seq,a5,a3,exp,exp_rc', [
     ('AACCGGCC', 'TTT', 'TTT', 'TTTAACCGGCCTTT', 'TTTGGCCGGTTTTT')
 ])
 def test_base_oligo_renderer_add_adaptors(seq, a5, a3, exp, exp_rc):
-    pam_seq = get_pam_protected_sequence(SEQ, None)
+    pam_seq = get_pam_protected_sequence()
 
     # Initialise renderer
     renderer = BaseOligoRenderer(pam_seq, GENE_ID, TRANSCRIPT_ID, a5, a3)
@@ -94,7 +101,7 @@ def test_base_oligo_renderer_add_adaptors(seq, a5, a3, exp, exp_rc):
     ('-', True, True, True)
 ])
 def test_base_oligo_renderer_should_apply_reverse_complement(strand, rc, exp, valid):
-    pam_seq = get_pam_protected_sequence(SEQ, None, strand=strand)
+    pam_seq = get_pam_protected_sequence(strand=strand)
 
     # Initialise renderer
     renderer = BaseOligoRenderer(pam_seq, GENE_ID, TRANSCRIPT_ID, '', '')
@@ -113,7 +120,7 @@ def test_base_oligo_renderer_should_apply_reverse_complement(strand, rc, exp, va
     (VariantType.SUBSTITUTION, 'vcf', 100, 'A', 'C', 'T1.G1_X:100_A>C_vcf'),
 ])
 def test_base_oligo_renderer_get_oligo_name(var_type, source, start, ref, alt, exp):
-    pam_seq = get_pam_protected_sequence(SEQ, None)
+    pam_seq = get_pam_protected_sequence()
 
     # Initialise renderer
     renderer = BaseOligoRenderer(pam_seq, GENE_ID, TRANSCRIPT_ID, '', '')
@@ -123,7 +130,7 @@ def test_base_oligo_renderer_get_oligo_name(var_type, source, start, ref, alt, e
 
 @pytest.mark.parametrize('rc', [True, False])
 def test_base_oligo_renderer_get_metadata_table(rc):
-    pam_seq = get_pam_protected_sequence(SEQ, None, strand='-')
+    pam_seq = get_pam_protected_sequence(strand='-')
 
     df = pd.DataFrame.from_records([
         ('OLIGO_1', 100, 'A', 'C', 'snv', 'AAACGGG', VariantType.SUBSTITUTION.value)
