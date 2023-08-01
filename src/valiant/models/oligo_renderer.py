@@ -176,7 +176,7 @@ class BaseOligoRenderer:
             ('ref_chr', self.chromosome),
             ('ref_strand', self.ref_seq.pos_range.strand),
             ('ref_seq', self.ref_seq.ref_seq),
-            ('pam_seq', self.ref_seq.get_pam_seq())
+            ('pam_seq', self.ref_seq.pam_seq)
         ]
 
     def _add_adaptors(self, mseq: str) -> str:

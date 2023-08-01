@@ -17,7 +17,7 @@
 #############################
 
 import abc
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Generic, List, TypeVar
 
 from ..enums import MutationType
@@ -61,6 +61,7 @@ PamBgAltSeqBuilderT = TypeVar('PamBgAltSeqBuilderT', bound='BasePamBgAltSeqBuild
 @dataclass(frozen=True)
 class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
     ab: AltSeqBuilderT
+    pam_seq: str = field(init=False)
 
     @property
     def pos_range(self) -> StrandedPositionRange:
@@ -105,6 +106,12 @@ class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
 
 @dataclass(frozen=True)
 class PamBgAltSeqBuilder(BasePamBgAltSeqBuilder[AltSeqBuilder]):
+
+    def __post_init__(self) -> None:
+
+        # Cache the ALT sequence
+        object.__setattr__(self, 'pam_seq', self.get_pam_seq(
+            extend=False, ref_check=False))
 
     @classmethod
     def from_ref(
