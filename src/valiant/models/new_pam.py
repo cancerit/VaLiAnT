@@ -135,7 +135,7 @@ class PamBgAltSeqBuilder(BasePamBgAltSeqBuilder[AltSeqBuilder]):
     ) -> 'PamBgAltSeqBuilder':
         return cls(AltSeqBuilder(
             ref_seq.genomic_range,
-            ref_seq.sequence,
+            DnaStr(ref_seq.sequence),
             _get_variant_groups(bg_variants, pam_variants)))
 
 
@@ -181,11 +181,11 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
         return self.ab.frame
 
     @property
-    def cds_prefix(self) -> int:
+    def cds_prefix(self) -> str:
         return self.ab.cds_prefix
 
     @property
-    def cds_suffix(self) -> int:
+    def cds_suffix(self) -> str:
         return self.ab.cds_suffix
 
     @property
