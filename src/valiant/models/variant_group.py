@@ -17,7 +17,7 @@
 #############################
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple
 
 from .uint_range import UIntRange
 from .variant import BaseVariantT, sort_variants
@@ -33,14 +33,17 @@ class VariantGroup:
     def from_variants(cls, variants: List[BaseVariantT]):
         return cls(sort_variants(variants))
 
-    def apply(self, start: int, sequence: str, ref_check: bool = False) -> str:
+    def apply(self, start: int, sequence: str, alt_offset: int = 0, ref_check: bool = False) -> Tuple[str, int]:
         alt_seq: str = sequence
 
         for variant in self.variants:
             alt_seq = variant.mutate_from(
-                alt_seq, variant.start - start, ref_check=ref_check)
+                alt_seq, variant.start - start + alt_offset, ref_check=ref_check)
 
-        return alt_seq
+            # Correct following variant position
+            alt_offset += variant.alt_ref_delta
+
+        return alt_seq, alt_offset
 
     def get_sub(self, r: UIntRange) -> 'VariantGroup':
         def var_in_range(variant: BaseVariantT) -> bool:
