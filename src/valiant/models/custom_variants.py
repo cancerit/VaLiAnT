@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -21,11 +21,12 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, FrozenSet
 import numpy as np
 import pandas as pd
+
 from ..constants import META_PAM_MUT_SGRNA_ID, META_VCF_VAR_IN_CONST
 from ..sgrna_utils import sgrna_ids_to_string
 from .mutated_sequences import BaseMutationCollection
+from .new_pam import PamBgAltSeqBuilder
 from .oligo_renderer import BaseOligoRenderer
-from .pam_protected_reference_sequence import PamProtectedReferenceSequence
 from .variant import BaseVariant, CustomVariant
 
 
@@ -42,7 +43,7 @@ class CustomVariantOligoRenderer(BaseOligoRenderer):
 
     def __init__(
         self,
-        ref_seq: PamProtectedReferenceSequence,
+        ref_seq: PamBgAltSeqBuilder,
         gene_id: str,
         transcript_id: str,
         adaptor_5: str,
