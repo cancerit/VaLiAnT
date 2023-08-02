@@ -53,3 +53,12 @@ class VariantGroup:
             return False
 
         return VariantGroup(list(filter(var_in_range, self.variants)))
+
+    def overlaps(self, variant: BaseVariantT) -> bool:
+        return any(
+            (
+                variant.ref_start_pos.in_range(r.ref_range) or
+                variant.ref_end_pos.in_range(r.ref_range)
+            )
+            for r in self.variants
+        )

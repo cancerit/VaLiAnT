@@ -222,3 +222,8 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
 
     def get_ref_codon_index(self, position: int) -> int:
         return self.ab.get_ref_codon_index(position)
+
+    def overlaps_bg(self, variant: BaseVariantT) -> bool:
+        """Does the variant overlap with any of the background variants?"""
+
+        return self.ab.overlaps_layer(LAYER_BG, variant)

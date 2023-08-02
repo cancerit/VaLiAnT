@@ -159,6 +159,9 @@ class AltSeqBuilder:
         self.validate_variant_group_index(variant_group_index)
         return self.variant_groups[variant_group_index]
 
+    def overlaps_layer(self, variant_group_index: int, variant: VariantT) -> bool:
+        return self.get_variant_group(variant_group_index).overlaps(variant)
+
     def mutate_alt(self, variant: VariantT, variant_layer: Optional[int] = None, ref_check: bool = False) -> str:
         if not variant.in_range(self.gr):
             raise RuntimeError("Variant out of bounds!")
