@@ -72,7 +72,7 @@ class CustomVariantMutation:
     def ref_length(self) -> int:
         return self.variant.ref_length
 
-    def to_row(self) -> Tuple[Optional[str], Optional[str], int, int, Optional[str], Optional[str], str, str]:
+    def to_row(self) -> Tuple[Optional[str], Optional[str], int, int, Optional[str], Optional[str], str, str, int]:
         var: BaseVariant = self.variant.base_variant
         return (
             self.variant.vcf_alias,

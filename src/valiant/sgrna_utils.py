@@ -16,7 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from typing import Dict, List, Optional, Set
+from typing import Dict, FrozenSet, List, Optional, Set
 import pandas as pd
 
 from .constants import META_MUT_POSITION, META_REF, META_PAM_MUT_SGRNA_ID, ARRAY_SEPARATOR
@@ -66,7 +66,7 @@ def get_sgrna_ids_from_row(frame: int, codon_to_sgrna_ids: Dict[int, str], r: pd
     return get_sgrna_ids(frame, codon_to_sgrna_ids, r[META_MUT_POSITION], mut_ref)
 
 
-def sgrna_ids_to_string(sgrna_ids: Set[str]) -> str:
+def sgrna_ids_to_string(sgrna_ids: FrozenSet[str]) -> str:
     return ARRAY_SEPARATOR.join(sorted(sgrna_ids))
 
 
