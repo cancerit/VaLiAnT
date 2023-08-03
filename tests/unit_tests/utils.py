@@ -22,6 +22,7 @@ import pathlib
 import pandas as pd
 from valiant.models.base import GenomicRange
 from valiant.models.codon_table import CodonTable
+from valiant.models.sequences import ReferenceSequence
 from valiant.models.snv_table import AuxiliaryTables
 from valiant.models.targeton import Targeton
 from .constants import DUMMY_PAM_PROTECTION_NT, CODON_TABLE_FP, FRAMES, STRANDS
@@ -70,3 +71,8 @@ def trim_cds_extensions(cds_seq, cds_prefix_length, cds_suffix_length):
 
 def seq2triplets(seq):
     return [seq[i:i + 3] for i in range(0, len(seq), 3)]
+
+
+def get_ref_seq(seq, chromosome='X', strand='+', pos=1):
+    gr = GenomicRange(chromosome, pos, pos + len(seq) - 1, strand)
+    return ReferenceSequence(seq, gr)

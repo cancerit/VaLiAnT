@@ -18,10 +18,11 @@
 
 import pytest
 from valiant.models.base import GenomicPosition
-from valiant.models.pam_protection import PamProtectedReferenceSequence
+from valiant.models.new_pam import PamBgAltSeqBuilder
+from valiant.models.pam_protection import PamVariant
 from valiant.models.variant import InsertionVariant, DeletionVariant, SubstitutionVariant
 from .constants import DUMMY_PAM_PROTECTION_NT
-from .utils import get_pam_protected_sequence
+from .utils import get_ref_seq
 
 
 SEQ = 'AAAACGTACGTACGT'
@@ -38,6 +39,11 @@ gp = GenomicPosition('X', 1)
 @pytest.mark.parametrize('pam_protection', [True, False])
 def test_apply_variant(variant, ref, pam, pam_protection):
     seq = SEQ
-    pam_ref_seq = get_pam_protected_sequence(seq, pam_protection)
-    mseq = pam_ref_seq.apply_variant(variant)
+    start = 1
+    ref_seq = get_ref_seq(seq, pos=start)
+    pam_ref_seq = PamBgAltSeqBuilder.from_ref_seq(ref_seq, [], [
+        PamVariant(GenomicPosition('X', start + i), seq[i], DUMMY_PAM_PROTECTION_NT, 'sgrna-id-a')
+        for i in range(len(seq))
+    ] if pam_protection else [])
+    mseq = pam_ref_seq.mutate(variant)
     assert mseq == (pam if pam_protection else ref)
