@@ -140,7 +140,7 @@ class ITargeton(BaseTargeton, Generic[PamBgAltSeqBuilderT], abc.ABC):
         return self.pos_range.start
 
     @property
-    def variants(self) -> List[VariantT]:
+    def variants(self) -> List[PamVariant]:
         return self.ab.pam_variants
 
     @property
