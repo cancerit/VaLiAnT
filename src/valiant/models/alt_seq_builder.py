@@ -23,7 +23,7 @@ from ..utils import has_duplicates
 from .base import GenomicPosition, GenomicRange, StrandedPositionRange
 from .dna_str import DnaStr
 from .uint_range import UIntRange
-from .variant import BaseVariantT as VariantT
+from .variant import BaseVariant, BaseVariantT as VariantT
 from .variant_group import VariantGroup
 
 
@@ -107,7 +107,7 @@ class AltSeqBuilder:
 
     def get_variants(self, variant_group_index: int, genomic_range: Optional[RangeT] = None) -> List[VariantT]:
         def ft(variant: VariantT) -> bool:
-            return variant.in_range(genomic_range)
+            return variant.in_range(genomic_range)  # type: ignore
 
         variants = self.get_variant_group(variant_group_index).variants
         return list(filter(ft, variants)) if genomic_range else variants
@@ -128,7 +128,13 @@ class AltSeqBuilder:
         if self.seq_length != len(self.gr):
             raise ValueError("Mismatching position range and sequence length!")
 
-    def get_alt(self, extend: bool = False, variant_layer: Optional[int] = None, ref_check: bool = False) -> str:
+    def get_alt(
+        self,
+        extend: bool = False,
+        variant_layer: Optional[int] = None,
+        ref_check: bool = False,
+        correct_alt: bool = False
+    ) -> str:
         last_group_index: int = (
             variant_layer if variant_layer is not None else
             self.variant_group_count - 1
@@ -136,37 +142,47 @@ class AltSeqBuilder:
         self.validate_variant_group_index(last_group_index)
 
         alt_seq: str = self.ext_sequence if extend else self.sequence
+        alt_offset: int = 0
         for g in self.variant_groups[:last_group_index + 1]:
-            alt_seq = g.apply(self.start, alt_seq, ref_check=ref_check)
+            alt_seq, layer_alt_offset = g.apply(
+                self.start, alt_seq, alt_offset=alt_offset, ref_check=ref_check)
+            if correct_alt:
+                alt_offset += layer_alt_offset
 
         return alt_seq
 
     def get_alt_length(self, extend: bool = False, variant_layer: Optional[int] = None) -> int:
         return len(self.get_alt(extend=extend, variant_layer=variant_layer))
 
-    def get_sub(self, r: UIntRange) -> 'AltSeqBuilder':
+    def _get_sub_seq(self, r: UIntRange) -> DnaStr:
         nr: UIntRange = r - self.start
+        return DnaStr(self.sequence[nr.to_slice()])
 
+    def _get_sub_groups(self, r: UIntRange) -> List[VariantGroup]:
+        return [
+            g.get_sub(r)
+            for g in self.variant_groups
+        ]
+
+    def get_sub(self, gr: GenomicRange) -> 'AltSeqBuilder':
+        r = gr.to_uintr()
         return AltSeqBuilder(
-            r.start,
-            self.sequence[nr.to_slice()],
-            [
-                g.get_sub(r)
-                for g in self.variant_groups
-            ])
+            gr,
+            self._get_sub_seq(r),
+            self._get_sub_groups(r))
 
     def get_variant_group(self, variant_group_index: int) -> VariantGroup:
         self.validate_variant_group_index(variant_group_index)
         return self.variant_groups[variant_group_index]
 
-    def overlaps_layer(self, variant_group_index: int, variant: VariantT) -> bool:
+    def overlaps_layer(self, variant_group_index: int, variant: BaseVariant) -> bool:
         return self.get_variant_group(variant_group_index).overlaps(variant)
 
-    def mutate_alt(self, variant: VariantT, variant_layer: Optional[int] = None, ref_check: bool = False) -> str:
+    def mutate_alt(self, variant: BaseVariant, variant_layer: Optional[int] = None, ref_check: bool = False) -> str:
         if not variant.in_range(self.gr):
             raise RuntimeError("Variant out of bounds!")
         # TODO: verify support for variants that begin before the reference start
         return variant.mutate(
             self.get_alt(variant_layer=variant_layer, ref_check=False),
-            self.ref_seq,
+            self.start,
             ref_check=ref_check)

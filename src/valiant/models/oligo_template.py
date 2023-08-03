@@ -105,7 +105,7 @@ class RegionOligoRenderer(BaseOligoRenderer):
 
     def __init__(
         self,
-        ref_seq: PamBgAltSeqBuilderT,
+        ref_seq: PamBgAltSeqBuilder,
         gene_id: str,
         transcript_id: str,
         adaptor_5: str,
@@ -140,7 +140,7 @@ class OligoMutationCollection:
             raise RuntimeError(
                 f"Empty mutation collection for mutator '{self.mutator}'!")
 
-        df: pd.DataFrame = self.mutation_collection.df
+        df: pd.DataFrame = self.mutation_collection.df  # type: ignore
         df[META_MUTATOR] = get_constant_category(self.mutator.value, df.shape[0])
         df[META_MUT_POSITION] += self.target_region_start
         df[META_OLIGO_NAME] = self.renderer.get_oligo_names_from_dataframe(df)
@@ -163,7 +163,7 @@ class OligoTemplate:
 
     ref_ranges: ReferenceSequenceRanges
     transcript_info: Optional[TranscriptInfo]
-    ref_seq: PamBgAltSeqBuilderT
+    ref_seq: PamBgAltSeqBuilder
     sgrna_ids: FrozenSet[str]
     custom_variants: Set[CustomVariant]
     adaptor_5: Optional[str]
@@ -258,7 +258,7 @@ class OligoTemplate:
             self.ref_seq.get_variant_corrected_ref(
                 variant.base_variant),
             self.ref_seq.mutate(
-                variant.base_variant, ref_check=False),
+                variant.base_variant),
             self.ref_ranges.is_range_in_constant_region(
                 variant.get_ref_range(self.strand)),
             self._get_custom_variant_sgrna_ids(variant))

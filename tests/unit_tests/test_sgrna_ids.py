@@ -19,13 +19,14 @@
 import pytest
 
 from valiant.models.base import GenomicRange, GenomicPosition
+from valiant.models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
 from valiant.models.refseq_ranges import ReferenceSequenceRanges
 from valiant.models.sequences import ReferenceSequence
 from valiant.models.oligo_segment import InvariantOligoSegment
 from valiant.models.custom_variants import CustomVariant
 from valiant.models.oligo_template import OligoTemplate
 from valiant.models.targeton import PamProtTargeton, PamProtCDSTargeton
-from valiant.models.pam_protection import PamProtectedReferenceSequence, PamVariant
+from valiant.models.pam_protection import PamVariant
 from valiant.models.variant import DeletionVariant, SubstitutionVariant, InsertionVariant
 
 
@@ -59,21 +60,21 @@ def test_oligo_template_get_custom_variant_sgrna_ids(variant, non_cds_region):
     ref_seq = ReferenceSequence(
         'A' * seq_length, GenomicRange(CHR, seq_start, seq_start + seq_length - 1, STRAND))
 
-    pam_seq = PamProtectedReferenceSequence.from_reference_sequence(
-        ref_seq, pam_variants)
+    pam_seq = PamBgAltSeqBuilder.from_ref_seq(
+        ref_seq, [], pam_variants)
 
     custom_variant = CustomVariant(variant, None, None)
 
     # Mark all or just the middle region as exonic
-    def get_targeton(region_index, region):
+    def get_targeton(region_index: int, region: PamBgAltSeqBuilder):
         return (
-            PamProtTargeton.from_pam_seq(region)
+            PamProtTargeton(region)
             if non_cds_region and region_index != EXON_REGION_INDEX else
-            PamProtCDSTargeton.from_pam_seq(region, 'AA', '')
+            PamProtCDSTargeton(CdsPamBgAltSeqBuilder.from_noncds(region, 'AA', ''))
         )
 
     regions = [
-        pam_seq.get_subsequence(GenomicRange(CHR, start, end, STRAND))
+        pam_seq.get_pam_sub(GenomicRange(CHR, start, end, STRAND))
         for start, end in [
             (seq_start + i * 10, seq_start + (i + 1) * 10 - 1)
             for i in range(3)

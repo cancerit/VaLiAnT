@@ -47,6 +47,9 @@ class PositionRange(UIntRange):
     def to_tuple(self) -> Tuple[int, int]:
         return self.start, self.end
 
+    def to_uintr(self) -> UIntRange:
+        return UIntRange(self.start, self.end)
+
     def get_subrange_before(self, pos: int, length: Optional[int] = None) -> Optional[PositionRange]:
         if pos < 1:
             raise ValueError("Invalid position!")

@@ -18,10 +18,9 @@
 
 import abc
 from dataclasses import dataclass, field
-from typing import Dict, Generic, List, TypeVar
+from typing import Dict, FrozenSet, Generic, List, Optional, TypeVar
 
 from ..enums import MutationType
-
 from .alt_seq_builder import AltSeqBuilderT, AltSeqBuilder
 from .base import GenomicRange, StrandedPositionRange
 from .cds_alt_seq_builder import CdsAltSeqBuilder
@@ -29,7 +28,7 @@ from .codon_table import CodonTable
 from .dna_str import DnaStr
 from .pam_protection import PamVariant
 from .sequences import ReferenceSequence
-from .variant import BaseVariantT
+from .variant import BaseVariant, BaseVariantT
 from .variant_group import VariantGroup
 
 
@@ -84,7 +83,7 @@ class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
         return self.ab.get_alt(extend=False)
 
     @property
-    def bg_variants(self) -> List[BaseVariantT]:
+    def bg_variants(self) -> List[BaseVariant]:
         return self.ab.variant_groups[LAYER_BG].variants
 
     @property
@@ -94,14 +93,23 @@ class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
     def get_pam_variants_in_range(self, spr: StrandedPositionRange) -> List[PamVariant]:
         return self.ab.get_variants(LAYER_PAM, genomic_range=spr)
 
+    def get_sgrna_ids_in_range(self, spr: StrandedPositionRange) -> FrozenSet[str]:
+        return frozenset({
+            variant.sgrna_id
+            for variant in self.get_pam_variants_in_range(spr)
+        })
+
     def get_bg_seq(self, extend: bool = False, ref_check: bool = False) -> str:
         return self.ab.get_alt(extend=extend, variant_layer=LAYER_BG, ref_check=ref_check)
 
     def get_pam_seq(self, extend: bool = False, ref_check: bool = False) -> str:
         return self.ab.get_alt(extend=extend, variant_layer=LAYER_PAM, ref_check=ref_check)
 
-    def mutate(self, variant: BaseVariantT) -> str:
+    def mutate(self, variant: BaseVariant) -> str:
         return self.ab.mutate_alt(variant)
+
+    def get_variant_corrected_ref(self, variant: BaseVariant) -> Optional[str]:
+        return variant.get_corrected_ref(self.pam_seq, self.start)
 
 
 @dataclass(frozen=True)
@@ -137,6 +145,9 @@ class PamBgAltSeqBuilder(BasePamBgAltSeqBuilder[AltSeqBuilder]):
             ref_seq.genomic_range,
             DnaStr(ref_seq.sequence),
             _get_variant_groups(bg_variants, pam_variants)))
+
+    def get_pam_sub(self, gr: GenomicRange) -> 'PamBgAltSeqBuilder':
+        return PamBgAltSeqBuilder(self.ab.get_sub(gr))
 
 
 @dataclass(frozen=True)
@@ -176,6 +187,10 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
             cds_prefix=cds_prefix,
             cds_suffix=cds_suffix)
 
+    @classmethod
+    def from_noncds(cls, x: PamBgAltSeqBuilder, prefix: str, suffix: str) -> 'CdsPamBgAltSeqBuilder':
+        return cls(CdsAltSeqBuilder.from_builder(x.ab, prefix, suffix))
+
     @property
     def frame(self) -> int:
         return self.ab.frame
@@ -204,10 +219,6 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
     def contains_same_codon_variants(self) -> bool:
         return self.ab.contains_same_codon_variants(LAYER_PAM)
 
-    @property
-    def contains_same_codon_variants(self) -> bool:
-        return self.ab.contains_same_codon_variants(LAYER_PAM)
-
     def get_pam_variant_codon_indices(self) -> List[int]:
         return self.ab.get_variant_group_codon_indices(LAYER_PAM)
 
@@ -223,7 +234,10 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
     def get_ref_codon_index(self, position: int) -> int:
         return self.ab.get_ref_codon_index(position)
 
-    def overlaps_bg(self, variant: BaseVariantT) -> bool:
+    def overlaps_bg(self, variant: BaseVariant) -> bool:
         """Does the variant overlap with any of the background variants?"""
 
         return self.ab.overlaps_layer(LAYER_BG, variant)
+
+    def get_codon_indices_in_range(self, spr: StrandedPositionRange) -> List[int]:
+        return self.ab.get_codon_indices_in_range(spr)
