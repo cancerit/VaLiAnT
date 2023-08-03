@@ -17,14 +17,14 @@
 #############################
 
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Generic, List, Tuple
 
 from .uint_range import UIntRange
 from .variant import BaseVariantT, sort_variants
 
 
 @dataclass(frozen=True)
-class VariantGroup:
+class VariantGroup(Generic[BaseVariantT]):
     __slots__ = ['variants']
 
     variants: List[BaseVariantT]
