@@ -436,6 +436,8 @@ class PamProtTargeton(Targeton[PamVariant, GenomicRange], PamProtected):
         return get_position_to_sgrna_ids(self.variants)
 
     def _set_metadata_sgrna_ids(self, mutations: MutationCollection) -> None:
+        if mutations.df is None:
+            raise ValueError("Null mutation collection data frame!")
         if not mutations.is_empty:
             position_to_sgrna_ids = self._get_rel_position_to_sgrna_ids(self.start, self.variants)
             set_metadata_sgrna_ids(0, position_to_sgrna_ids, {}, mutations.df)
