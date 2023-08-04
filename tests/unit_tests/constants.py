@@ -21,6 +21,7 @@ DNA_ALPHABET_SET = set(DNA_ALPHABET)
 FRAMES = [0, 1, 2]
 
 DUMMY_PAM_PROTECTION_NT = 'A'
+DUMMY_PAM_SGRNA_ID = 'sgrna-id-a'
 
 CODON_TABLE_FP = 'codon_table.csv'
 GTF_MULTI = 'ddx3x_cds.gtf'

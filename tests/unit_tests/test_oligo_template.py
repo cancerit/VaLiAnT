@@ -18,19 +18,21 @@
 
 import pytest
 from valiant.enums import TargetonMutator
-from valiant.models.annotated_sequence import CDSAnnotatedSequencePair
 from valiant.models.base import GenomicPosition, GenomicRange, TranscriptInfo
-from valiant.models.codon_table import CodonTable
+from valiant.models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
 from valiant.models.oligo_template import OligoTemplate, TargetonOligoSegment
-from valiant.models.pam_protection import PamProtectedReferenceSequence, PamVariant
+from valiant.models.pam_protection import PamVariant
 from valiant.models.refseq_ranges import ReferenceSequenceRanges
-from valiant.models.sequences import Sequence, ReferenceSequence
-from valiant.models.targeton import PamProtCDSTargeton, Targeton
+from valiant.models.sequences import ReferenceSequence
+from valiant.models.targeton import PamProtCDSTargeton
 from valiant.models.variant import CustomVariant, SubstitutionVariant
-from .constants import CODON_TABLE_FP, DUMMY_PAM_PROTECTION_NT
-from .utils import get_data_file_path, get_no_op_pam_protected_sequence, get_targeton
+from .constants import DUMMY_PAM_PROTECTION_NT, DUMMY_PAM_SGRNA_ID
+from .utils import get_aux_tables, get_pam_bg_alt_seq_builder, get_ref_seq
 
 TRANSCRIPT_INFO = TranscriptInfo('GENE_ID', 'TRANSCRIPT_ID')
+
+
+aux = get_aux_tables()
 
 
 @pytest.mark.parametrize('targetons', [
@@ -39,29 +41,39 @@ TRANSCRIPT_INFO = TranscriptInfo('GENE_ID', 'TRANSCRIPT_ID')
 @pytest.mark.parametrize('pam_protection', [True, False])
 @pytest.mark.parametrize('mutator', [TargetonMutator.DEL1, TargetonMutator.SNV])
 def test_oligo_compute_mutations(targetons, mutator, pam_protection):
-
-    def get_segment(seq):
-        return TargetonOligoSegment(
-            get_targeton(seq, pam_protection), {mutator})
-
-    ct = CodonTable.load(get_data_file_path(CODON_TABLE_FP))
-    ref_seq = ''.join(targetons)
-
     gr = GenomicRange('X', 1, sum(len(seq) for seq in targetons), '+')
-    pam_ref_seq = get_no_op_pam_protected_sequence(ref_seq, gr)
+    ref_seq = ReferenceSequence(''.join(targetons), gr)
+
+    pam_ref_seq = get_pam_bg_alt_seq_builder(ref_seq, pam_protection)
 
     adaptor_5 = 'AAAAAA'
     adaptor_3 = 'AAAAAA'
-    segments = list(map(get_segment, targetons))
+
+    targeton_start = gr.start
+    segments = []
+    for targeton_seq in targetons:
+        targeton_length = len(targeton_seq)
+        segments.append(
+            get_pam_bg_alt_seq_builder(
+                get_ref_seq(
+                    targeton_seq,
+                    chromosome=gr.chromosome,
+                    pos=targeton_start,
+                    strand=gr.strand
+                ), pam_protection))
+        targeton_start += targeton_length
 
     empty = frozenset()
     rsr = ReferenceSequenceRanges(
         'X', '+', 1, 22, 1, 22, (0, 0), (empty, empty, empty), empty)
 
-    ot = OligoTemplate(rsr, TRANSCRIPT_INFO, pam_ref_seq, set(), set(), adaptor_5, adaptor_3, segments)
+    ot = OligoTemplate(rsr, TRANSCRIPT_INFO, pam_ref_seq, frozenset({DUMMY_PAM_SGRNA_ID}), set(), adaptor_5, adaptor_3, segments)
     for _, target_segment in ot.target_segments:
-        mutation_collections = target_segment.compute_mutations(ct)
+        mutation_collections = target_segment.compute_mutations(aux)
         df = mutation_collections[mutator].df
+        if df is None:
+            raise ValueError("Null data frame!")
+
         if pam_protection:
             if mutator == TargetonMutator.DEL1:
                 assert all(
@@ -93,16 +105,16 @@ def test_oligo_template_get_custom_variant_mutation():
     ref_seq = ref * 6
 
     gr = GenomicRange('X', 1, len(ref_seq), '+')
-    pam_ref_seq = PamProtectedReferenceSequence.from_reference_sequence(
-        ReferenceSequence(ref_seq, gr), pam_variants)
+    pam_ref_seq = PamBgAltSeqBuilder.from_ref_seq(
+        ReferenceSequence(ref_seq, gr), [], list(pam_variants))
 
     print(pam_ref_seq)
 
-    targeton = PamProtCDSTargeton.from_pam_seq(
-        pam_ref_seq, '', '')
+    targeton = PamProtCDSTargeton(CdsPamBgAltSeqBuilder.from_noncds(
+        pam_ref_seq, '', ''))
 
-    sgrna_ids = {x.sgrna_id for x in pam_variants}
-    segment = TargetonOligoSegment(targeton, set())
+    sgrna_ids = frozenset({x.sgrna_id for x in pam_variants})
+    segment = TargetonOligoSegment(targeton, frozenset())
     ot = OligoTemplate(
         rsr, TRANSCRIPT_INFO, pam_ref_seq, sgrna_ids, {custom_variant}, None, None, [segment])
 

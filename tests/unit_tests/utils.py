@@ -28,7 +28,7 @@ from valiant.models.pam_protection import PamVariant
 from valiant.models.sequences import ReferenceSequence
 from valiant.models.snv_table import AuxiliaryTables
 from valiant.models.targeton import Targeton
-from .constants import DUMMY_PAM_PROTECTION_NT, CODON_TABLE_FP, FRAMES, STRANDS
+from .constants import DUMMY_PAM_PROTECTION_NT, DUMMY_PAM_SGRNA_ID, CODON_TABLE_FP, FRAMES, STRANDS
 
 cds_extension_slices = {
     (a, b): slice(a, -b if b > 0 else None)
@@ -81,19 +81,30 @@ def get_ref_seq(seq, chromosome='X', strand='+', pos=1):
     return ReferenceSequence(seq, gr)
 
 
-def get_consecutive_pam_variants(seq: str, start: int, alt: str = DUMMY_PAM_PROTECTION_NT) -> List[PamVariant]:
+def get_consecutive_pam_variants(
+    seq: str,
+    start: int,
+    alt: str = DUMMY_PAM_PROTECTION_NT,
+    sgrna_id: str = DUMMY_PAM_SGRNA_ID
+) -> List[PamVariant]:
     return [
-        PamVariant(GenomicPosition('X', start + i), seq[i], alt, 'sgrna-id-a')
+        PamVariant(GenomicPosition('X', start + i), seq[i], alt, sgrna_id)
         for i in range(len(seq))
     ]
 
 
-def get_pam_bg_alt_seq_builder(ref_seq: ReferenceSequence, pam_protection: bool, alt: str = DUMMY_PAM_PROTECTION_NT):
+def get_pam_bg_alt_seq_builder(
+    ref_seq: ReferenceSequence,
+    pam_protection: bool,
+    alt: str = DUMMY_PAM_PROTECTION_NT,
+    sgrna_id: str = DUMMY_PAM_SGRNA_ID
+):
     return PamBgAltSeqBuilder.from_ref_seq(
         ref_seq,
         [],
         get_consecutive_pam_variants(
             ref_seq.sequence,
             ref_seq.genomic_range.start,
-            alt=alt
+            alt=alt,
+            sgrna_id=sgrna_id
         ) if pam_protection else [])
