@@ -63,7 +63,7 @@ class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
     pam_seq: str = field(init=False)
 
     @property
-    def pos_range(self) -> StrandedPositionRange:
+    def pos_range(self) -> GenomicRange:
         return self.ab.gr
 
     @property

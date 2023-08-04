@@ -79,7 +79,7 @@ class BaseTargeton(abc.ABC):
     def _get_mutator_method(self, mutator: TargetonMutator):
         return getattr(self, f"get_{mutator.value.replace('-', '_')}_mutations")
 
-    def get_mutations(self, mutator: TargetonMutator, aux_tables: AuxiliaryTables = None) -> MutationCollection:
+    def get_mutations(self, mutator: TargetonMutator, aux_tables: Optional[AuxiliaryTables] = None) -> MutationCollection:
         if mutator not in self.MUTATORS:
             raise ValueError(f"Invalid mutator '{mutator.value}' for targeton!")
 
@@ -103,7 +103,7 @@ class BaseTargeton(abc.ABC):
     def _compute_mutations(
         self,
         mutators: FrozenSet[TargetonMutator],
-        aux_tables: AuxiliaryTables = None
+        aux_tables: Optional[AuxiliaryTables] = None
     ) -> Dict[TargetonMutator, MutationCollection]:
         return {
             mutator: self.get_mutations(mutator, aux_tables=aux_tables)
@@ -171,7 +171,7 @@ class Targeton(ITargeton[PamBgAltSeqBuilder], Generic[VariantT, RangeT]):
         cls: Type[CDSTargetonT],
         pos_range: RangeT,
         ref_seq: str
-    ) -> NonCDSTargetonT:
+    ) -> ITargeton:
         return cls(PamBgAltSeqBuilder.from_ref(
             pos_range, ref_seq, [], []))
 
