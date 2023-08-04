@@ -30,15 +30,16 @@ from .models.codon_table import CodonTable
 from .models.custom_variants import CustomVariant
 from .models.exon import AnnotationRepository, CDSContextRepository, GenomicRangePair, TranscriptInfo
 from .models.metadata_table import MetadataTable
+from .models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
 from .models.oligo_generation_info import OligoGenerationInfo
 from .models.oligo_segment import InvariantOligoSegment, OligoSegment, TargetonOligoSegment
 from .models.oligo_template import OligoTemplate
 from .models.options import Options
 from .models.pam_protection import PamVariant
-from .models.pam_protected_reference_sequence import PamProtectedReferenceSequence
 from .models.refseq_ranges import genomic_ranges_to_pyranges, ReferenceSequenceRangeCollection, ReferenceSequenceRanges, TargetReferenceRegion
 from .models.refseq_repository import fetch_reference_sequences, ReferenceSequenceRepository
 from .models.sequences import ReferenceSequence
+from .models.sge_config import SGEConfig
 from .models.snv_table import AuxiliaryTables
 from .models.stats import Stats
 from .models.targeton import ITargeton, PamProtCDSTargeton, PamProtTargeton
@@ -83,6 +84,9 @@ def get_oligo_template(
     adaptor_3: Optional[str] = None
 ) -> OligoTemplate:
 
+    bg_variant_ls = list(bg_variants)
+    pam_variant_ls = list(pam_variants)
+
     # 1. Generate PAM protected reference sequence
 
     def get_sequence(genomic_range: GenomicRange) -> ReferenceSequence:
@@ -92,31 +96,32 @@ def get_oligo_template(
             raise ValueError("Sequence not found!")
         return ReferenceSequence(seq, genomic_range)
 
-    pam_ref_seq: PamProtectedReferenceSequence = PamProtectedReferenceSequence.from_reference_sequence(
-        get_sequence(rsr.ref_range), pam_variants, bg_variants)
+    pam_ref_seq = PamBgAltSeqBuilder.from_ref_seq(
+        get_sequence(rsr.ref_range), bg_variant_ls, pam_variant_ls)
 
     # 2. Get constant regions
 
     def get_cds_targeton(
-        region_pam_seq: PamProtectedReferenceSequence,
+        region_pam_seq: PamBgAltSeqBuilder,
         exg_gr_pair: GenomicRangePair
     ) -> PamProtCDSTargeton:
-        return PamProtCDSTargeton.from_pam_seq(
-            region_pam_seq,
-            get_cds_extension_sequence(exg_gr_pair[0]),
-            get_cds_extension_sequence(exg_gr_pair[1]))
+        return PamProtCDSTargeton(
+            CdsPamBgAltSeqBuilder.from_noncds(
+                region_pam_seq,
+                get_cds_extension_sequence(exg_gr_pair[0]),
+                get_cds_extension_sequence(exg_gr_pair[1])))
 
-    def get_targeton(region_pam_seq: PamProtectedReferenceSequence) -> ITargeton:
+    def get_targeton(region_pam_seq: PamBgAltSeqBuilder) -> ITargeton:
         if cds:
             exg_gr_pair: Optional[GenomicRangePair] = cds.get_cds_extensions(
-                region_pam_seq.genomic_range)
+                region_pam_seq.pos_range)
             if exg_gr_pair is not None:
                 return get_cds_targeton(region_pam_seq, exg_gr_pair)
-        return PamProtTargeton.from_pam_seq(region_pam_seq)
+        return PamProtTargeton(region_pam_seq)
 
     def get_constant_region_segment(gr: Optional[GenomicRange]) -> Optional[InvariantOligoSegment]:
         return InvariantOligoSegment(
-            get_targeton(pam_ref_seq.get_subsequence(gr))) if gr else None
+            get_targeton(pam_ref_seq.get_pam_sub(gr))) if gr else None
 
     const_region_1: Optional[InvariantOligoSegment] = get_constant_region_segment(rsr.const_region_1)
     const_region_2: Optional[InvariantOligoSegment] = get_constant_region_segment(rsr.const_region_2)
@@ -134,7 +139,7 @@ def get_oligo_template(
         return sequence
 
     def get_oligo_segment(trr: TargetReferenceRegion) -> OligoSegment:
-        region_pam_seq = pam_ref_seq.get_subsequence(trr.genomic_range)
+        region_pam_seq = pam_ref_seq.get_pam_sub(trr.genomic_range)
         return (
             TargetonOligoSegment(get_targeton(region_pam_seq), trr.mutators) if trr.mutators else
             get_constant_region_segment(trr.genomic_range)
@@ -231,11 +236,11 @@ def get_oligo_templates(
         return set(variants.pam.get_sgrna_variants_bulk(rsr.sgrna_ids))
 
     def get_bg_variants(rsr: ReferenceSequenceRanges) -> Set[BaseVariant]:
-        return variants.background.get_variants(rsr.ref_range)
+        return variants.background.get_variants(rsr.ref_range) if variants.background else set()
 
     def get_rsr_oligo_template(rsr: ReferenceSequenceRanges) -> OligoTemplate:
 
-        def get_vars(label: str, cond: bool, f: Callable[[ReferenceSequenceRanges], Set]) -> Set[BaseVariant]:
+        def get_vars(label: str, cond: bool, f: Callable[[ReferenceSequenceRanges], Set[BaseVariantT]]) -> Set[BaseVariantT]:
             try:
                 return f(rsr) if cond else set()
             except ValueError as ex:
