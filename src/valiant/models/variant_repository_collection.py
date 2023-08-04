@@ -26,7 +26,7 @@ from pyranges import PyRanges
 from .pam_protection import PamProtectionVariantRepository
 from .refseq_ranges import ReferenceSequenceRangeCollection
 from .sge_config import SGEConfig
-from .variant import VariantRepository
+from .variant_repository import VariantRepository
 
 
 def _load_pam_protection_vcf(sgrna_ids: FrozenSet[str], pam: Optional[str]) -> PamProtectionVariantRepository:

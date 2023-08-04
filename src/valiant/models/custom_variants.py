@@ -24,10 +24,33 @@ import pandas as pd
 
 from ..constants import META_PAM_MUT_SGRNA_ID, META_VCF_VAR_IN_CONST
 from ..sgrna_utils import sgrna_ids_to_string
+from .base import StrandedPositionRange
 from .mutated_sequences import BaseMutationCollection
 from .new_pam import PamBgAltSeqBuilder
 from .oligo_renderer import BaseOligoRenderer
-from .variant import BaseVariant, CustomVariant
+from .variant import BaseVariant
+
+
+@dataclass(frozen=True)
+class CustomVariant:
+    __slots__ = {'base_variant', 'vcf_alias', 'vcf_variant_id'}
+
+    base_variant: BaseVariant
+    vcf_alias: Optional[str]
+    vcf_variant_id: Optional[str]
+
+    def get_ref(self) -> Optional[str]:
+        return self.base_variant.get_ref()
+
+    @property
+    def ref_length(self) -> int:
+        return self.base_variant.ref_length
+
+    def get_ref_range(self, strand: str) -> StrandedPositionRange:
+        start: int = self.base_variant.genomic_position.position
+        ref_length: int = len(getattr(self.base_variant, 'ref', ''))
+        end: int = start + (ref_length if ref_length > 1 else 0)
+        return StrandedPositionRange(start, end, strand)
 
 
 @dataclass(init=False)

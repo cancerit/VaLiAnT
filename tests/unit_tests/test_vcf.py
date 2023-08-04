@@ -25,7 +25,7 @@ import pytest
 from valiant.enums import VariantType, VariantClassification
 from valiant.loaders.vcf import get_vcf, load_vcf, load_vcf_manifest, normalise_variant_record
 from valiant.models.pam_protection import PamVariant, PamProtectionVariantRepository
-from valiant.models.variant import VariantRepository
+from valiant.models.variant_repository import VariantRepository
 from .utils import get_data_file_path
 
 

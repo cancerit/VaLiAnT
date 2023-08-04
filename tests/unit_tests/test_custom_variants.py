@@ -21,7 +21,8 @@ import pytest
 from valiant.enums import VariantType
 from valiant.models.base import GenomicPosition
 from valiant.models.custom_variants import CustomVariantMutation, CustomVariantMutationCollection
-from valiant.models.variant import CustomVariant, DeletionVariant, InsertionVariant, SubstitutionVariant
+from valiant.models.variant import DeletionVariant, InsertionVariant, SubstitutionVariant
+from valiant.models.custom_variants import CustomVariant
 
 deletion_variant = DeletionVariant(GenomicPosition('X', 5), 'A')
 insertion_variant = InsertionVariant(GenomicPosition('X', 5), 'C')

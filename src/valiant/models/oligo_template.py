@@ -35,7 +35,7 @@ from .new_pam import PamBgAltSeqBuilder, CdsPamBgAltSeqBuilder, PamBgAltSeqBuild
 from .oligo_renderer import BaseOligoRenderer
 from .options import Options
 from .snv_table import AuxiliaryTables
-from .variant import CustomVariant
+from .custom_variants import CustomVariant
 from ..constants import (
     ARRAY_SEPARATOR,
     CUSTOM_MUTATOR,

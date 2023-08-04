@@ -27,7 +27,7 @@ from pyranges import PyRanges
 from .enums import TargetonMutator
 from .models.base import GenomicRange
 from .models.codon_table import CodonTable
-from .models.sge_config import SGEConfig
+from .models.custom_variants import CustomVariant
 from .models.exon import AnnotationRepository, CDSContextRepository, GenomicRangePair, TranscriptInfo
 from .models.metadata_table import MetadataTable
 from .models.oligo_generation_info import OligoGenerationInfo
@@ -42,7 +42,7 @@ from .models.sequences import ReferenceSequence
 from .models.snv_table import AuxiliaryTables
 from .models.stats import Stats
 from .models.targeton import ITargeton, PamProtCDSTargeton, PamProtTargeton
-from .models.variant import BaseVariant, CustomVariant
+from .models.variant import BaseVariant, BaseVariantT
 from .models.variant_repository_collection import VariantRepositoryCollection
 from .common_cli import common_params, existing_file, finalise
 from .cli_utils import load_codon_table

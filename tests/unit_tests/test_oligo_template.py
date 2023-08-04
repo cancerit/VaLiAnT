@@ -19,13 +19,14 @@
 import pytest
 from valiant.enums import TargetonMutator
 from valiant.models.base import GenomicPosition, GenomicRange, TranscriptInfo
+from valiant.models.custom_variants import CustomVariant
 from valiant.models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
 from valiant.models.oligo_template import OligoTemplate, TargetonOligoSegment
 from valiant.models.pam_protection import PamVariant
 from valiant.models.refseq_ranges import ReferenceSequenceRanges
 from valiant.models.sequences import ReferenceSequence
 from valiant.models.targeton import PamProtCDSTargeton
-from valiant.models.variant import CustomVariant, SubstitutionVariant
+from valiant.models.variant import SubstitutionVariant
 from .constants import DUMMY_PAM_PROTECTION_NT, DUMMY_PAM_SGRNA_ID
 from .utils import get_aux_tables, get_pam_bg_alt_seq_builder, get_ref_seq
 

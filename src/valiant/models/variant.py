@@ -17,23 +17,22 @@
 #############################
 
 from __future__ import annotations
-from collections import namedtuple
 from dataclasses import dataclass
 from functools import partial
 import logging
-from typing import Dict, Iterable, List, Optional, Set, Tuple, ClassVar, Any, Callable, TypeVar
+from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple, ClassVar, Any, Callable, TypeVar
+
 import pandas as pd
-from pyranges import PyRanges
 from pysam import VariantRecord
 
-from valiant.constants import META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_REF, META_REF, META_VCF_ALIAS, META_VCF_VAR_ID, METADATA_PAM_FIELDS
-from .base import GenomicPosition, GenomicRange, PositionRange, StrandedPositionRange
+from .base import GenomicPosition, GenomicRange, PositionRange
 from .refseq_repository import ReferenceSequenceRepository
 from .sequences import ReferenceSequence
+from ..constants import META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_REF, META_REF, META_VCF_ALIAS, META_VCF_VAR_ID, METADATA_PAM_FIELDS
 from ..enums import VariantType
-from ..loaders.vcf import load_vcf, load_vcf_manifest, var_type_sub, var_type_del, var_type_ins, var_class_unclass, var_class_mono
+from ..loaders.vcf import var_type_sub, var_type_del, var_type_ins
 from ..string_mutators import delete_nucleotides, insert_nucleotides, replace_nucleotides
-from ..utils import get_id_column, is_dna, get_var_types, opt_str_length
+from ..utils import is_dna, opt_str_length
 
 # Metadata table fields used to generate the VCF output
 VCF_RECORD_METADATA_FIELDS: List[str] = [
@@ -248,181 +247,6 @@ class DeletionVariant(BaseVariant):
         return delete_nucleotides(seq, offset, self.ref)
 
 
-@dataclass(frozen=True)
-class CustomVariant:
-    __slots__ = {'base_variant', 'vcf_alias', 'vcf_variant_id'}
-
-    base_variant: BaseVariant
-    vcf_alias: Optional[str]
-    vcf_variant_id: Optional[str]
-
-    def get_ref(self) -> Optional[str]:
-        return self.base_variant.get_ref()
-
-    @property
-    def ref_length(self) -> int:
-        return self.base_variant.ref_length
-
-    def get_ref_range(self, strand: str) -> StrandedPositionRange:
-        start: int = self.base_variant.genomic_position.position
-        ref_length: int = len(getattr(self.base_variant, 'ref', ''))
-        end: int = start + (ref_length if ref_length > 1 else 0)
-        return StrandedPositionRange(start, end, strand)
-
-
-VAR_TYPE_CONSTRUCTOR: Dict[int, Callable[[Any], BaseVariant]] = {
-    var_type_sub: lambda t: SubstitutionVariant(
-        GenomicPosition(t.Chromosome, t.Start_var + 1), t.ref, t.alt),
-    var_type_del: lambda t: DeletionVariant(
-        GenomicPosition(t.Chromosome, t.Start_var + 1), t.ref),
-    var_type_ins: lambda t: InsertionVariant(
-        GenomicPosition(t.Chromosome, t.Start_var + 1), t.alt)
-}
-
-
-def _map_variants(variants: pd.DataFrame, var_type: int, mask: bool = True) -> Dict[int, CustomVariant]:
-    constructor = VAR_TYPE_CONSTRUCTOR[var_type]
-    return {
-        t.variant_id: CustomVariant(
-            constructor(t),
-            t.vcf_alias,
-            t.vcf_var_id)
-        for t in (
-            variants[variants.var_type == var_type] if mask else
-            variants
-        ).itertuples(index=False)
-    }
-
-
-def _regions_to_chromosome_boundaries(regions: PyRanges) -> Dict[str, Tuple[int, int]]:
-    return {
-        chromosome: (df.Start.min() + 1, df.End.max())
-        for chromosome, df in regions.dfs.items()
-    }
-
-
-@dataclass
-class VariantRepository:
-    _variants: Dict[int, CustomVariant]
-    _region_variants: Dict[Tuple[str, int, int], Set[int]]
-
-    @classmethod
-    def load_vcf(cls, vcf_fp: str, regions: PyRanges) -> VariantRepository:
-        # TODO: verify variant filtering criteria being applied at this stage (if any)
-        chromosome_boundaries = _regions_to_chromosome_boundaries(regions)
-        df = load_vcf(vcf_fp, chromosome_boundaries)
-        # TODO: discuss variant identifiers
-        df['vcf_alias'] = None
-        df['vcf_var_id'] = None
-        return cls.from_df(regions, df)
-
-    @classmethod
-    def load(cls, manifest_fp: str, regions: PyRanges) -> VariantRepository:
-
-        # Load all permitted variants from multiple VCF files
-        chromosome_boundaries = _regions_to_chromosome_boundaries(regions)
-        df = load_vcf_manifest(manifest_fp, chromosome_boundaries)
-        return cls.from_df(regions, df)
-
-    @classmethod
-    def from_df(cls, regions: PyRanges, custom_variants: pd.DataFrame) -> VariantRepository:
-        custom_variants_n: int = custom_variants.shape[0]
-
-        if custom_variants_n == 0:
-            return cls({}, {})
-
-        logging.debug("Collected %d custom variants." % custom_variants_n)
-
-        # Make start positions zero-based
-        custom_variants.Start -= 1
-
-        # Assign identifier to all variants
-        custom_variants['variant_id'] = get_id_column(custom_variants_n)
-        custom_variant_ranges: PyRanges = PyRanges(df=custom_variants)
-
-        # Match regions with variants
-        ref_ranges_variants: pd.DataFrame = regions.join(
-            custom_variant_ranges,
-            suffix='_var'
-        )[[
-            'Start_var',
-            'End_var',
-            'variant_id',
-            'ref',
-            'alt',
-            'vcf_alias',
-            'vcf_var_id',
-            'var_type',
-            'var_class'
-        ]].as_df()
-        del custom_variant_ranges
-
-        variants: pd.DataFrame = ref_ranges_variants.drop([
-            'Start',
-            'End'
-        ], axis=1).drop_duplicates([
-            'variant_id'
-        ])
-
-        # Log and discard monomorphic variants
-        mono_mask: pd.Series = variants.var_class == var_class_mono
-        if mono_mask.any():
-            for chromosome, start in variants.loc[mono_mask, [
-                'Chromosome',
-                'Start_var'
-            ]].itertuples(index=False, name=None):
-                logging.info(f"Monomorphic variant at {chromosome}:{start + 1} (SKIPPED).")
-            variants = variants[~mono_mask]
-            mono_mask = ref_ranges_variants.var_class != var_class_mono
-            ref_ranges_variants = ref_ranges_variants[mono_mask]
-        del mono_mask
-
-        # Log unclassified variants
-        unclass_mask: pd.Series = variants.var_class == var_class_unclass
-        for r in variants[unclass_mask].itertuples(index=False):
-            logging.info(f"Unclassified variant at {r.Chromosome}:{r.Start_var + 1}: {r.ref}>{r.alt}.")
-        del unclass_mask
-
-        # List all variant types represented in the collection
-        var_types: List[int] = get_var_types(variants.var_type)
-        var_types_n: int = len(var_types)
-
-        if not var_types_n:
-            raise RuntimeError("No variant types in variant table!")
-
-        # Map variant indices to variant objects
-        var_types_gt_one: bool = var_types_n > 1
-        matching_variants: Dict[int, CustomVariant] = _map_variants(
-            variants, var_types[0], mask=var_types_gt_one)
-        if var_types_gt_one:
-            for var_type in var_types[1:]:
-                matching_variants.update(_map_variants(variants, var_type))
-        del variants, var_types_gt_one
-
-        # Map regions to variant indices
-        ref_ranges_variant_ids: Dict[Tuple[str, int, int], Set[int]] = {
-            (chromosome, start + 1, end): set(g.variant_id[(
-                (g.Start_var >= start)
-                & (g.End_var <= end)
-            )].unique())
-            for (chromosome, start, end), g in ref_ranges_variants.groupby([
-                'Chromosome',
-                'Start',
-                'End'
-            ])
-        }
-
-        return cls(matching_variants, ref_ranges_variant_ids)
-
-    def get_variants(self, genomic_range: GenomicRange) -> Set[CustomVariant]:
-        r: Tuple[str, int, int] = genomic_range.as_unstranded()
-
-        if r not in self._region_variants or not self._region_variants[r]:
-            return set()
-
-        return set(self._variants[var_id] for var_id in self._region_variants[r])
-
-
 def get_variant_from_tuple(chromosome: str, position: int, ref: str, alt: str) -> BaseVariant:
     genomic_position: GenomicPosition = GenomicPosition(chromosome, position)
     ref_len: int = len(ref)
@@ -620,7 +444,7 @@ def _get_substitution_record(
     return pos, end, pam_slice, alt, (ref_slice if pam_slice != ref_slice else None)
 
 
-def get_nullable_field(s: namedtuple, field: str, default: Optional[T] = None) -> Optional[T]:
+def get_nullable_field(s: pd.Series, field: str, default: Optional[T] = None) -> Optional[T]:
     x: T = s.__getattribute__(field)
     return x if not pd.isna(x) else default
 
@@ -649,7 +473,7 @@ class VCFRecordParams:
         assert isinstance(self.ref_start, int)
 
     @classmethod
-    def from_meta(cls, pam_mode: bool, meta: namedtuple) -> VCFRecordParams:
+    def from_meta(cls, pam_mode: bool, meta: pd.Series) -> VCFRecordParams:
         f = (
             cls.from_meta_pam_ext if (
                 pam_mode
@@ -661,7 +485,7 @@ class VCFRecordParams:
         return f(meta)
 
     @classmethod
-    def from_meta_no_pam(cls, meta: namedtuple) -> VCFRecordParams:
+    def from_meta_no_pam(cls, meta: pd.Series) -> VCFRecordParams:
         return cls(
             chr=meta.ref_chr,
             pos=int(meta.mut_position),
@@ -677,7 +501,7 @@ class VCFRecordParams:
             pam_seq=meta.pam_seq)
 
     @classmethod
-    def from_meta_pam_ext(cls, meta: namedtuple) -> VCFRecordParams:
+    def from_meta_pam_ext(cls, meta: pd.Series) -> VCFRecordParams:
         ref = get_nullable_field(meta, META_PAM_CODON_REF) or None
         alt = get_nullable_field(meta, META_PAM_CODON_ALT) or None
         var_type = (
@@ -768,7 +592,7 @@ def get_records(
 
     to_record_params_f = _get_vcf_record_params_constructor(pam_ref)
 
-    def get_record(x: namedtuple) -> Dict[str, Any]:
+    def get_record(x: NamedTuple) -> Dict[str, Any]:
         return to_record_params_f(x).get_vcf_record(
             ref_repository, pam_ref)
 
