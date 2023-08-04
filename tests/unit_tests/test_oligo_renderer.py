@@ -43,7 +43,8 @@ META_COLUMNS = {
     'revc'
 }
 
-def get_pam_protected_sequence(strand = '+'):
+
+def get_pam_protected_sequence(strand='+'):
     seq = SEQ
     start = 100
     return PamBgAltSeqBuilder.from_ref(
