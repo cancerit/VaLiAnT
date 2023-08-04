@@ -19,9 +19,12 @@
 from hashlib import md5
 import os
 import pathlib
+from typing import List
 import pandas as pd
-from valiant.models.base import GenomicRange
+from valiant.models.base import GenomicPosition, GenomicRange
 from valiant.models.codon_table import CodonTable
+from valiant.models.new_pam import PamBgAltSeqBuilder
+from valiant.models.pam_protection import PamVariant
 from valiant.models.sequences import ReferenceSequence
 from valiant.models.snv_table import AuxiliaryTables
 from valiant.models.targeton import Targeton
@@ -76,3 +79,21 @@ def seq2triplets(seq):
 def get_ref_seq(seq, chromosome='X', strand='+', pos=1):
     gr = GenomicRange(chromosome, pos, pos + len(seq) - 1, strand)
     return ReferenceSequence(seq, gr)
+
+
+def get_consecutive_pam_variants(seq: str, start: int, alt: str = DUMMY_PAM_PROTECTION_NT) -> List[PamVariant]:
+    return [
+        PamVariant(GenomicPosition('X', start + i), seq[i], alt, 'sgrna-id-a')
+        for i in range(len(seq))
+    ]
+
+
+def get_pam_bg_alt_seq_builder(ref_seq: ReferenceSequence, pam_protection: bool, alt: str = DUMMY_PAM_PROTECTION_NT):
+    return PamBgAltSeqBuilder.from_ref_seq(
+        ref_seq,
+        [],
+        get_consecutive_pam_variants(
+            ref_seq.sequence,
+            ref_seq.genomic_range.start,
+            alt=alt
+        ) if pam_protection else [])
