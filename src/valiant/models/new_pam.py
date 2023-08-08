@@ -62,6 +62,12 @@ class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
     ab: AltSeqBuilderT
     pam_seq: str = field(init=False)
 
+    def __post_init__(self) -> None:
+
+        # Cache the ALT sequence
+        object.__setattr__(self, 'pam_seq', self.get_pam_seq(
+            extend=False, ref_check=False))
+
     @property
     def pos_range(self) -> GenomicRange:
         return self.ab.gr
@@ -114,12 +120,6 @@ class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
 
 @dataclass(frozen=True)
 class PamBgAltSeqBuilder(BasePamBgAltSeqBuilder[AltSeqBuilder]):
-
-    def __post_init__(self) -> None:
-
-        # Cache the ALT sequence
-        object.__setattr__(self, 'pam_seq', self.get_pam_seq(
-            extend=False, ref_check=False))
 
     @classmethod
     def from_ref(

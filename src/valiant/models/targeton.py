@@ -121,7 +121,7 @@ class ITargeton(BaseTargeton, Generic[PamBgAltSeqBuilderT], abc.ABC):
 
     @property
     def alt_seq(self) -> str:
-        return self.ab.alt_seq
+        return self.ab.pam_seq
 
     @property
     def pos_range(self) -> StrandedPositionRange:

@@ -111,7 +111,8 @@ class CdsAltSeqBuilder(AltSeqBuilder):
 
         return get_codon_index(self.frame, self.start, position)
 
-    def get_ref_codon_indices(self, positions: List[GenomicPosition]) -> List[int]:
+    def get_ref_codon_indices(self, positions: List[GenomicPosition], no_duplicate_codons: bool = False) -> List[int]:
+        # TODO: reintroduce `no_duplicate_codons` validation
         return [self.get_ref_codon_index(x.position) for x in positions]
 
     def contains_same_codon_variants(self, variant_group_index: int) -> bool:

@@ -141,7 +141,7 @@ class AltSeqBuilder:
         )
         self.validate_variant_group_index(last_group_index)
 
-        alt_seq: str = self.ext_sequence if extend else self.sequence
+        alt_seq: str = self.ext_ref_seq if extend else self.ref_seq
         alt_offset: int = 0
         for g in self.variant_groups[:last_group_index + 1]:
             alt_seq, layer_alt_offset = g.apply(
