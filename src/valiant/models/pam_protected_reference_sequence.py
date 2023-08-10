@@ -18,13 +18,13 @@
 
 from dataclasses import dataclass
 from typing import Iterable, List, Optional
-from valiant.models.background_variants import GenomicPositionOffsets
-from valiant.models.base import GenomicRange
-from valiant.models.new_pam import PamBgAltSeqBuilder
-from valiant.models.pam_protection import PamVariant
 
-from valiant.models.sequences import ReferenceSequence
-from valiant.models.variant import BaseVariant
+from .background_variants import GenomicPositionOffsets
+from .base import GenomicRange
+from .new_pam import PamBgAltSeqBuilder
+from .pam_protection import PamVariant
+from .sequences import ReferenceSequence
+from .variant import BaseVariant
 
 
 @dataclass(frozen=True)
