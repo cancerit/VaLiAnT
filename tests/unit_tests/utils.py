@@ -41,10 +41,6 @@ def get_data_file_path(fp):
     return os.path.join(pathlib.Path(__file__).parent.absolute(), 'data', fp)
 
 
-def get_dummy_pam_protected(seq):
-    return DUMMY_PAM_PROTECTION_NT * len(seq)
-
-
 def get_targeton(seq, chromosome='X', strand='+', pos=1):
     return Targeton.build_without_variants(
         GenomicRange(chromosome, pos, pos + len(seq) - 1, strand), seq)
