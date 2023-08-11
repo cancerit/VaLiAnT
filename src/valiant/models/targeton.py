@@ -327,19 +327,19 @@ class CDSTargeton(ITargeton[CdsPamBgAltSeqBuilder], Generic[VariantT, RangeT]):
 
         return mc
 
-    def get_ala_mutations(self, aux_tables: AuxiliaryTables = None) -> MutationCollection:
+    def get_ala_mutations(self, aux_tables: Optional[AuxiliaryTables] = None) -> MutationCollection:
         if not aux_tables:
             raise RuntimeError("Codon table not provided!")
         codon_table: CodonTable = aux_tables.codon_table
         return self._get_codon_mutations(codon_table, 'A')
 
-    def get_stop_mutations(self, aux_tables: AuxiliaryTables = None) -> MutationCollection:
+    def get_stop_mutations(self, aux_tables: Optional[AuxiliaryTables] = None) -> MutationCollection:
         if not aux_tables:
             raise RuntimeError("Codon table not provided!")
         codon_table: CodonTable = aux_tables.codon_table
         return self._get_codon_mutations(codon_table, STOP_CODE)
 
-    def get_aa_mutations(self, aux_tables: AuxiliaryTables = None) -> MutationCollection:
+    def get_aa_mutations(self, aux_tables: Optional[AuxiliaryTables] = None) -> MutationCollection:
         if not aux_tables:
             raise RuntimeError("Auxiliary tables not provided!")
         df: pd.DataFrame = aux_tables.all_aa_table.get_subs(
