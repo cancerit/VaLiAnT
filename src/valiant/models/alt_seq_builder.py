@@ -89,6 +89,9 @@ class AltSeqBuilder:
     def variant_group_count(self) -> int:
         return len(self.variant_groups)
 
+    def _extend(self, s: str) -> str:
+        return s
+
     def is_variant_group_index_valid(self, variant_group_index: int) -> bool:
         return is_valid_index(self.variant_group_count, variant_group_index)
 
@@ -141,7 +144,7 @@ class AltSeqBuilder:
         )
         self.validate_variant_group_index(last_group_index)
 
-        alt_seq: str = self.ext_ref_seq if extend else self.ref_seq
+        alt_seq: str = self.ref_seq
         alt_offset: int = 0
         for g in self.variant_groups[:last_group_index + 1]:
             alt_seq, layer_alt_offset = g.apply(
@@ -149,7 +152,7 @@ class AltSeqBuilder:
             if correct_alt:
                 alt_offset += layer_alt_offset
 
-        return alt_seq
+        return self._extend(alt_seq) if extend else alt_seq
 
     def get_alt_length(self, extend: bool = False, variant_layer: Optional[int] = None) -> int:
         return len(self.get_alt(extend=extend, variant_layer=variant_layer))
