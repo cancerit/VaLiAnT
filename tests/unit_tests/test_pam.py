@@ -21,7 +21,7 @@ from contextlib import nullcontext
 from valiant.models.base import GenomicPosition, GenomicRange
 from valiant.models.new_pam import PamBgAltSeqBuilder
 from valiant.models.sequences import ReferenceSequence
-from valiant.models.pam_protected_reference_sequence import PamVariant
+from valiant.models.pam_protection import PamVariant
 from .utils import get_ref_seq
 
 

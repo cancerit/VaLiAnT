@@ -21,8 +21,6 @@ import pytest
 from valiant.enums import VariantType
 from valiant.models.base import GenomicRange
 from valiant.models.new_pam import CdsPamBgAltSeqBuilder
-from valiant.models.pam_protected_reference_sequence import PamProtectedReferenceSequence
-from valiant.models.sequences import ReferenceSequence
 from valiant.models.targeton import CDSTargeton
 from .utils import get_aux_tables, seq2triplets
 
