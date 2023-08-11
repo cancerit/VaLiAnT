@@ -267,7 +267,7 @@ class CDSTargeton(ITargeton[CdsPamBgAltSeqBuilder], Generic[VariantT, RangeT]):
             'alt_aa': META_ALT_AA,
             'mut_type': META_MUT_TYPE
         }).set_index([META_MUT_POSITION, META_NEW])
-        snvs.df.mut_position += self.start
+        snvs.df[META_MUT_POSITION] += self.start
         df = snvs.df.set_index([META_MUT_POSITION, META_NEW], drop=False)
 
         # Join SNV data with pre-computed metadata
