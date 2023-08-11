@@ -45,7 +45,7 @@ def test_pam_protected_sequence_from_reference_sequence(seq, pos, ref, alt, ppse
         alt_seq = pam_ref_seq.get_pam_seq(ref_check=True)
 
     if valid:
-        assert pam_ref_seq.ref_seq == ref_seq.ref_seq
+        assert pam_ref_seq.ref_seq == ref_seq.sequence
         assert alt_seq == ppseq
 
 

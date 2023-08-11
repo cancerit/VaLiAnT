@@ -189,7 +189,7 @@ def test_get_targeton_metadata_table(annotated):
 
     ref_seqs = df.ref_seq.unique()
     assert len(ref_seqs) == 1
-    assert ref_seqs[0] == repository.get_subsequence(cdna_1_id, pr).ref_seq
+    assert ref_seqs[0] == repository.get_subsequence(cdna_1_id, pr).sequence
 
     # Check positions
     assert list(df.ref_start.unique()) == [pr.start]

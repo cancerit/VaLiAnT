@@ -61,6 +61,6 @@ def test_cdna_targeton_collection_load():
 def test_annotated_cdna_get_extended_subsequence(start, end, exp_subseq, exp_ext_5p, exp_ext_3p):
     cdna = get_cdna_annot(SEQ)
     subseq, ext_5p, ext_3p = cdna.get_extended_subsequence(PositionRange(start, end))
-    assert subseq.ref_seq == exp_subseq
+    assert subseq.sequence == exp_subseq
     assert ext_5p == exp_ext_5p
     assert ext_3p == exp_ext_3p
