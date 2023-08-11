@@ -40,9 +40,16 @@ class CdsAltSeqBuilder(AltSeqBuilder):
     cds_prefix: DnaStr
     cds_suffix: DnaStr
 
+    def _extend(self, s: str) -> str:
+        return f"{self.cds_prefix}{s}{self.cds_suffix}"
+
     @property
     def ext_sequence(self) -> str:
-        return f"{self.cds_prefix}{self.sequence}{self.cds_suffix}"
+        return self._extend(self.sequence)
+
+    @property
+    def ext_alt_seq(self) -> str:
+        return self._extend(super().ext_alt_seq)
 
     def __post_init__(self) -> None:
         if (
