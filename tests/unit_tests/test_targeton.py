@@ -117,7 +117,7 @@ def test_pam_prot_targeton_compute_mutations(pam_variant_clash):
 
 
 def test_pam_prot_cds_targeton_concat():
-    def get_targeton(start, end, ref_seq, variants=None, alt_seq=None, cds_prefix='', cds_suffix=''):
+    def get_targeton(start, end, ref_seq, variants=None, cds_prefix='', cds_suffix=''):
         return get_cds_targeton(
             GenomicRange('X', start, end, '+'),
             ref_seq,
@@ -125,7 +125,7 @@ def test_pam_prot_cds_targeton_concat():
             cds_prefix,
             cds_suffix)
 
-    pam_variant = PamVariant(GenomicPosition('X', 47), 'A', 'T', 'sgrna-1')
+    pam_variant = PamVariant(GenomicPosition('X', 47), 'T', 'C', 'sgrna-1')
     pam_variants = [pam_variant]
 
     t1 = get_targeton(45, 50, 'AATAAA', cds_prefix='T', cds_suffix='CC', variants=pam_variants)
