@@ -41,10 +41,10 @@ def is_valid_index(range_length: int, value: int) -> bool:
 
 @dataclass(frozen=True)
 class AltSeqBuilder:
-    __slots__ = ['gr', 'sequence', 'variant_groups']
+    __slots__ = ['gr', 'ref_seq', 'variant_groups']
 
     gr: GenomicRange
-    sequence: DnaStr
+    ref_seq: DnaStr
     variant_groups: List[VariantGroup]
 
     # Genomic position properties
@@ -60,16 +60,8 @@ class AltSeqBuilder:
     # Reference sequence properties
 
     @property
-    def ref_seq(self) -> str:
-        return self.sequence
-
-    @property
-    def ext_sequence(self) -> str:
-        return self.sequence
-
-    @property
     def seq_length(self) -> int:
-        return len(self.sequence)
+        return len(self.ref_seq)
 
     @property
     def ext_seq_length(self) -> int:
@@ -77,7 +69,7 @@ class AltSeqBuilder:
 
     @property
     def ext_ref_seq(self) -> str:
-        return self.ext_sequence
+        return self.ref_seq
 
     @property
     def ext_alt_seq(self) -> str:
@@ -159,7 +151,7 @@ class AltSeqBuilder:
 
     def _get_sub_seq(self, r: UIntRange) -> DnaStr:
         nr: UIntRange = r - self.start
-        return DnaStr(self.sequence[nr.to_slice()])
+        return DnaStr(self.ref_seq[nr.to_slice()])
 
     def _get_sub_groups(self, r: UIntRange) -> List[VariantGroup]:
         return [

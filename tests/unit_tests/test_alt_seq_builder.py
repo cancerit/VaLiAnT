@@ -43,7 +43,7 @@ def test_alt_seq_builder_get_alt_sub():
         VariantGroup.from_variants([var_b])
     ])
 
-    assert alt_builder.sequence[i] == ref_nt
+    assert alt_builder.ref_seq[i] == ref_nt
 
     alt = alt_builder.get_alt()
     assert alt[i] == var_a.alt

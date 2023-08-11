@@ -65,4 +65,4 @@ def test_reference_sequence_get_subsequence():
 
     # Check reference subsequence
     assert sub_ref_seq.genomic_range == gr_sub
-    assert sub_ref_seq.sequence == 'AAA'
+    assert sub_ref_seq.ref_seq == 'AAA'

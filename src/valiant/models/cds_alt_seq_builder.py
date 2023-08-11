@@ -21,21 +21,20 @@ from itertools import groupby
 import logging
 from typing import Dict, List, Set, Tuple
 
+from .alt_seq_builder import AltSeqBuilder
+from .base import GenomicPosition, GenomicRange, StrandedPositionRange
+from .codon_table import CODON_LENGTH, CodonTable
+from .dna_str import DnaStr
+from .variant import BaseVariantT
+from .variant_group import VariantGroup
 from ..enums import MutationType
 from ..sgrna_utils import get_codon_index, get_codon_indices_in_range
 from ..utils import does_any_set_intersect, has_duplicates
 
-from .alt_seq_builder import AltSeqBuilder
-from .base import GenomicPosition, StrandedPositionRange
-from .codon_table import CodonTable, CODON_LENGTH
-from .dna_str import DnaStr
-from .variant import BaseVariantT
-from .variant_group import VariantGroup
-
 
 @dataclass(frozen=True)
 class CdsAltSeqBuilder(AltSeqBuilder):
-    __slots__ = ['gr', 'sequence', 'variant_groups', 'cds_prefix', 'cds_suffix']
+    __slots__ = ['gr', 'ref_seq', 'variant_groups', 'cds_prefix', 'cds_suffix']
 
     cds_prefix: DnaStr
     cds_suffix: DnaStr
@@ -44,12 +43,8 @@ class CdsAltSeqBuilder(AltSeqBuilder):
         return f"{self.cds_prefix}{s}{self.cds_suffix}"
 
     @property
-    def ext_sequence(self) -> str:
-        return self._extend(self.sequence)
-
-    @property
-    def ext_alt_seq(self) -> str:
-        return self._extend(super().ext_alt_seq)
+    def ext_ref_seq(self) -> str:
+        return self._extend(self.ref_seq)
 
     def __post_init__(self) -> None:
         if (
@@ -61,7 +56,7 @@ class CdsAltSeqBuilder(AltSeqBuilder):
 
     @property
     def seq_length(self) -> int:
-        return len(self.sequence)
+        return len(self.ref_seq)
 
     @property
     def ext_seq_length(self) -> int:
@@ -91,7 +86,7 @@ class CdsAltSeqBuilder(AltSeqBuilder):
     def from_builder(cls, b: AltSeqBuilder, prefix: str, suffix: str) -> 'CdsAltSeqBuilder':
         return CdsAltSeqBuilder(
             b.gr,
-            b.sequence,
+            b.ref_seq,
             b.variant_groups,
             DnaStr(prefix),
             DnaStr(suffix))
@@ -164,15 +159,28 @@ class CdsAltSeqBuilder(AltSeqBuilder):
         return self.get_codon_mutation_types_at(
             codon_table, self.get_variant_positions(variant_group_index), **kwargs)
 
+    def _get_alt_codon(self, i: int) -> str:
+        """Get the ALT sequence of the i-th codon, including the CDS extensions"""
+
+        return self.ext_alt_seq[i * CODON_LENGTH:i * CODON_LENGTH + CODON_LENGTH]
+
     def get_indexed_alt_codons(self) -> Dict[int, str]:
-        d = {
-            i: self.ext_alt_seq[i * CODON_LENGTH:i * CODON_LENGTH + CODON_LENGTH]
+        """Map codon indices to ALT codons, excluding the CDS extensions"""
+
+        # Map codon indices to ALT codons
+        d: Dict[int, str] = {
+            i: self._get_alt_codon(i)
             for i in range(self.codon_count)
         }
+
+        # Trim the CDS extension from the first codon, if any
         if self.frame > 0:
             d[0] = d[0][self.frame:]
+
+        # Trim the CDS extension from the last codon, if any
         if self.cds_suffix_length > 0:
             d[self.last_codon_index] = d[self.last_codon_index][:-self.cds_suffix_length]
+
         return d
 
     def _get_variant_group_codon_indices(self, g: VariantGroup) -> Set[int]:
@@ -207,10 +215,13 @@ class CdsAltSeqBuilder(AltSeqBuilder):
         codon_indices = list(range(start_codon_index, end_codon_index + 1))
 
         # Apply variant to reference sequence
-        alt_seq = variant.mutate(self.sequence, self.start, ref_check=False)
+        alt_seq = variant.mutate(self.ref_seq, self.start, ref_check=False)
 
         # Predict variant effect on the CDS
         mut_types = codon_table.get_mutation_types_at(
-            self.gr.strand, self.sequence, alt_seq, codon_indices)
+            self.gr.strand, self.ref_seq, alt_seq, codon_indices)
 
         return any(m != MutationType.SYNONYMOUS for m in mut_types)
+
+    def get_sub(self, r: GenomicRange) -> 'CdsAltSeqBuilder':
+        raise NotImplementedError

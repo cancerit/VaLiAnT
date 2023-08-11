@@ -103,7 +103,7 @@ def get_pam_bg_alt_seq_builder(
         ref_seq,
         [],
         get_consecutive_pam_variants(
-            ref_seq.sequence,
+            ref_seq.ref_seq,
             ref_seq.genomic_range.start,
             alt=alt,
             sgrna_id=sgrna_id

@@ -22,6 +22,7 @@ from valiant.models.base import GenomicPosition, GenomicRange
 from valiant.models.new_pam import PamBgAltSeqBuilder
 from valiant.models.sequences import ReferenceSequence
 from valiant.models.pam_protected_reference_sequence import PamVariant
+from .utils import get_ref_seq
 
 
 @pytest.mark.parametrize('seq,pos,ref,alt,ppseq,valid', [
@@ -44,5 +45,16 @@ def test_pam_protected_sequence_from_reference_sequence(seq, pos, ref, alt, ppse
         alt_seq = pam_ref_seq.get_pam_seq(ref_check=True)
 
     if valid:
-        assert pam_ref_seq.ref_seq == ref_seq.sequence
+        assert pam_ref_seq.ref_seq == ref_seq.ref_seq
         assert alt_seq == ppseq
+
+
+def test_pam_bg_alt_seq_builder_pam_seq():
+    b = PamBgAltSeqBuilder.from_ref_seq(
+        get_ref_seq('AAA', pos=100), [], [
+            PamVariant(GenomicPosition('X', 101), 'A', 'C', 'sgrna-id-a')
+        ])
+
+    exp = 'ACA'
+    assert b.get_pam_seq(extend=False) == exp
+    assert b.pam_seq == exp

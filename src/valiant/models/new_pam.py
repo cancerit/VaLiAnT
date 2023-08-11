@@ -61,12 +61,17 @@ PamBgAltSeqBuilderT = TypeVar('PamBgAltSeqBuilderT', bound='BasePamBgAltSeqBuild
 class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
     ab: AltSeqBuilderT
     pam_seq: str = field(init=False)
+    ext_pam_seq: str = field(init=False)
 
     def __post_init__(self) -> None:
 
         # Cache the ALT sequence
-        object.__setattr__(self, 'pam_seq', self.get_pam_seq(
-            extend=False, ref_check=False))
+        for attr, ext in [
+            ('pam_seq', False),
+            ('ext_pam_seq', True)
+        ]:
+            object.__setattr__(self, attr, self.get_pam_seq(
+                extend=ext, ref_check=True))
 
     @property
     def pos_range(self) -> GenomicRange:
@@ -82,11 +87,11 @@ class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
 
     @property
     def ext_alt_seq(self) -> str:
-        return self.ab.ext_alt_seq
+        return self.ext_pam_seq
 
     @property
     def alt_seq(self) -> str:
-        return self.ab.get_alt(extend=False)
+        return self.pam_seq
 
     @property
     def bg_variants(self) -> List[BaseVariant]:
@@ -105,11 +110,14 @@ class BasePamBgAltSeqBuilder(abc.ABC, Generic[AltSeqBuilderT]):
             for variant in self.get_pam_variants_in_range(spr)
         })
 
+    def _get_alt(self, layer: int, extend: bool = False, ref_check: bool = False) -> str:
+        return self.ab.get_alt(variant_layer=layer, extend=extend, ref_check=ref_check)
+
     def get_bg_seq(self, extend: bool = False, ref_check: bool = False) -> str:
-        return self.ab.get_alt(extend=extend, variant_layer=LAYER_BG, ref_check=ref_check)
+        return self._get_alt(LAYER_BG, extend=extend, ref_check=ref_check)
 
     def get_pam_seq(self, extend: bool = False, ref_check: bool = False) -> str:
-        return self.ab.get_alt(extend=extend, variant_layer=LAYER_PAM, ref_check=ref_check)
+        return self._get_alt(LAYER_PAM, extend=extend, ref_check=ref_check)
 
     def mutate(self, variant: BaseVariant) -> str:
         return self.ab.mutate_alt(variant)
