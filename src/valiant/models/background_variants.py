@@ -17,11 +17,21 @@
 #############################
 
 from dataclasses import dataclass, field
-from typing import List, Tuple
+from typing import List
 
 import numpy as np
 
 from .variant import BaseVariantT, sort_variants
+
+
+@dataclass
+class PosOffset:
+    """Relative position and cumulative offset starting from it"""
+
+    __slots__ = ['pos', 'offset']
+
+    pos: int
+    offset: int
 
 
 def compute_genomic_offset(variants: List[BaseVariantT]) -> int:
@@ -82,7 +92,7 @@ def _compute_alt_offsets(ref_start: int, alt_length: int, variants_in_range: Lis
     return alt_offsets
 
 
-def _compute_ref_offsets(variants_in_range: List[BaseVariantT]) -> List[Tuple[int, int]]:
+def _compute_ref_offsets(variants_in_range: List[BaseVariantT]) -> List[PosOffset]:
     """
     Map sorted positions to the cumulative offsets the corresponding variants introduce
 
@@ -93,7 +103,7 @@ def _compute_ref_offsets(variants_in_range: List[BaseVariantT]) -> List[Tuple[in
     pos_offset = []
     for variant in variants_in_range:
         offset += variant.alt_ref_delta
-        pos_offset.append((variant.genomic_position.position, offset))
+        pos_offset.append(PosOffset(variant.genomic_position.position, offset))
     return pos_offset
 
 
@@ -103,7 +113,7 @@ class GenomicPositionOffsets:
     ref_length: int
     variants_in_range: List[BaseVariantT]
     _alt_length: int = field(init=False)
-    _pos_offsets: List[Tuple[int, int]] = field(init=False)
+    _pos_offsets: List[PosOffset] = field(init=False)
     _ins_offsets: np.ndarray = field(init=False)
 
     @property
@@ -119,11 +129,11 @@ class GenomicPositionOffsets:
         self._pos_offsets = self._compute_ref_offsets()
         self._ins_offsets = self._compute_ins_offsets()
 
-    def _compute_ins_offsets(self) -> List[Tuple[int, int]]:
+    def _compute_ins_offsets(self) -> np.ndarray:
         return _compute_alt_offsets(
             self.ref_start, self._alt_length, self.variants_in_range)
 
-    def _compute_ref_offsets(self) -> List[Tuple[int, int]]:
+    def _compute_ref_offsets(self) -> List[PosOffset]:
         return _compute_ref_offsets(self.variants_in_range)
 
     @classmethod
@@ -133,12 +143,13 @@ class GenomicPositionOffsets:
         return cls(ref_start, ref_length, variants_in_range)
 
     def get_offset(self, pos: int) -> int:
-        if not self._pos_offsets or pos < self._pos_offsets[0]:
+        if not self._pos_offsets or pos < self._pos_offsets[0].pos:
             return 0
 
-        for p, offset in self._pos_offsets:
-            if pos >= p:
-                return offset
+        # TODO: optimise search in sorted list
+        for p in self._pos_offsets:
+            if pos >= p.pos:
+                return p.offset
 
     def alt_to_ref_position(self, alt_pos: int) -> int:
         if not (self.ref_start <= alt_pos < self.ref_start + self._alt_length):
