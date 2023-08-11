@@ -16,6 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from __future__ import annotations
+
 from ..utils import is_dna
 
 
@@ -26,5 +28,5 @@ class DnaStr(str):
             raise ValueError(f"Invalid DNA sequence '{self}'!")
 
     @classmethod
-    def empty(cls):
+    def empty(cls) -> DnaStr:
         return cls('')

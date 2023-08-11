@@ -16,6 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from itertools import groupby
 import logging
@@ -83,7 +85,7 @@ class CdsAltSeqBuilder(AltSeqBuilder):
         return self.codon_count - 1
 
     @classmethod
-    def from_builder(cls, b: AltSeqBuilder, prefix: str, suffix: str) -> 'CdsAltSeqBuilder':
+    def from_builder(cls, b: AltSeqBuilder, prefix: str, suffix: str) -> CdsAltSeqBuilder:
         return CdsAltSeqBuilder(
             b.gr,
             b.ref_seq,
@@ -223,5 +225,5 @@ class CdsAltSeqBuilder(AltSeqBuilder):
 
         return any(m != MutationType.SYNONYMOUS for m in mut_types)
 
-    def get_sub(self, r: GenomicRange) -> 'CdsAltSeqBuilder':
+    def get_sub(self, r: GenomicRange) -> CdsAltSeqBuilder:
         raise NotImplementedError

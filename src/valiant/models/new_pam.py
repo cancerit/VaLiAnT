@@ -16,12 +16,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from __future__ import annotations
+
 import abc
 from dataclasses import dataclass, field
 from typing import Dict, FrozenSet, Generic, List, Optional, TypeVar
 
-from ..enums import MutationType
-from .alt_seq_builder import AltSeqBuilderT, AltSeqBuilder
+from .alt_seq_builder import AltSeqBuilder, AltSeqBuilderT
 from .base import GenomicRange, StrandedPositionRange
 from .cds_alt_seq_builder import CdsAltSeqBuilder
 from .codon_table import CodonTable
@@ -30,7 +31,7 @@ from .pam_protection import PamVariant
 from .sequences import ReferenceSequence
 from .variant import BaseVariant, BaseVariantT
 from .variant_group import VariantGroup
-
+from ..enums import MutationType
 
 LAYER_BG = 0
 LAYER_PAM = 1
@@ -136,7 +137,7 @@ class PamBgAltSeqBuilder(BasePamBgAltSeqBuilder[AltSeqBuilder]):
         ref_seq: str,
         bg_variants: List[BaseVariantT],
         pam_variants: List[PamVariant]
-    ) -> 'PamBgAltSeqBuilder':
+    ) -> PamBgAltSeqBuilder:
         return cls(AltSeqBuilder(
             ref_range,
             DnaStr(ref_seq),
@@ -148,13 +149,13 @@ class PamBgAltSeqBuilder(BasePamBgAltSeqBuilder[AltSeqBuilder]):
         ref_seq: ReferenceSequence,
         bg_variants: List[BaseVariantT],
         pam_variants: List[PamVariant]
-    ) -> 'PamBgAltSeqBuilder':
+    ) -> PamBgAltSeqBuilder:
         return cls(AltSeqBuilder(
             ref_seq.genomic_range,
             DnaStr(ref_seq.sequence),
             _get_variant_groups(bg_variants, pam_variants)))
 
-    def get_pam_sub(self, gr: GenomicRange) -> 'PamBgAltSeqBuilder':
+    def get_pam_sub(self, gr: GenomicRange) -> PamBgAltSeqBuilder:
         return PamBgAltSeqBuilder(self.ab.get_sub(gr))
 
 
@@ -170,7 +171,7 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
         pam_variants: List[PamVariant],
         cds_prefix: str = '',
         cds_suffix: str = ''
-    ) -> 'CdsPamBgAltSeqBuilder':
+    ) -> CdsPamBgAltSeqBuilder:
         return cls(CdsAltSeqBuilder(
             ref_range,
             DnaStr(ref_seq),
@@ -186,7 +187,7 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
         pam_variants: List[PamVariant],
         cds_prefix: str = '',
         cds_suffix: str = ''
-    ) -> 'CdsPamBgAltSeqBuilder':
+    ) -> CdsPamBgAltSeqBuilder:
         return cls.from_ref(
             ref_seq.genomic_range,
             ref_seq.sequence,
@@ -196,7 +197,7 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
             cds_suffix=cds_suffix)
 
     @classmethod
-    def from_noncds(cls, x: PamBgAltSeqBuilder, prefix: str, suffix: str) -> 'CdsPamBgAltSeqBuilder':
+    def from_noncds(cls, x: PamBgAltSeqBuilder, prefix: str, suffix: str) -> CdsPamBgAltSeqBuilder:
         return cls(CdsAltSeqBuilder.from_builder(x.ab, prefix, suffix))
 
     @property

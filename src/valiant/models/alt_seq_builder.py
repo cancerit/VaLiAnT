@@ -16,19 +16,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional, TypeVar
 
-from ..utils import has_duplicates
-from .base import GenomicPosition, GenomicRange, StrandedPositionRange
+from .base import GenomicPosition, GenomicRange
 from .dna_str import DnaStr
 from .uint_range import UIntRange
 from .variant import BaseVariant, BaseVariantT as VariantT
 from .variant_group import VariantGroup
-
+from ..utils import has_duplicates
 
 RangeT = TypeVar('RangeT', bound='StrandedPositionRange')
-AltSeqBuilderT = TypeVar('AltSeqBuilderT', bound='AltSeqBuilder')
 
 
 class InvalidVariantGroupIndex(IndexError):
@@ -159,7 +159,7 @@ class AltSeqBuilder:
             for g in self.variant_groups
         ]
 
-    def get_sub(self, gr: GenomicRange) -> 'AltSeqBuilder':
+    def get_sub(self, gr: GenomicRange) -> AltSeqBuilder:
         r = gr.to_uintr()
         return AltSeqBuilder(
             gr,
@@ -181,3 +181,6 @@ class AltSeqBuilder:
             self.get_alt(variant_layer=variant_layer, ref_check=False),
             self.start,
             ref_check=ref_check)
+
+
+AltSeqBuilderT = TypeVar('AltSeqBuilderT', bound=AltSeqBuilder)
