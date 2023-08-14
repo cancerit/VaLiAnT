@@ -16,8 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from dataclasses import dataclass
+from __future__ import annotations
+
 from collections.abc import Container, Sized
+from dataclasses import dataclass
+from typing import List
 
 
 @dataclass(frozen=True)
@@ -44,13 +47,21 @@ class UIntRange(Sized, Container):
 
     def __contains__(self, b) -> bool:
         if isinstance(b, int):
-            return b >= self.start and b <= self.end
+            return self.start <= b <= self.end
+        elif isinstance(b, UIntRange):
+            return b.start >= self.start and b.end <= self.end
         raise TypeError("Unsupported operand type!")
 
     def __eq__(self, b) -> bool:
         if isinstance(b, UIntRange):
             return self.start == b.start and self.end == b.end
         raise TypeError("Unsupported operand type!")
+
+    def __lt__(self, other) -> bool:
+        return (
+            self.end < other.end if self.start == other.start else
+            self.start < other.start
+        )
 
     def __sub__(self, b) -> 'UIntRange':
         if isinstance(b, int):
@@ -59,3 +70,21 @@ class UIntRange(Sized, Container):
 
     def to_slice(self) -> slice:
         return slice(self.start, self.end + 1)
+
+    def diff(self, others: List[UIntRange]) -> List[UIntRange]:
+        """Generate the difference set of ranges"""
+
+        new_start: int = self.start
+        result = []
+
+        for other in sorted(others):
+            if other not in self:
+                raise ValueError("Range out of range!")
+            if other.start > self.start:
+                result.append(UIntRange(new_start, other.start - 1))
+            new_start = other.end + 1
+
+        if new_start <= self.end:
+            result.append(UIntRange(new_start, self.end))
+
+        return result
