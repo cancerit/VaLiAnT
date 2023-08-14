@@ -27,6 +27,7 @@ from typing import Dict, Iterable, List, Optional, FrozenSet, Tuple
 import pandas as pd
 from pyranges import PyRanges
 from .base import GenomicRange, PositionRange
+from ..constants import PYR_CHR, PYR_END, PYR_START, PYR_STRAND
 from ..enums import TargetonMutator
 from ..loaders.tsv import load_tsv
 from ..utils import get_smallest_int_type, parse_list, parse_mutators
@@ -253,7 +254,7 @@ class ReferenceSequenceRangeCollection:
             (*r, i)
             for i, rsr in self._rsrs.items()
             for r in rsr.regions_as_pyranges()
-        ]), columns=['Chromosome', 'Strand', 'Start', 'End', 'is_const', 'targeton_id'])
+        ]), columns=[PYR_CHR, PYR_STRAND, PYR_START, PYR_END, 'is_const', 'targeton_id'])
         df.targeton_id = df.targeton_id.astype(get_smallest_int_type(max(self._rsrs.keys())))
         self._region_ranges = PyRanges(df=df)
 

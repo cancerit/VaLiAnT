@@ -35,6 +35,12 @@ MUTATION_TYPE_NON_CDS = 'ncd'
 DEFAULT_OLIGO_MAX_LENGTH = 300
 DEFAULT_OLIGO_MIN_LENGTH = 1
 
+# PyRanges conventional field names
+PYR_CHR = 'Chromosome'
+PYR_STRAND = 'Strand'
+PYR_START = 'Start'
+PYR_END = 'End'
+
 # Valid metadata table field names
 META_OLIGO_NAME = 'oligo_name'
 META_SPECIES = 'species'

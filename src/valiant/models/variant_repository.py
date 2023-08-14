@@ -17,6 +17,7 @@
 #############################
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 import logging
 from typing import Callable, Dict, Generic, List, Set, Tuple, TypeVar
@@ -24,12 +25,13 @@ from typing import Callable, Dict, Generic, List, Set, Tuple, TypeVar
 import pandas as pd
 from pyranges import PyRanges
 
-from ..loaders.vcf import load_vcf, load_vcf_manifest, var_type_sub, var_type_del, var_type_ins, var_class_unclass, var_class_mono
-from ..utils import get_id_column, get_var_types
 from .base import GenomicPosition, GenomicRange
 from .custom_variants import CustomVariant
 from .variant import BaseVariant, DeletionVariant, InsertionVariant, SubstitutionVariant
-
+from ..constants import META_VCF_ALIAS, META_VCF_VAR_ID
+from ..loaders.vcf import load_vcf, load_vcf_manifest, var_class_mono, var_class_unclass, var_type_del, var_type_ins, \
+    var_type_sub
+from ..utils import get_id_column, get_var_types
 
 VariantRepositoryVariant = TypeVar('VariantRepositoryVariant', bound=CustomVariant)
 VariantConstructor = Callable[[pd.Series], BaseVariant]
@@ -97,8 +99,8 @@ class VariantRepository(Generic[VariantRepositoryVariant]):
         chromosome_boundaries = _regions_to_chromosome_boundaries(regions)
         df = load_vcf(vcf_fp, chromosome_boundaries)
         # TODO: discuss variant identifiers
-        df['vcf_alias'] = None
-        df['vcf_var_id'] = None
+        df[META_VCF_ALIAS] = None
+        df[META_VCF_VAR_ID] = None
         return cls.from_df(regions, df)
 
     @classmethod
