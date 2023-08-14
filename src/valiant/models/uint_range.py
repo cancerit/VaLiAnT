@@ -80,7 +80,7 @@ class UIntRange(Sized, Container):
         for other in sorted(others):
             if other not in self:
                 raise ValueError("Range out of range!")
-            if other.start > self.start:
+            if other.start > new_start:
                 result.append(UIntRange(new_start, other.start - 1))
             new_start = other.end + 1
 
