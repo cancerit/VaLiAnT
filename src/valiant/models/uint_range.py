@@ -63,7 +63,7 @@ class UIntRange(Sized, Container):
             self.start < other.start
         )
 
-    def __sub__(self, b) -> 'UIntRange':
+    def __sub__(self, b) -> UIntRange:
         if isinstance(b, int):
             return UIntRange(self.start - b, self.end - b)
         raise TypeError("Unsupported operand type!")
