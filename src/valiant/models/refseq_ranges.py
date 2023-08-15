@@ -243,11 +243,12 @@ class ReferenceSequenceRanges:
 
 @dataclass(init=False)
 class ReferenceSequenceRangeCollection:
-    __slots__ = {'_rsrs', '_ref_ranges', '_region_ranges'}
+    __slots__ = {'_rsrs', '_ref_ranges', '_ref_bg_ranges', '_region_ranges'}
 
     _rsrs: Dict[int, ReferenceSequenceRanges]
     _unmasked_ref_ranges: PyRanges
     _ref_ranges: PyRanges
+    _ref_bg_ranges: PyRanges
     _region_ranges: PyRanges
 
     def __init__(self, rsrs: Iterable[ReferenceSequenceRanges]) -> None:
@@ -261,7 +262,7 @@ class ReferenceSequenceRangeCollection:
 
         # Collect reference sequence unstranded genomic ranges
         # for the purposes of background variant filtering
-        self._ref_ranges = genomic_ranges_to_unstranded_pyranges(
+        self._ref_bg_ranges = genomic_ranges_to_unstranded_pyranges(
             chain.from_iterable(
                 rsr.bg_ranges for rsr in self._rsrs.values()))
 
@@ -293,6 +294,14 @@ class ReferenceSequenceRangeCollection:
     @property
     def ref_ranges(self) -> FrozenSet[GenomicRange]:
         return frozenset(rsr.ref_range for rsr in self._rsrs.values())
+
+    @property
+    def ref_pyr(self) -> PyRanges:
+        return self._ref_ranges
+
+    @property
+    def ref_bg_pyr(self) -> PyRanges:
+        return self._ref_bg_ranges
 
     @property
     def strands(self) -> FrozenSet[str]:

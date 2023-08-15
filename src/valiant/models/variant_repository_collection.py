@@ -85,7 +85,7 @@ class VariantRepositoryCollection:
         background_variant_repository = (
             _load_variant_repository(
                 config.bg_fp,
-                rsrs._ref_ranges,
+                rsrs.ref_bg_pyr,
                 'background'
             )
         )
@@ -94,7 +94,7 @@ class VariantRepositoryCollection:
         variant_repository = (
             _load_variant_repository(
                 config.vcf_fp,
-                rsrs._ref_ranges,
+                rsrs.ref_pyr,
                 'custom',
                 from_manifest=True
             )
