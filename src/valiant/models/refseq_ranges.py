@@ -77,18 +77,24 @@ class ReferenceSequenceRanges:
     __slots__ = {
         'ref_range',
         'sgrna_ids',
+        '_bg_mask_regions',
         '_const_regions',
         '_target_regions'
     }
 
     ref_range: GenomicRange
     sgrna_ids: FrozenSet[str]
+    _bg_mask_regions: List[GenomicRange]
     _const_regions: Tuple[Optional[GenomicRange], Optional[GenomicRange]]
     _target_regions: Tuple[
         Optional[TargetReferenceRegion],
         TargetReferenceRegion,
         Optional[TargetReferenceRegion]
     ]
+
+    @property
+    def bg_ranges(self) -> List[GenomicRange]:
+        return self.ref_range.diff(self._bg_mask_regions)
 
     def __init__(
         self,
@@ -102,6 +108,9 @@ class ReferenceSequenceRanges:
         mutators: Tuple[FrozenSet[TargetonMutator], FrozenSet[TargetonMutator], FrozenSet[TargetonMutator]],
         sgrna_ids: FrozenSet[str]
     ) -> None:
+
+        # TODO: implement
+        self._bg_mask_regions = []
 
         def get_genomic_range(start: int, end: int) -> GenomicRange:
             return GenomicRange(chromosome, start, end, strand)
@@ -237,6 +246,7 @@ class ReferenceSequenceRangeCollection:
     __slots__ = {'_rsrs', '_ref_ranges', '_region_ranges'}
 
     _rsrs: Dict[int, ReferenceSequenceRanges]
+    _unmasked_ref_ranges: PyRanges
     _ref_ranges: PyRanges
     _region_ranges: PyRanges
 
@@ -248,6 +258,12 @@ class ReferenceSequenceRangeCollection:
         # Collect reference sequence unstranded genomic ranges (unique)
         self._ref_ranges = genomic_ranges_to_unstranded_pyranges(
             rsr.ref_range for rsr in self._rsrs.values())
+
+        # Collect reference sequence unstranded genomic ranges
+        # for the purposes of background variant filtering
+        self._ref_ranges = genomic_ranges_to_unstranded_pyranges(
+            chain.from_iterable(
+                rsr.bg_ranges for rsr in self._rsrs.values()))
 
         # Collect subregion unstranded genomic ranges
         df: pd.DataFrame = pd.DataFrame.from_records(chain([
