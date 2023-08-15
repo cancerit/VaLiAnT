@@ -16,6 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from contextlib import nullcontext
+
+import pytest
 from valiant.models.uint_range import UIntRange
 
 
@@ -36,3 +39,12 @@ def test_uint_range_diff():
         UIntRange(20, 50),
         UIntRange(60, 90)
     ]
+
+
+@pytest.mark.parametrize('skip', [True, False])
+def test_uint_range_diff_skip(skip):
+    a = UIntRange(100, 200)
+    b = UIntRange(10, 20)
+
+    with nullcontext() if skip else pytest.raises(ValueError):
+        assert a.diff([b], skip_out_of_range=skip) == [a]

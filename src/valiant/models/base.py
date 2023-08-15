@@ -17,11 +17,12 @@
 #############################
 
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Tuple, Optional
 
-from ..utils import get_region, is_strand
+from dataclasses import dataclass
+from typing import Optional, Tuple
+
 from .uint_range import UIntRange
+from ..utils import get_region, is_strand
 
 
 @dataclass(frozen=True)
@@ -49,6 +50,9 @@ class PositionRange(UIntRange):
 
     def to_uintr(self) -> UIntRange:
         return UIntRange(self.start, self.end)
+
+    def _from_uintr(self, x: UIntRange) -> PositionRange:
+        return PositionRange(x.start, x.end)
 
     def get_subrange_before(self, pos: int, length: Optional[int] = None) -> Optional[PositionRange]:
         if pos < 1:
@@ -103,6 +107,11 @@ class StrandedPositionRange(PositionRange):
             raise TypeError("Unsupported operation!")
         return self.strand == other.strand and super().__eq__(other)
 
+    def __lt__(self, other) -> bool:
+        if other.strand != self.strand:
+            raise ValueError("Can't compare across strands!")
+        return super().__lt__(other)
+
     def __contains__(self, other) -> bool:
         if isinstance(other, StrandedPositionRange):
             return other.strand == self.strand and super().__contains__(other)
@@ -110,6 +119,9 @@ class StrandedPositionRange(PositionRange):
             return super().__contains__(other)
         else:
             raise TypeError("Unsupported operation!")
+
+    def _from_uintr(self, x: UIntRange) -> StrandedPositionRange:
+        return StrandedPositionRange(x.start, x.end, self.strand)
 
     @classmethod
     def to_plus_strand(cls, pr: PositionRange) -> StrandedPositionRange:
@@ -215,14 +227,18 @@ class GenomicRange(StrandedPositionRange):
             and other.end == self.end
         )
 
+    def __lt__(self, other) -> bool:
+        if other.chromosome != self.chromosome:
+            raise ValueError("Can't compare across chromosomes!")
+        return super().__lt__(other)
+
     def __contains__(self, other) -> bool:
         return other.chromosome == self.chromosome and super().__contains__(other)
 
     def contains_position(self, genomic_position: GenomicPosition) -> bool:
         return (
-            genomic_position.chromosome == self.chromosome
-            and genomic_position.position >= self.start
-            and genomic_position.position <= self.end
+            genomic_position.chromosome == self.chromosome and
+            self.start <= genomic_position.position <= self.end
         )
 
     def as_unstranded(self) -> Tuple[str, int, int]:
@@ -240,6 +256,9 @@ class GenomicRange(StrandedPositionRange):
         start: int = child.start - self.start
         end: int = child.end - self.start + 1
         return start, end
+
+    def _from_uintr(self, x: UIntRange) -> GenomicRange:
+        return GenomicRange(self.chromosome, x.start, x.end, self.strand)
 
     @property
     def pos_range(self) -> PositionRange:

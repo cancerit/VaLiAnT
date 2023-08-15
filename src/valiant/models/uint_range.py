@@ -20,7 +20,14 @@ from __future__ import annotations
 
 from collections.abc import Container, Sized
 from dataclasses import dataclass
-from typing import List
+from typing import List, NoReturn, TypeVar
+
+
+UIntRangeT = TypeVar('UIntRangeT', bound='UIntRange')
+
+
+def err_unsupported_operand() -> NoReturn:
+    raise TypeError("Unsupported operand type!")
 
 
 @dataclass(frozen=True)
@@ -50,12 +57,12 @@ class UIntRange(Sized, Container):
             return self.start <= b <= self.end
         elif isinstance(b, UIntRange):
             return b.start >= self.start and b.end <= self.end
-        raise TypeError("Unsupported operand type!")
+        err_unsupported_operand()
 
     def __eq__(self, b) -> bool:
         if isinstance(b, UIntRange):
             return self.start == b.start and self.end == b.end
-        raise TypeError("Unsupported operand type!")
+        err_unsupported_operand()
 
     def __lt__(self, other) -> bool:
         return (
@@ -66,12 +73,15 @@ class UIntRange(Sized, Container):
     def __sub__(self, b) -> UIntRange:
         if isinstance(b, int):
             return UIntRange(self.start - b, self.end - b)
-        raise TypeError("Unsupported operand type!")
+        err_unsupported_operand()
 
     def to_slice(self) -> slice:
         return slice(self.start, self.end + 1)
 
-    def diff(self, others: List[UIntRange]) -> List[UIntRange]:
+    def _from_uintr(self, x: UIntRange) -> UIntRange:
+        return x
+
+    def diff(self, others: List[UIntRangeT], skip_out_of_range: bool = False) -> List[UIntRangeT]:
         """Generate the difference set of ranges"""
 
         new_start: int = self.start
@@ -79,12 +89,15 @@ class UIntRange(Sized, Container):
 
         for other in sorted(others):
             if other not in self:
-                raise ValueError("Range out of range!")
+                if skip_out_of_range:
+                    continue
+                else:
+                    raise ValueError("Range out of range!")
             if other.start > new_start:
-                result.append(UIntRange(new_start, other.start - 1))
+                result.append(self._from_uintr(UIntRange(new_start, other.start - 1)))
             new_start = other.end + 1
 
         if new_start <= self.end:
-            result.append(UIntRange(new_start, self.end))
+            result.append(self._from_uintr(UIntRange(new_start, self.end)))
 
         return result
