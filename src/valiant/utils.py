@@ -21,7 +21,7 @@ from functools import lru_cache
 import os
 import pathlib
 import re
-from typing import Any, List, Optional, Set, Type, Tuple, FrozenSet, Iterable, TypeVar
+from typing import Any, List, Optional, Set, Type, Tuple, FrozenSet, Iterable, TypeVar, Union
 import numpy as np
 import pandas as pd
 from .constants import SRC_TYPES
@@ -206,6 +206,6 @@ def does_any_set_intersect(sets: Iterable[Set[T]]) -> bool:
     return False
 
 
-def get_nullable_field(s: pd.Series, field: str, default: Optional[T] = None) -> Optional[T]:
-    x: T = s[field]
+def get_nullable_field(s: Union[pd.Series, Tuple], field: str, default: Optional[T] = None) -> Optional[T]:
+    x: T = getattr(s, field)
     return x if not pd.isnull(x) else default  # type: ignore
