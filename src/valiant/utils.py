@@ -204,3 +204,8 @@ def does_any_set_intersect(sets: Iterable[Set[T]]) -> bool:
         items |= s
 
     return False
+
+
+def get_nullable_field(s: pd.Series, field: str, default: Optional[T] = None) -> Optional[T]:
+    x: T = s[field]
+    return x if not pd.isnull(x) else default  # type: ignore

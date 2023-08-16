@@ -20,7 +20,7 @@ from typing import Dict, FrozenSet, List, Optional, Set
 import pandas as pd
 
 from .constants import META_MUT_POSITION, META_REF, META_PAM_MUT_SGRNA_ID, ARRAY_SEPARATOR
-from .utils import init_string_field
+from .utils import get_nullable_field, init_string_field
 
 
 def get_codon_index_range(codon_start: int, codon_end: int) -> List[int]:
@@ -52,7 +52,7 @@ def get_sgrna_ids(frame: int, codon_to_sgrna_ids: Dict[int, str], mut_pos: int, 
 
 
 def _get_ref(r: pd.Series) -> Optional[str]:
-    return r[META_REF] if not pd.isna(r[META_REF]) else None
+    return get_nullable_field(r, META_REF)
 
 
 def get_sgrna_ids_from_row(frame: int, codon_to_sgrna_ids: Dict[int, str], r: pd.Series) -> Set[str]:

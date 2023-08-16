@@ -17,10 +17,11 @@
 #############################
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from functools import partial
 import logging
-from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple, ClassVar, Any, Callable, TypeVar
+from typing import Any, Callable, ClassVar, Dict, Iterable, List, NamedTuple, Optional, Tuple, TypeVar
 
 import pandas as pd
 from pysam import VariantRecord
@@ -28,11 +29,12 @@ from pysam import VariantRecord
 from .base import GenomicPosition, GenomicRange, PositionRange
 from .refseq_repository import ReferenceSequenceRepository
 from .sequences import ReferenceSequence
-from ..constants import META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_REF, META_REF, META_VCF_ALIAS, META_VCF_VAR_ID, METADATA_PAM_FIELDS
+from ..constants import META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_REF, META_REF, META_VCF_ALIAS, META_VCF_VAR_ID, \
+    METADATA_PAM_FIELDS
 from ..enums import VariantType
-from ..loaders.vcf import var_type_sub, var_type_del, var_type_ins
+from ..loaders.vcf import var_type_del, var_type_ins, var_type_sub
 from ..string_mutators import delete_nucleotides, insert_nucleotides, replace_nucleotides
-from ..utils import is_dna, opt_str_length
+from ..utils import get_nullable_field, is_dna, opt_str_length
 
 # Metadata table fields used to generate the VCF output
 VCF_RECORD_METADATA_FIELDS: List[str] = [
@@ -442,11 +444,6 @@ def _get_substitution_record(
     offset: int = pos - seq_start
     ref_slice, pam_slice = _get_slices(ref_seq, pam_seq, offset, mut_len)
     return pos, end, pam_slice, alt, (ref_slice if pam_slice != ref_slice else None)
-
-
-def get_nullable_field(s: pd.Series, field: str, default: Optional[T] = None) -> Optional[T]:
-    x: T = s.__getattribute__(field)
-    return x if not pd.isna(x) else default
 
 
 @dataclass
