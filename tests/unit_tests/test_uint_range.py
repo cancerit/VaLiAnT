@@ -35,6 +35,8 @@ def test_uint_range_diff():
     y = UIntRange(91, 100)
     z = UIntRange(51, 59)
 
+    assert a.diff([]) == [a]
+
     assert a.diff([x, y, z]) == [
         UIntRange(20, 50),
         UIntRange(60, 90)
