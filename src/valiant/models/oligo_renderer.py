@@ -23,9 +23,9 @@ import numpy as np
 import pandas as pd
 from .new_pam import PamBgAltSeqBuilderT
 from .options import Options
-from ..constants import META_MSEQ, META_MSEQ_NO_ADAPT, META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_MUTATOR, META_NEW, META_OLIGO_NAME, META_REF, META_REF_END, META_REF_START, REVCOMP_OLIGO_NAME_SUFFIX
+from ..constants import META_MSEQ, META_MSEQ_NO_ADAPT, META_MSEQ_NO_ADAPT_NO_RC, META_MUT_POSITION, META_MUTATOR, META_NEW, META_OLIGO_NAME, META_REF, META_REF_END, META_REF_START, META_VAR_TYPE, REVCOMP_OLIGO_NAME_SUFFIX
 from ..enums import VariantType
-from ..utils import get_constant_category, reverse_complement, get_source_type_column, validate_strand
+from ..utils import get_constant_category, get_nullable_field, reverse_complement, get_source_type_column, validate_strand
 
 
 ERR_MISSING_ALT = 'missing alternative'
@@ -99,14 +99,14 @@ def get_oligo_name(
         raise_err_invalid_var_type()
 
 
-def get_oligo_name_from_row(oligo_name_prefix: str, r) -> str:
+def get_oligo_name_from_row(oligo_name_prefix: str, r: pd.Series) -> str:
     return get_oligo_name(
         oligo_name_prefix,
-        r.var_type,
-        r.mutator,
-        r.mut_position,
-        r.ref if not pd.isnull(r.ref) else None,
-        r.new if not pd.isnull(r.new) else None)
+        int(r[META_VAR_TYPE]),
+        str(r[META_MUTATOR]),
+        int(r[META_MUT_POSITION]),
+        get_nullable_field(r, META_REF),
+        get_nullable_field(r, META_NEW))
 
 
 def get_oligo_names_from_dataframe(oligo_name_prefix: str, df: pd.DataFrame) -> pd.Series:
