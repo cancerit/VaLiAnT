@@ -24,10 +24,16 @@ from .options import Options
 
 class SGEConfig(BaseConfig):
     revcomp_minus_strand: bool
+
+    # File paths
     gff_fp: Optional[str]
     bg_fp: Optional[str]
     pam_fp: Optional[str]
     vcf_fp: Optional[str]
+
+    # Background variants
+    force_bg_ns: bool
+    force_bg_fs: bool
 
     class Config:
         fields = {
@@ -35,7 +41,9 @@ class SGEConfig(BaseConfig):
             'gff_fp': 'GFFFilePath',
             'bg_fp': 'backgroundVCFFilePath',
             'pam_fp': 'PAMProtectionVCFFilePath',
-            'vcf_fp': 'customVCFManifestFilePath'
+            'vcf_fp': 'customVCFManifestFilePath',
+            'force_bg_ns': 'forceBackgroundNonSynonymous',
+            'force_bg_fs': 'forceBackgroundFrameShifting'
         }
 
     @property

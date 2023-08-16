@@ -229,6 +229,8 @@ The `REF_FASTA` path is expected to point to a reference genome in FASTA format.
 |`vcf`|file path|-|Path to a [VCF manifest file](#vcf-manifest-file).|
 |`revcomp-minus-strand`|flag|`false`|For minus strand targets, include the reverse complement of the mutated reference sequence in the oligonucleotide.|
 |`sequences-only`|flag|`false`|Generate the [reference sequence retrieval quality check file](#reference-sequence-retrieval-quality-check-file) and quit.
+|`force-bg-ns`|flag|`false`|Allow non-synonymous background variants|
+|`force-bg-indels`|flag|`false`|Allow frame-shifting background variants|
 
 ### valiant cdna
 
@@ -567,6 +569,8 @@ The execution parameters depend on the execution mode, and each corresponds to o
 |`bg`|`backgroundVCFFilePath`|
 |`pam`|`PAMProtectionVCFFilePath`|
 |`vcf`|`customVCFManifestFilePath`|
+|`force-bg-ns`|`forceBackgroundNonSynonymous`|
+|`force-bg-indels`|`forceBackgroundFrameShifting`|
 
 Example:
 
@@ -590,7 +594,9 @@ Example:
         "reverseComplementOnMinusStrand": true,
         "GFFFilePath": "reference_input_files/ENST00000357654.9.gtf",
         "PAMProtectionVCFFilePath": "parameter_input_files/brca1_protection_edits.vcf",
-        "customVCFManifestFilePath": "reference_input_files/brca1_custom_variants_manifest.csv"
+        "customVCFManifestFilePath": "reference_input_files/brca1_custom_variants_manifest.csv",
+        "forceBackgroundNonSynonymous": false,
+        "forceBackgroundFrameShifting": false
     }
 }
 ```

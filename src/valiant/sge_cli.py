@@ -473,6 +473,10 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     '--revcomp-minus-strand',
     is_flag=True,
     help="Include reverse complement in oligonucleotide if reference is on minus strand")
+@click.option('--force-bg-ns', 'force_bg_ns', is_flag=True,
+    help="Allow non-synonymous background variants")
+@click.option('--force-bg-indels', 'force_bg_fs', is_flag=True,
+    help="Allow frame-shifting background variants")
 def sge(
 
     # Input files
@@ -494,6 +498,10 @@ def sge(
     # Adaptor sequences
     adaptor_5: Optional[str],
     adaptor_3: Optional[str],
+
+    # Background variants
+    force_bg_ns: bool,
+    force_bg_fs: bool,
 
     # Actions
     sequences_only: bool,
@@ -526,6 +534,8 @@ def sge(
             ref_fasta_fp=ref_fasta_fp,
             output_dir=output_dir,
             revcomp_minus_strand=revcomp_minus_strand,
+            force_bg_ns=force_bg_ns,
+            force_bg_fs=force_bg_fs,
             gff_fp=gff_fp,
             bg_fp=bg_fp,
             pam_fp=pam_fp,
