@@ -557,7 +557,7 @@ class PamProtCDSTargeton(CDSTargeton[PamVariant, GenomicRange], PamProtected):
 
         if self.has_pam_variants:
             codon_indices = self.ab.get_pam_variant_codon_indices()
-            codon_to_pam_variant = self._get_codon_to_pam_variant(codon_indices)
+            codon_to_pam_variant = self.ab.get_codon_index_to_pam_variant()
             codon_to_pam_codon = self._get_codon_to_pam_codon(codon_indices)
 
         self._setattr('_codon_to_pam_variant', codon_to_pam_variant)

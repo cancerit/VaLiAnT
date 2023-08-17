@@ -230,7 +230,14 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
         return self.ab.contains_same_codon_variants(LAYER_PAM)
 
     def get_pam_variant_codon_indices(self) -> List[int]:
-        return self.ab.get_variant_group_codon_indices(LAYER_PAM)
+        return sorted(self.ab.get_variant_group_codon_indices(LAYER_PAM))
+
+    def get_codon_index_to_pam_variant(self) -> Dict[int, PamVariant]:
+        # TODO: ensure the duplicate codons are validated against beforehand
+        return {
+            self.ab.get_ref_codon_index(variant.start): variant
+            for variant in self.pam_variants
+        }
 
     def get_indexed_alt_codons(self) -> Dict[int, str]:
         return self.ab.get_indexed_alt_codons()
