@@ -25,6 +25,7 @@ import click
 from pyranges import PyRanges
 
 from .enums import TargetonMutator
+from .errors import InvalidBackground
 from .models.base import GenomicRange
 from .models.codon_table import CodonTable
 from .models.custom_variants import CustomVariant
@@ -80,8 +81,8 @@ def get_oligo_template(
     bg_variants: Set[BaseVariant],
     pam_variants: Set[PamVariant],
     custom_variants: Set[CustomVariant],
-    adaptor_5: Optional[str] = None,
-    adaptor_3: Optional[str] = None
+    codon_table: CodonTable,
+    config: SGEConfig
 ) -> OligoTemplate:
 
     bg_variant_ls = list(bg_variants)
@@ -105,11 +106,17 @@ def get_oligo_template(
         region_pam_seq: PamBgAltSeqBuilder,
         exg_gr_pair: GenomicRangePair
     ) -> PamProtCDSTargeton:
-        return PamProtCDSTargeton(
-            CdsPamBgAltSeqBuilder.from_noncds(
-                region_pam_seq,
-                get_cds_extension_sequence(exg_gr_pair[0]),
-                get_cds_extension_sequence(exg_gr_pair[1])))
+        b = CdsPamBgAltSeqBuilder.from_noncds(
+            region_pam_seq,
+            get_cds_extension_sequence(exg_gr_pair[0]),
+            get_cds_extension_sequence(exg_gr_pair[1]))
+        if not b.is_background_valid(
+            codon_table,
+            config.force_bg_fs,
+            config.force_bg_ns
+        ):
+            raise InvalidBackground("Invalid background variants!")
+        return PamProtCDSTargeton(b)
 
     def get_targeton(region_pam_seq: PamBgAltSeqBuilder) -> ITargeton:
         if cds:
@@ -173,8 +180,8 @@ def get_oligo_template(
         pam_ref_seq,
         rsr.sgrna_ids,
         custom_variants,
-        adaptor_5,
-        adaptor_3,
+        config.adaptor_5,
+        config.adaptor_3,
         segments)
 
 
@@ -183,8 +190,8 @@ def get_oligo_templates(
     ref: ReferenceSequenceRepository,
     variants: VariantRepositoryCollection,
     annotation: Optional[AnnotationRepository],
-    adaptor_5: Optional[str] = None,
-    adaptor_3: Optional[str] = None
+    codon_table: CodonTable,
+    config: SGEConfig
 ) -> List[OligoTemplate]:
 
     def match_ref_regions_pam_variants() -> Dict[Tuple[str, int, int], Set[str]]:
@@ -260,8 +267,8 @@ def get_oligo_templates(
             bg_variants,
             pam_variants,
             variants.custom.get_variants(rsr.ref_range) if variants.custom else set(),
-            adaptor_5=adaptor_5,
-            adaptor_3=adaptor_3)
+            codon_table,
+            config)
 
     # Pass sgRNA variants to oligonucleotide template generation
     pam_variants_available: bool = variants.pam.count > 0
@@ -422,13 +429,17 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         sys.exit(1)
 
     # Prepare oligonucleotides
-    oligo_templates: List[OligoTemplate] = get_oligo_templates(
-        rsrs,
-        ref,
-        variants,
-        annotation,
-        adaptor_5=config.adaptor_5,
-        adaptor_3=config.adaptor_3)
+    try:
+        oligo_templates: List[OligoTemplate] = get_oligo_templates(
+            rsrs,
+            ref,
+            variants,
+            annotation,
+            aux.codon_table,
+            config)
+    except InvalidBackground as ex:
+        logging.critical(ex.args[0])
+        sys.exit(1)
 
     def get_qc_row(ot: OligoTemplate) -> List[str]:
         return get_oligo_template_qc_info(ref, ot)
@@ -473,9 +484,15 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     '--revcomp-minus-strand',
     is_flag=True,
     help="Include reverse complement in oligonucleotide if reference is on minus strand")
-@click.option('--force-bg-ns', 'force_bg_ns', is_flag=True,
+@click.option(
+    '--force-bg-ns',
+    'force_bg_ns',
+    is_flag=True,
     help="Allow non-synonymous background variants")
-@click.option('--force-bg-indels', 'force_bg_fs', is_flag=True,
+@click.option(
+    '--force-bg-indels',
+    'force_bg_fs',
+    is_flag=True,
     help="Allow frame-shifting background variants")
 def sge(
 

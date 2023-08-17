@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass, field
+import logging
 from typing import Dict, FrozenSet, Generic, List, Optional, TypeVar
 
 from .alt_seq_builder import AltSeqBuilder, AltSeqBuilderT
@@ -250,3 +251,34 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
 
     def get_codon_indices_in_range(self, spr: StrandedPositionRange) -> List[int]:
         return self.ab.get_codon_indices_in_range(spr)
+
+    def any_non_syn_background(self, codon_table: CodonTable) -> bool:
+        return any(
+            self.ab.is_variant_nonsynonymous(codon_table, variant)
+            for variant in self.bg_variants
+        )
+
+    def any_frame_shifting_background(self) -> bool:
+        return any(
+            variant.is_frame_shifting
+            for variant in self.bg_variants
+        )
+
+    def is_background_valid(self, codon_table: CodonTable, allow_frame_shift: bool, allow_non_syn: bool) -> bool:
+        any_fs: bool = False
+        any_ns: bool = False
+        for variant in self.bg_variants:
+            if self.ab.is_variant_nonsynonymous(codon_table, variant):
+                fs = variant.is_frame_shifting
+                any_ns = True
+                if fs:
+                    any_fs = True
+                    prefix = "Frame shifting"
+                else:
+                    prefix = "Non-synonymous"
+                logging.warning(f"{prefix} background variant at {variant.genomic_position}!")
+
+        return not (
+            (not allow_non_syn and any_ns) or
+            (not allow_frame_shift and any_fs)
+        )

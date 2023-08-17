@@ -27,3 +27,7 @@ class InvalidMutatorForTarget(ValueError):
 
 class InvalidConfig(Exception):
     pass
+
+
+class InvalidBackground(Exception):
+    pass
