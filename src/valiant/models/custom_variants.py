@@ -17,18 +17,18 @@
 #############################
 
 from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, FrozenSet
+from typing import FrozenSet, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
 
-from ..constants import META_PAM_MUT_SGRNA_ID, META_VCF_VAR_IN_CONST
-from ..sgrna_utils import sgrna_ids_to_string
 from .base import StrandedPositionRange
 from .mutated_sequences import BaseMutationCollection
-from .new_pam import PamBgAltSeqBuilder
-from .oligo_renderer import BaseOligoRenderer
 from .variant import BaseVariant
+from ..constants import META_PAM_MUT_SGRNA_ID, META_VCF_VAR_IN_CONST
+from ..sgrna_utils import sgrna_ids_to_string
 
 
 @dataclass(frozen=True)
@@ -51,31 +51,6 @@ class CustomVariant:
         ref_length: int = len(getattr(self.base_variant, 'ref', ''))
         end: int = start + (ref_length if ref_length > 1 else 0)
         return StrandedPositionRange(start, end, strand)
-
-
-@dataclass(init=False)
-class CustomVariantOligoRenderer(BaseOligoRenderer):
-    __slots__ = {
-        'ref_seq',
-        'gene_id',
-        'transcript_id',
-        'adaptor_5',
-        'adaptor_3',
-        '_oligo_name_prefix'
-    }
-
-    def __init__(
-        self,
-        ref_seq: PamBgAltSeqBuilder,
-        gene_id: str,
-        transcript_id: str,
-        adaptor_5: str,
-        adaptor_3: str
-    ) -> None:
-        super().__init__(ref_seq, gene_id, transcript_id, adaptor_5, adaptor_3)
-
-    def get_oligo_name(self, vcf_alias: str, var_type: int, start: int, ref: Optional[str], alt: Optional[str]) -> str:
-        return super()._get_oligo_name(var_type, vcf_alias, start, ref, alt)
 
 
 @dataclass(frozen=True)
