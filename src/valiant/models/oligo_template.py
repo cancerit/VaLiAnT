@@ -54,7 +54,7 @@ from ..constants import (
     MUTATION_TYPE_NON_CDS
 )
 from ..enums import MutationType, TargetonMutator
-from ..utils import get_constant_category, group_consecutive
+from ..utils import get_constant_category, group_consecutive, map_filter_log
 
 MUTATION_TYPE_LABELS: Dict[int, str] = {
     MutationType.SYNONYMOUS.value: 'syn',
@@ -264,8 +264,22 @@ class OligoTemplate:
             self._get_custom_variant_sgrna_ids(variant))
 
     def _compute_custom_variants(self) -> CustomVariantMutationCollection:
+
+        def non_overlapping(variant: CustomVariant) -> bool:
+            return not self.ref_seq.overlaps_bg(variant.base_variant)
+
+        def log_overlapping(variant: CustomVariant) -> str:
+            return f"Custom variant at {variant.base_variant.genomic_position} " \
+                "overlaps with background variant: discarded!"
+
         return CustomVariantMutationCollection.from_variants(
-            list(map(self._get_custom_variant_mutation, self.custom_variants)))
+            map_filter_log(
+                items=self.custom_variants,
+                map_f=self._get_custom_variant_mutation,
+                ft_f=non_overlapping,
+                log_f=log_overlapping,
+                sort_f=hash,
+                level=logging.WARNING))
 
     def _get_mutation_collection(
         self,

@@ -18,16 +18,20 @@
 
 from enum import Enum
 from functools import lru_cache
+import logging
 import os
 import pathlib
 import re
-from typing import Any, List, Optional, Set, Type, Tuple, FrozenSet, Iterable, TypeVar, Union
+from typing import Any, Callable, FrozenSet, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union
+
 import numpy as np
 import pandas as pd
+
 from .constants import SRC_TYPES
 from .enums import TargetonMutator
 
 T = TypeVar('T')
+S = TypeVar('S')
 
 dna_complement_tr_table = str.maketrans('ACGT', 'TGCA')
 dna_re = re.compile('^[ACGT]+$')
@@ -209,3 +213,22 @@ def does_any_set_intersect(sets: Iterable[Set[T]]) -> bool:
 def get_nullable_field(s: Union[pd.Series, Tuple], field: str, default: Optional[T] = None) -> Optional[T]:
     x: T = getattr(s, field)
     return x if not pd.isnull(x) else default  # type: ignore
+
+
+def map_filter_log(
+    map_f: Callable[[T], S],
+    ft_f: Callable[[T], bool],
+    log_f: Callable[[T], str],
+    items: Iterable[T],
+    sort_f: Optional[Callable[[S], Any]] = None,
+    level: int = logging.WARNING
+) -> List[S]:
+    """Map, filter, and optionally sort, logging discarded items"""
+
+    res: List[S] = []
+    for item in items:
+        if ft_f(item):
+            res.append(map_f(item))
+        else:
+            logging.log(level, log_f(item))
+    return sorted(res, key=sort_f) if sort_f is not None else res

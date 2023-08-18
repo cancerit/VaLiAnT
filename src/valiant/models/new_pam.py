@@ -159,6 +159,11 @@ class PamBgAltSeqBuilder(BasePamBgAltSeqBuilder[AltSeqBuilder]):
     def get_pam_sub(self, gr: GenomicRange) -> PamBgAltSeqBuilder:
         return PamBgAltSeqBuilder(self.ab.get_sub(gr))
 
+    def overlaps_bg(self, variant: BaseVariant) -> bool:
+        """Does the variant overlap with any of the background variants?"""
+
+        return self.ab.overlaps_layer(LAYER_BG, variant)
+
 
 @dataclass(frozen=True)
 class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
@@ -250,11 +255,6 @@ class CdsPamBgAltSeqBuilder(BasePamBgAltSeqBuilder[CdsAltSeqBuilder]):
 
     def get_ref_codon_index(self, position: int) -> int:
         return self.ab.get_ref_codon_index(position)
-
-    def overlaps_bg(self, variant: BaseVariant) -> bool:
-        """Does the variant overlap with any of the background variants?"""
-
-        return self.ab.overlaps_layer(LAYER_BG, variant)
 
     def get_codon_indices_in_range(self, spr: StrandedPositionRange) -> List[int]:
         return self.ab.get_codon_indices_in_range(spr)
