@@ -32,6 +32,7 @@ from .sequences import ReferenceSequence
 from ..constants import META_NEW, META_PAM_CODON_ALT, META_PAM_CODON_REF, META_REF, META_VCF_ALIAS, META_VCF_VAR_ID, \
     METADATA_PAM_FIELDS
 from ..enums import VariantType
+from ..errors import InvalidVariantRef
 from ..loaders.vcf import var_type_del, var_type_ins, var_type_sub
 from ..string_mutators import delete_nucleotides, insert_nucleotides, replace_nucleotides
 from ..utils import get_nullable_field, is_dna, opt_str_length
@@ -74,7 +75,9 @@ def _validate_alt(alt: str) -> None:
 
 def _validate_ref_in_target(seq: str, offset: int, ref: str) -> None:
     if seq[offset:offset + len(ref)] != ref:
-        raise RuntimeError(f"Invalid variant: expected {ref}, found {seq[offset:offset + len(ref)]}!")
+        raise InvalidVariantRef(
+            f"Invalid variant: expected {ref}, "
+            f"found {seq[offset:offset + len(ref)]}!")
 
 
 @dataclass(frozen=True)

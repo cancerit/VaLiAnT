@@ -25,7 +25,7 @@ import click
 from pyranges import PyRanges
 
 from .enums import TargetonMutator
-from .errors import InvalidBackground
+from .errors import InvalidBackground, InvalidVariantRef
 from .models.base import GenomicRange
 from .models.codon_table import CodonTable
 from .models.custom_variants import CustomVariant
@@ -106,10 +106,14 @@ def get_oligo_template(
         region_pam_seq: PamBgAltSeqBuilder,
         exg_gr_pair: GenomicRangePair
     ) -> PamProtCDSTargeton:
+
+        # Annotate region as CDS
         b = CdsPamBgAltSeqBuilder.from_noncds(
             region_pam_seq,
             get_cds_extension_sequence(exg_gr_pair[0]),
             get_cds_extension_sequence(exg_gr_pair[1]))
+
+        # Validate background variants
         if not b.is_background_valid(
             codon_table,
             config.force_bg_fs,
@@ -439,6 +443,11 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             config)
     except InvalidBackground as ex:
         logging.critical(ex.args[0])
+        sys.exit(1)
+    except InvalidVariantRef as ex:
+        logging.critical(ex.args[0])
+        if variants.background:
+            logging.critical("Please check your background variants for overlaps!")
         sys.exit(1)
 
     def get_qc_row(ot: OligoTemplate) -> List[str]:

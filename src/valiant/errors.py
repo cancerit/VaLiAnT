@@ -31,3 +31,7 @@ class InvalidConfig(Exception):
 
 class InvalidBackground(Exception):
     pass
+
+
+class InvalidVariantRef(Exception):
+    pass
