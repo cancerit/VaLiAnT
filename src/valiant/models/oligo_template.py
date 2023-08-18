@@ -29,7 +29,8 @@ from .oligo_segment import OligoSegment, TargetonOligoSegment
 from .refseq_ranges import ReferenceSequenceRanges
 from .targeton import PamProtCDSTargeton
 from .base import GenomicRange, TranscriptInfo
-from .custom_variants import CustomVariantMutation, CustomVariantMutationCollection, CustomVariantOligoRenderer
+from .custom_variants import CustomVariantMutation, CustomVariantMutationCollection
+from .custom_variant_oligo_renderer import CustomVariantOligoRenderer
 from .mutated_sequences import MutationCollection
 from .new_pam import PamBgAltSeqBuilder, CdsPamBgAltSeqBuilder, PamBgAltSeqBuilderT
 from .oligo_renderer import BaseOligoRenderer
