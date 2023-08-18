@@ -16,10 +16,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from typing import Any, Dict, List, Optional
-from ..utils import get_not_none
+import logging
+from typing import List, Optional
+
 from .config import BaseConfig
 from .options import Options
+from ..utils import get_not_none
 
 
 class SGEConfig(BaseConfig):
@@ -60,3 +62,12 @@ class SGEConfig(BaseConfig):
             revcomp_minus_strand=self.revcomp_minus_strand,
             oligo_max_length=self.max_length,
             oligo_min_length=self.min_length)
+
+    def is_valid(self) -> bool:
+        success = super().is_valid()
+        if self.force_bg_fs and not self.force_bg_ns:
+            logging.error(
+                "For frame-shifting background variants to be allowed, "
+                "non-synonymous variants must also be allowed!")
+            success = False
+        return success
