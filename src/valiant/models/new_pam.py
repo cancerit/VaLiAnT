@@ -27,6 +27,7 @@ from .alt_seq_builder import AltSeqBuilder, AltSeqBuilderT
 from .base import GenomicRange, StrandedPositionRange
 from .cds_alt_seq_builder import CdsAltSeqBuilder
 from .codon_table import CodonTable
+from .custom_variants import CustomVariant
 from .dna_str import DnaStr
 from .pam_protection import PamVariant
 from .sequences import ReferenceSequence
@@ -47,6 +48,8 @@ def _get_variant_groups(
     pam_variants: List[PamVariant]
 ) -> List[VariantGroup]:
     # Beware: maintain the variant layer order!
+    if bg_variants and isinstance(bg_variants[0], CustomVariant):
+        bg_variants = [x.base_variant for x in bg_variants]
     return [
         VariantGroup.from_variants(variants)
         for variants in [
