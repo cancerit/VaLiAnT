@@ -29,13 +29,13 @@ class SGEConfig(BaseConfig):
 
     # File paths
     gff_fp: Optional[str]
-    bg_fp: Optional[str]
     pam_fp: Optional[str]
     vcf_fp: Optional[str]
+    bg_fp: Optional[str] = None
 
     # Background variants
-    force_bg_ns: bool
-    force_bg_fs: bool
+    force_bg_ns: bool = False
+    force_bg_fs: bool = False
 
     class Config:
         fields = {
