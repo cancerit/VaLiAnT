@@ -344,13 +344,17 @@ class OligoTemplate:
 
         # Compute mutations per region
         region_mutations: Optional[pd.DataFrame] = pd.concat([
-            pd.concat([
-                self._get_mutation_collection(
-                    i, segment, mutator, mutation_collection).get_metadata_table(options)
-                for mutator, mutation_collection in segment.compute_mutations(
+            df for _, df in sorted(list(chain.from_iterable([
+                [
+                    (
+                        mutator, self._get_mutation_collection(
+                            i, segment, mutator, mutation_collection).get_metadata_table(options)
+                    )
+                    for mutator, mutation_collection in segment.compute_mutations(
                     aux, sgrna_ids=self.sgrna_ids).items()
-            ])
-            for i, segment in self.target_segments
+                ]
+                for i, segment in self.target_segments
+            ])), key=lambda t: t[0].value)
         ], ignore_index=True) if self.target_segments else None
 
         # Compute global mutations (custom variants)
