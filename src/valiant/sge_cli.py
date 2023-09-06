@@ -149,15 +149,15 @@ def get_oligo_template(
 
         # TODO: should PAM variants be included?
         # Assumption: the local extension range is already in [local] cell-line coordinates
+        sequence: Optional[str] = None
         try:
-            sequence: Optional[str] = (
+            sequence = (
                 pam_ref_seq.get_pam_sub(genomic_range).pam_seq if is_local else
                 ref.get_genomic_range_sequence(genomic_range)
             )
         except GenomicRangeOutOfBounds as ex:
             # TODO: handle CDS extension partially out of bounds
             logging.error(ex.args[0])
-            sequence = None
 
         if sequence is None:
             raise SequenceNotFound("CDS extension sequence not found!")
