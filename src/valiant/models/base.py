@@ -235,6 +235,13 @@ class GenomicRange(StrandedPositionRange):
     def __contains__(self, other) -> bool:
         return other.chromosome == self.chromosome and super().__contains__(other)
 
+    def offset(self, value: int) -> GenomicRange:
+        return GenomicRange(
+            self.chromosome,
+            self.start + value,
+            self.end + value,
+            self.strand)
+
     def overlaps_range(self, other: GenomicRange, unstranded: bool = False) -> bool:
         return (
             other.chromosome == self.chromosome and
