@@ -26,6 +26,7 @@ from pyranges import PyRanges
 
 from .enums import TargetonMutator
 from .errors import GenomicRangeOutOfBounds, InvalidBackground, InvalidVariantRef, SequenceNotFound
+from .models.background_variants import GenomicPositionOffsets
 from .models.base import GenomicRange
 from .models.codon_table import CodonTable
 from .models.custom_variants import CustomVariant
@@ -49,6 +50,7 @@ from .models.variant import BaseVariant, BaseVariantT
 from .models.variant_repository_collection import VariantRepositoryCollection
 from .common_cli import common_params, existing_file, finalise
 from .cli_utils import load_codon_table
+from .viz import get_text_diagram
 from .writers import write_reference_sequences
 
 
@@ -73,6 +75,13 @@ def _load_oligo_templates(fp: str) -> ReferenceSequenceRangeCollection:
         logging.critical(ex.args[0])
         logging.critical("Failed to load oligonucleotide templates!")
         sys.exit(1)
+
+
+def resize_rsr(rsr: ReferenceSequenceRanges, gpo: GenomicPositionOffsets) -> ReferenceSequenceRanges:
+    def resize_f(gr: GenomicRange) -> GenomicRange:
+        return gr.resize(gpo.ref_to_alt_range(gr))
+
+    return rsr.resize_regions(resize_f)
 
 
 def get_oligo_template(
@@ -100,6 +109,12 @@ def get_oligo_template(
 
     pam_ref_seq = PamBgAltSeqBuilder.from_ref_seq(
         get_sequence(rsr.ref_range), bg_variant_ls, pam_variant_ls)
+
+    offsets = GenomicPositionOffsets(
+        pam_ref_seq.start,
+        len(pam_ref_seq.ref_seq),
+        pam_ref_seq.bg_variants)
+    rsr_alt = resize_rsr(rsr, offsets)
 
     # 2. Get constant regions
 

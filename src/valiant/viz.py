@@ -25,29 +25,51 @@ def _draw_range(start: int, gr: GenomicRange) -> str:
     return ' ' * (gr.start - start) + '*' * len(gr)
 
 
+def _pad(pad: int, s: str) -> str:
+    return s + ' ' * (pad - len(s)) if pad and len(s) < pad else s
+
+
 def _draw_region(start: int, label: str, gr: GenomicRange, pad: int = 0):
-    if pad and len(label) < pad:
-        label += ' ' * (pad - len(label))
-    return label + _draw_range(start, gr)
+    return _pad(pad, label) + _draw_range(start, gr)
 
 
-def get_text_diagram(b: PamBgAltSeqBuilder, rsr: ReferenceSequenceRanges) -> str:
+def get_text_diagram(b: PamBgAltSeqBuilder, rsr_ref: ReferenceSequenceRanges, rsr_alt: ReferenceSequenceRanges) -> str:
     # TODO: add CDS annotation (with extensions?)
     # TODO: add ALT sequence (with alignment?)
-    start: int = rsr.ref_range.start
-    pad = 4
-    s = [(' ' * pad) + b.ref_seq]
 
-    f = lambda x, y: _draw_region(start, x, y, pad=4)
+    s = []
 
-    if rsr.const_region_1:
-        s.append(f('C1', rsr.const_region_1))
-    if rsr.target_ragion_1:
-        s.append(f('R1', rsr.target_ragion_1))
-    s.append(f('R2', rsr.target_ragion_2))
-    if rsr.target_ragion_3:
-        s.append(f('R3', rsr.target_ragion_3))
-    if rsr.const_region_2:
-        s.append(f('C2', rsr.const_region_2))
+    for seq, rsr in [(b.ref_seq, rsr_ref), (b.alt_seq, rsr_alt)]:
+        start: int = rsr.ref_range.start
+        pad = 4
+        s.append((' ' * pad) + seq)
+
+        bg_variants = b.bg_variants
+        if bg_variants:
+            bg = {z.start - start: z for z in bg_variants}
+            ps = _pad(pad, "BG")
+            for i in range(len(seq)):
+                ps += ('!' if bg[i].is_frame_shifting else '^') if i in bg else ' '
+            s.append(ps)
+
+        pam_variants = b.pam_variants
+        if pam_variants:
+            pam = {z.start - start for z in pam_variants}
+            ps = _pad(pad, "PAM")
+            for i in range(len(seq)):
+                ps += '^' if i in pam else ' '
+            s.append(ps)
+
+        f = lambda x, y: _draw_region(start, x, y, pad=4)
+
+        if rsr.const_region_1:
+            s.append(f('C1', rsr.const_region_1))
+        if rsr.target_ragion_1:
+            s.append(f('R1', rsr.target_ragion_1))
+        s.append(f('R2', rsr.target_ragion_2))
+        if rsr.target_ragion_3:
+            s.append(f('R3', rsr.target_ragion_3))
+        if rsr.const_region_2:
+            s.append(f('C2', rsr.const_region_2))
 
     return '\n'.join(s)

@@ -232,3 +232,7 @@ def map_filter_log(
         else:
             logging.log(level, log_f(item))
     return sorted(res, key=sort_f) if sort_f is not None else res
+
+
+def apply_nonnull(x: Optional[T], f: Callable[[T], S]) -> Optional[S]:
+    return f(x) if x is not None else None

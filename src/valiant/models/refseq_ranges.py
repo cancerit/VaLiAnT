@@ -20,14 +20,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from itertools import chain
 import re
-from typing import Dict, Iterable, List, Optional, FrozenSet, Tuple
+from typing import Callable, Dict, Iterable, List, Optional, FrozenSet, Tuple
 import pandas as pd
 from pyranges import PyRanges
 from .base import GenomicRange, PositionRange
 from ..constants import PYR_CHR, PYR_END, PYR_START, PYR_STRAND
 from ..enums import TargetonMutator
 from ..loaders.tsv import load_tsv
-from ..utils import get_smallest_int_type, parse_list, parse_mutators
+from ..utils import apply_nonnull, get_smallest_int_type, parse_list, parse_mutators
 
 
 CSV_HEADER = [
@@ -41,6 +41,15 @@ CSV_HEADER = [
     'action_vector',
     'sgrna_vector'
 ]
+
+TargetonRegionTuple = Tuple[
+    Optional[GenomicRange],
+    Optional[GenomicRange],
+    GenomicRange,
+    Optional[GenomicRange],
+    Optional[GenomicRange]
+]
+
 
 # Mutation vector pattern, e.g.: `(1del), (snv, 1del), (3del)`
 mutator_vector_re: re.Pattern = re.compile(
@@ -117,6 +126,41 @@ class ReferenceSequenceRanges:
     @property
     def bg_ranges(self) -> List[GenomicRange]:
         return self.ref_range.diff(self._bg_mask_regions)
+
+    def resize_regions(self, resize_f: Callable[[GenomicRange], GenomicRange]) -> ReferenceSequenceRanges:
+        # TODO: consider whether changing the reference start is allowed
+        # TODO: compare first and last regions with self.ref_range
+
+        def f(x: Optional[GenomicRange]) -> Optional[GenomicRange]:
+            return apply_nonnull(x, resize_f)
+
+        def resize_mut_f(x: TargetReferenceRegion) -> TargetReferenceRegion:
+            return TargetReferenceRegion(resize_f(x.genomic_range), x.mutators)
+
+        def g(x: Optional[TargetReferenceRegion]) -> Optional[TargetReferenceRegion]:
+            return apply_nonnull(x, resize_mut_f)
+
+        return ReferenceSequenceRanges(
+            self.ref_range,
+            self.sgrna_ids,
+            self._bg_mask_regions,
+            (f(self.const_region_1), f(self.const_region_2)),
+            (
+                g(self._target_regions[0]),
+                resize_mut_f(self._target_regions[1]),
+                g(self._target_regions[2])
+            )
+        )
+
+    @property
+    def regions(self) -> TargetonRegionTuple:
+        return (
+            self.const_region_1,
+            self.target_ragion_1,
+            self.target_ragion_2,
+            self.target_ragion_3,
+            self.const_region_2
+        )
 
     @classmethod
     def from_config(

@@ -21,6 +21,7 @@ from typing import List
 
 import numpy as np
 
+from .uint_range import UIntRange
 from .variant import BaseVariantT, sort_variants
 
 
@@ -37,7 +38,7 @@ class PosOffset:
 def compute_genomic_offset(variants: List[BaseVariantT]) -> int:
     """Given a list of variants, get the offset they would introduce if applied"""
 
-    # TODO: check for overlapping variants
+    # TODO: check for overlapping variants (best done upstream, when filtering the full list via PyRanges)
     return sum(
         variant.alt_ref_delta
         for variant in variants
@@ -156,3 +157,11 @@ class GenomicPositionOffsets:
             raise ValueError(f"Invalid ALT position {alt_pos}: out of bounds!")
 
         return alt_pos - self._ins_offsets[alt_pos - self.ref_start]
+
+    def ref_to_alt_position(self, ref_pos: int) -> int:
+        return ref_pos + self.get_offset(ref_pos)
+
+    def ref_to_alt_range(self, r: UIntRange) -> UIntRange:
+        return UIntRange(
+            self.ref_to_alt_position(r.start),
+            self.ref_to_alt_position(r.end))

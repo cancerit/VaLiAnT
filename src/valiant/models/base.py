@@ -235,6 +235,9 @@ class GenomicRange(StrandedPositionRange):
     def __contains__(self, other) -> bool:
         return other.chromosome == self.chromosome and super().__contains__(other)
 
+    def resize(self, r: UIntRange) -> GenomicRange:
+        return GenomicRange(self.chromosome, r.start, r.end, self.strand)
+
     def offset(self, value: int) -> GenomicRange:
         return GenomicRange(
             self.chromosome,
