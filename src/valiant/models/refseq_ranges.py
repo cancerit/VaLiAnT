@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,11 +17,8 @@
 #############################
 
 from __future__ import annotations
-import csv
 from dataclasses import dataclass
-from functools import lru_cache
 from itertools import chain
-import logging
 import re
 from typing import Dict, Iterable, List, Optional, FrozenSet, Tuple
 import pandas as pd
@@ -72,7 +69,32 @@ class TargetReferenceRegion:
     mutators: FrozenSet[TargetonMutator]
 
 
-@dataclass(init=False)
+@dataclass
+class TargetonConfig:
+    __slots__ = [
+        'chromosome',
+        'strand',
+        'ref_start',
+        'ref_end',
+        'target_region_2_start',
+        'target_region_2_end',
+        'target_region_2_extension',
+        'mutators',
+        'sgrna_ids'
+    ]
+
+    chromosome: str
+    strand: str
+    ref_start: int
+    ref_end: int
+    target_region_2_start: int
+    target_region_2_end: int
+    target_region_2_extension: Tuple[int, int]
+    mutators: Tuple[FrozenSet[TargetonMutator], FrozenSet[TargetonMutator], FrozenSet[TargetonMutator]]
+    sgrna_ids: FrozenSet[str]
+
+
+@dataclass
 class ReferenceSequenceRanges:
     __slots__ = {
         'ref_range',
@@ -96,43 +118,34 @@ class ReferenceSequenceRanges:
     def bg_ranges(self) -> List[GenomicRange]:
         return self.ref_range.diff(self._bg_mask_regions)
 
-    def __init__(
-        self,
-        chromosome: str,
-        strand: str,
-        ref_start: int,
-        ref_end: int,
-        target_region_2_start: int,
-        target_region_2_end: int,
-        target_region_2_extension: Tuple[int, int],
-        mutators: Tuple[FrozenSet[TargetonMutator], FrozenSet[TargetonMutator], FrozenSet[TargetonMutator]],
-        sgrna_ids: FrozenSet[str]
-    ) -> None:
+    @classmethod
+    def from_config(
+        cls,
+        config: TargetonConfig
+    ) -> ReferenceSequenceRanges:
 
         # TODO: implement
-        self._bg_mask_regions = []
+        bg_mask_regions = []
 
         def get_genomic_range(start: int, end: int) -> GenomicRange:
-            return GenomicRange(chromosome, start, end, strand)
+            return GenomicRange(config.chromosome, start, end, config.strand)
 
-        self.sgrna_ids = sgrna_ids
-
-        if len(target_region_2_extension) != 2 or any(x < 0 for x in target_region_2_extension):
+        if len(config.target_region_2_extension) != 2 or any(x < 0 for x in config.target_region_2_extension):
             raise ValueError("Invalid extension vector!")
 
         # Get lenghts of target regions 1 and 3
-        r1_len, r3_len = target_region_2_extension
+        r1_len, r3_len = config.target_region_2_extension
 
-        self.ref_range = get_genomic_range(ref_start, ref_end)
+        ref_range = get_genomic_range(config.ref_start, config.ref_end)
         target_region_2_range = get_genomic_range(
-            target_region_2_start, target_region_2_end)
+            config.target_region_2_start, config.target_region_2_end)
 
-        if target_region_2_range not in self.ref_range:
+        if target_region_2_range not in ref_range:
             raise ValueError("Target region 2 is outside of the reference genomic range!")
 
         if (
-            target_region_2_range.start - r1_len < self.ref_range.start
-            or target_region_2_range.end + r3_len > self.ref_range.end
+            target_region_2_range.start - r1_len < ref_range.start
+            or target_region_2_range.end + r3_len > ref_range.end
         ):
             raise ValueError("Invalid extension vector: exceeding reference genomic range!")
 
@@ -151,22 +164,24 @@ class ReferenceSequenceRanges:
 
         # Calculate flanking constant region genomic ranges
         const_region_1: Optional[GenomicRange] = get_genomic_range(
-            self.ref_range.start,
+            ref_range.start,
             targeton_start - 1
-        ) if targeton_start - self.ref_range.start > 0 else None
+        ) if targeton_start - ref_range.start > 0 else None
 
         const_region_2: Optional[GenomicRange] = get_genomic_range(
             targeton_end + 1,
-            self.ref_range.end
-        ) if self.ref_range.end - targeton_end > 0 else None
+            ref_range.end
+        ) if ref_range.end - targeton_end > 0 else None
 
         # Store regions
-        self._const_regions = (const_region_1, const_region_2)
-        self._target_regions = (
-            TargetReferenceRegion(target_region_1_range, mutators[0]) if target_region_1_range else None,
-            TargetReferenceRegion(target_region_2_range, mutators[1]),
-            TargetReferenceRegion(target_region_3_range, mutators[2]) if target_region_3_range else None
+        const_regions = (const_region_1, const_region_2)
+        target_regions = (
+            TargetReferenceRegion(target_region_1_range, config.mutators[0]) if target_region_1_range else None,
+            TargetReferenceRegion(target_region_2_range, config.mutators[1]),
+            TargetReferenceRegion(target_region_3_range, config.mutators[2]) if target_region_3_range else None
         )
+
+        return cls(ref_range, config.sgrna_ids, bg_mask_regions, const_regions, target_regions)
 
     @staticmethod
     def parse_mutator_tuples(s: str) -> List[FrozenSet[TargetonMutator]]:
@@ -194,7 +209,7 @@ class ReferenceSequenceRanges:
         # sgRNA ID vector
         sgrna_ids: FrozenSet[str] = frozenset(parse_list(row[8]))
 
-        return cls(
+        return cls.from_config(TargetonConfig(
             row[0],
             row[1],
             int(row[2]),
@@ -203,7 +218,7 @@ class ReferenceSequenceRanges:
             int(row[5]),
             (extensions[0], extensions[1]),
             (mutators[0], mutators[1], mutators[2]),
-            sgrna_ids)
+            sgrna_ids))
 
     @property
     def mutators(self) -> FrozenSet[TargetonMutator]:
