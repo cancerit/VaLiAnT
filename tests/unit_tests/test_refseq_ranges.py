@@ -19,7 +19,7 @@
 import pytest
 from valiant.enums import TargetonMutator
 from valiant.models.base import PositionRange
-from valiant.models.refseq_ranges import ReferenceSequenceRanges, ReferenceSequenceRangeCollection
+from valiant.models.refseq_ranges import ReferenceSequenceRanges, ReferenceSequenceRangeCollection, TargetonConfig
 
 
 def test_reference_sequence_ranges_init():
@@ -40,16 +40,17 @@ def test_reference_sequence_ranges_init():
     sgrna_ids = frozenset({'ID1', 'ID2'})
 
     # Initialise object
-    rsr = ReferenceSequenceRanges(
-        chromosome,
-        strand,
-        ref_start,
-        ref_end,
-        r2_start,
-        r2_end,
-        (0, 20),
-        mutators,
-        sgrna_ids)
+    rsr = ReferenceSequenceRanges.from_config(
+        TargetonConfig(
+            chromosome,
+            strand,
+            ref_start,
+            ref_end,
+            r2_start,
+            r2_end,
+            (0, 20),
+            mutators,
+            sgrna_ids))
 
     # Check reference range
     assert rsr.ref_range.chromosome == chromosome
@@ -111,16 +112,17 @@ def test_reference_sequence_range_collection_init():
     r2_end = 200
     sgrna_ids = frozenset({'ID1', 'ID2'})
 
-    rsr = ReferenceSequenceRanges(
-        chromosome,
-        strand,
-        ref_start,
-        ref_end,
-        r2_start,
-        r2_end,
-        (0, 20),
-        mutators,
-        sgrna_ids)
+    rsr = ReferenceSequenceRanges.from_config(
+        TargetonConfig(
+            chromosome,
+            strand,
+            ref_start,
+            ref_end,
+            r2_start,
+            r2_end,
+            (0, 20),
+            mutators,
+            sgrna_ids))
 
     rsrc = ReferenceSequenceRangeCollection([rsr])
 
@@ -137,16 +139,17 @@ def test_reference_sequence_range_collection_init():
 
 
 def get_reference_sequence_ranges(ref_start, ref_end, r2_start, r2_end):
-    return ReferenceSequenceRanges(
-        'X',
-        '+',
-        ref_start,
-        ref_end,
-        r2_start,
-        r2_end,
-        (0, 0),
-        (frozenset(), frozenset(), frozenset()),
-        frozenset())
+    return ReferenceSequenceRanges.from_config(
+        TargetonConfig(
+            'X',
+            '+',
+            ref_start,
+            ref_end,
+            r2_start,
+            r2_end,
+            (0, 0),
+            (frozenset(), frozenset(), frozenset()),
+            frozenset()))
 
 
 # Region 2 and both constant regions

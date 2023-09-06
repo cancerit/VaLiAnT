@@ -23,7 +23,7 @@ from valiant.models.custom_variants import CustomVariant
 from valiant.models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
 from valiant.models.oligo_template import OligoTemplate, TargetonOligoSegment
 from valiant.models.pam_protection import PamVariant
-from valiant.models.refseq_ranges import ReferenceSequenceRanges
+from valiant.models.refseq_ranges import ReferenceSequenceRanges, TargetonConfig
 from valiant.models.sequences import ReferenceSequence
 from valiant.models.targeton import PamProtCDSTargeton
 from valiant.models.variant import SubstitutionVariant
@@ -65,8 +65,8 @@ def test_oligo_compute_mutations(targetons, mutator, pam_protection):
         targeton_start += targeton_length
 
     empty = frozenset()
-    rsr = ReferenceSequenceRanges(
-        'X', '+', 1, 22, 1, 22, (0, 0), (empty, empty, empty), empty)
+    rsr = ReferenceSequenceRanges.from_config(
+        TargetonConfig('X', '+', 1, 22, 1, 22, (0, 0), (empty, empty, empty), empty))
 
     ot = OligoTemplate(rsr, TRANSCRIPT_INFO, pam_ref_seq, frozenset({DUMMY_PAM_SGRNA_ID}), set(), adaptor_5, adaptor_3, segments)
     for _, target_segment in ot.target_segments:
@@ -90,8 +90,8 @@ def test_oligo_compute_mutations(targetons, mutator, pam_protection):
 
 def test_oligo_template_get_custom_variant_mutation():
     empty = frozenset()
-    rsr = ReferenceSequenceRanges(
-        'X', '+', 1, 22, 1, 22, (0, 0), (empty, empty, empty), empty)
+    rsr = ReferenceSequenceRanges.from_config(
+        TargetonConfig('X', '+', 1, 22, 1, 22, (0, 0), (empty, empty, empty), empty))
 
     ref = 'A'
     pam_ref = 'C'

@@ -20,7 +20,7 @@ import pytest
 
 from valiant.models.base import GenomicRange, GenomicPosition
 from valiant.models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
-from valiant.models.refseq_ranges import ReferenceSequenceRanges
+from valiant.models.refseq_ranges import ReferenceSequenceRanges, TargetonConfig
 from valiant.models.sequences import ReferenceSequence
 from valiant.models.oligo_segment import InvariantOligoSegment
 from valiant.models.custom_variants import CustomVariant
@@ -87,8 +87,8 @@ def test_oligo_template_get_custom_variant_sgrna_ids(variant, non_cds_region):
     ]
 
     empty = frozenset()
-    rsr = ReferenceSequenceRanges(
-        'X', '+', 1, seq_length, 1, seq_length, (0, 0), (empty, empty, empty), empty)
+    rsr = ReferenceSequenceRanges.from_config(
+        TargetonConfig('X', '+', 1, seq_length, 1, seq_length, (0, 0), (empty, empty, empty), empty))
 
     ot = OligoTemplate(
         rsr, None, pam_seq, frozenset(all_sgrna_ids), {custom_variant}, None, None, segments)
