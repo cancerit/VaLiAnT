@@ -351,7 +351,7 @@ class OligoTemplate:
                             i, segment, mutator, mutation_collection).get_metadata_table(options)
                     )
                     for mutator, mutation_collection in segment.compute_mutations(
-                    aux, sgrna_ids=self.sgrna_ids).items()
+                        aux, sgrna_ids=self.sgrna_ids).items()
                 ]
                 for i, segment in self.target_segments
             ])), key=lambda t: t[0].value)
