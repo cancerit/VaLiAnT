@@ -360,8 +360,6 @@ class OligoTemplate:
         # Compute global mutations (custom variants)
         if self.custom_variants:
             global_mutations: pd.DataFrame = self._get_custom_variant_collection(options)
-            if global_mutations.shape[0] != len(self.custom_variants):
-                raise RuntimeError("Unexpected number of custom variants!")
 
             # Concatenate to region mutations, if any
             all_mutations = (
