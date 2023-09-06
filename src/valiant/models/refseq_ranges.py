@@ -225,6 +225,18 @@ class ReferenceSequenceRanges:
     def const_region_2(self) -> Optional[GenomicRange]:
         return self._const_regions[1]
 
+    @property
+    def target_ragion_1(self) -> Optional[GenomicRange]:
+        return self._target_regions[0].genomic_range if self._target_regions[0] else None
+
+    @property
+    def target_ragion_2(self) -> GenomicRange:
+        return self._target_regions[1].genomic_range
+
+    @property
+    def target_ragion_3(self) -> Optional[GenomicRange]:
+        return self._target_regions[2].genomic_range if self._target_regions[2] else None
+
     def is_range_in_constant_region(self, gr: PositionRange) -> bool:
         for cr in self._const_regions:
             if cr is not None and not (gr.start > cr.end or gr.end < cr.start):
