@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from collections.abc import Sized
 from dataclasses import dataclass
 from typing import Generic, List, Tuple
 
@@ -24,7 +25,7 @@ from .variant import BaseVariantT, sort_variants
 
 
 @dataclass(frozen=True)
-class VariantGroup(Generic[BaseVariantT]):
+class VariantGroup(Generic[BaseVariantT], Sized):
     __slots__ = ['variants']
 
     variants: List[BaseVariantT]
@@ -32,6 +33,13 @@ class VariantGroup(Generic[BaseVariantT]):
     @classmethod
     def from_variants(cls, variants: List[BaseVariantT]):
         return cls(sort_variants(variants))
+
+    def __len__(self) -> int:
+        return len(self.variants)
+
+    @property
+    def is_empty(self):
+        return len(self) == 0
 
     def apply(self, start: int, sequence: str, alt_offset: int = 0, ref_check: bool = False) -> Tuple[str, int]:
         alt_seq: str = sequence

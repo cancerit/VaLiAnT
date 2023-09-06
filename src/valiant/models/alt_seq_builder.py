@@ -139,16 +139,19 @@ class AltSeqBuilder:
         alt_seq: str = self.ref_seq
         alt_offset: int = 0
 
-        # Only allow reference checks on the first layer
+        # Only allow reference checks after the first non-empty layer
         # TODO: should warnings be raised for failed reference checks on the following layers?
+        do_ref_check: bool = ref_check
         for i, g in enumerate(self.variant_groups[:last_group_index + 1]):
-            alt_seq, layer_alt_offset = g.apply(
-                self.start,
-                alt_seq,
-                alt_offset=alt_offset,
-                ref_check=ref_check if i == 0 else False)
-            if correct_alt:
-                alt_offset += layer_alt_offset
+            if not g.is_empty:
+                alt_seq, layer_alt_offset = g.apply(
+                    self.start,
+                    alt_seq,
+                    alt_offset=alt_offset,
+                    ref_check=do_ref_check)
+                do_ref_check = ref_check
+                if correct_alt:
+                    alt_offset += layer_alt_offset
 
         return self._extend(alt_seq) if extend else alt_seq
 
