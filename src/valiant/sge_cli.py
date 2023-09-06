@@ -25,10 +25,11 @@ import click
 from pyranges import PyRanges
 
 from .enums import TargetonMutator
-from .errors import InvalidBackground, InvalidVariantRef
+from .errors import GenomicRangeOutOfBounds, InvalidBackground, InvalidVariantRef, SequenceNotFound
 from .models.base import GenomicRange
 from .models.codon_table import CodonTable
 from .models.custom_variants import CustomVariant
+from .models.dna_str import DnaStr
 from .models.exon import AnnotationRepository, CDSContextRepository, GenomicRangePair, TranscriptInfo
 from .models.metadata_table import MetadataTable
 from .models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
@@ -139,15 +140,29 @@ def get_oligo_template(
 
     # 3. Get potential target regions
 
-    def get_cds_extension_sequence(genomic_range: Optional[GenomicRange]) -> str:
+    def get_cds_extension_sequence(genomic_range: Optional[GenomicRange]) -> DnaStr:
         if genomic_range is None:
-            return ''
+            return DnaStr.empty()
 
-        sequence: Optional[str] = ref.get_genomic_range_sequence(genomic_range)
+        is_local: bool = genomic_range.overlaps_range(
+            pam_ref_seq.pos_range, unstranded=True)
+
+        # TODO: should PAM variants be included?
+        # Assumption: the local extension range is already in [local] cell-line coordinates
+        try:
+            sequence: Optional[str] = (
+                pam_ref_seq.get_pam_sub(genomic_range).pam_seq if is_local else
+                ref.get_genomic_range_sequence(genomic_range)
+            )
+        except GenomicRangeOutOfBounds as ex:
+            # TODO: handle CDS extension partially out of bounds
+            logging.error(ex.args[0])
+            sequence = None
+
         if sequence is None:
-            raise RuntimeError("CDS extension sequence not found!")
+            raise SequenceNotFound("CDS extension sequence not found!")
 
-        return sequence
+        return DnaStr(sequence)
 
     def get_oligo_segment(trr: TargetReferenceRegion) -> OligoSegment:
         region_pam_seq = pam_ref_seq.get_pam_sub(trr.genomic_range)
@@ -441,7 +456,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             annotation,
             aux.codon_table,
             config)
-    except InvalidBackground as ex:
+    except (SequenceNotFound, InvalidBackground) as ex:
         logging.critical(ex.args[0])
         sys.exit(1)
     except InvalidVariantRef as ex:

@@ -35,3 +35,7 @@ class InvalidBackground(Exception):
 
 class InvalidVariantRef(Exception):
     pass
+
+
+class GenomicRangeOutOfBounds(Exception):
+    pass

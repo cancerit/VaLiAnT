@@ -26,6 +26,7 @@ from .dna_str import DnaStr
 from .uint_range import UIntRange
 from .variant import BaseVariant, BaseVariantT as VariantT
 from .variant_group import VariantGroup
+from ..errors import GenomicRangeOutOfBounds
 from ..utils import has_duplicates
 
 RangeT = TypeVar('RangeT', bound='StrandedPositionRange')
@@ -169,6 +170,11 @@ class AltSeqBuilder:
         ]
 
     def get_sub(self, gr: GenomicRange) -> AltSeqBuilder:
+        if gr not in self.gr:
+            raise GenomicRangeOutOfBounds(
+                "Failed to extract subsequence: "
+                "genomic range out of bounds!")
+
         r = gr.to_uintr()
         return AltSeqBuilder(
             gr,

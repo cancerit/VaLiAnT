@@ -235,6 +235,16 @@ class GenomicRange(StrandedPositionRange):
     def __contains__(self, other) -> bool:
         return other.chromosome == self.chromosome and super().__contains__(other)
 
+    def overlaps_range(self, other: GenomicRange, unstranded: bool = False) -> bool:
+        return (
+            other.chromosome == self.chromosome and
+            (other.strand == self.strand if not unstranded else True) and
+            (
+                (self.start <= other.start <= self.end) or
+                (self.start <= other.end <= self.end)
+            )
+        )
+
     def contains_position(self, genomic_position: GenomicPosition) -> bool:
         return (
             genomic_position.chromosome == self.chromosome and
