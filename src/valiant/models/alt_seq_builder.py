@@ -150,7 +150,10 @@ class AltSeqBuilder:
                     alt_seq,
                     alt_offset=alt_offset,
                     ref_check=do_ref_check)
-                do_ref_check = ref_check
+
+                # Prevent reference checks on the following layers
+                do_ref_check = False
+
                 if correct_alt:
                     alt_offset += layer_alt_offset
 

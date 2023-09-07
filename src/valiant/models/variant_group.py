@@ -22,6 +22,7 @@ from typing import Generic, List, Tuple
 
 from .uint_range import UIntRange
 from .variant import BaseVariantT, sort_variants
+from ..errors import InvalidVariantRef
 
 
 @dataclass(frozen=True)
@@ -45,8 +46,15 @@ class VariantGroup(Generic[BaseVariantT], Sized):
         alt_seq: str = sequence
 
         for variant in self.variants:
+            offset: int = variant.start - start
+            if ref_check and variant.ref_length > 0:
+                exp_ref: str = sequence[offset:offset + variant.ref_length]
+                if variant.ref != exp_ref:
+                    raise InvalidVariantRef(
+                        f"Invalid variant at {variant.genomic_position}: "
+                        f"expected {variant.ref}, found {exp_ref}!")
             alt_seq = variant.mutate_from(
-                alt_seq, variant.start - start + alt_offset, ref_check=ref_check)
+                alt_seq, offset + alt_offset, ref_check=False)
 
             # Correct following variant position
             alt_offset += variant.alt_ref_delta
