@@ -90,18 +90,6 @@ class VariantRepositoryCollection:
             )
         )
 
-        # TEMPORARY
-        if background_variant_repository is not None:
-            # TODO: remove once these variants are supported
-            for variant in background_variant_repository._variants.values():
-                if variant.base_variant.alt_ref_delta != 0:
-                    logging.warning(
-                        "Currently unsupported background variant at "
-                        f"{variant.base_variant.genomic_position}!")
-                    raise NotImplementedError(
-                        "Background variants altering the length of the "
-                        "reference sequence are not yet supported!")
-
         # Load custom variants
         variant_repository = (
             _load_variant_repository(
