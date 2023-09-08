@@ -57,7 +57,7 @@ from ..constants import (
     MUTATION_TYPE_NON_CDS
 )
 from ..enums import MutationType, TargetonMutator
-from ..utils import get_constant_category, group_consecutive, map_filter_log
+from ..utils import get_constant_category, get_nullable_field, group_consecutive, map_filter_log
 
 MUTATION_TYPE_LABELS: Dict[int, str] = {
     MutationType.SYNONYMOUS.value: 'syn',
@@ -323,6 +323,13 @@ class OligoTemplate:
             mutation_collection,
             target_segment.start)
 
+    def _correct_mut_pos(self, df: pd.DataFrame) -> None:
+        """Convert the ALT mutation positions to REF (if they can differ)"""
+
+        if self.gpo:
+            df[META_MUT_POSITION] = df[META_MUT_POSITION].apply(
+                self.gpo.alt_to_ref_position).astype(np.int32)
+
     def _get_custom_variant_collection(self, options: Options) -> pd.DataFrame:
         renderer: CustomVariantOligoRenderer = CustomVariantOligoRenderer(
             self.ref_seq,
@@ -337,14 +344,18 @@ class OligoTemplate:
             return pd.DataFrame()
 
         df: pd.DataFrame = mc.df
-        df['oligo_name'] = pd.Series(
+
+        # Correct the mutation position before generating the name
+        self._correct_mut_pos(df)
+
+        df[META_OLIGO_NAME] = pd.Series(
             df.apply(lambda r: renderer.get_oligo_name(
                 r[META_VCF_ALIAS],
                 r[META_VAR_TYPE],
                 r[META_MUT_POSITION],
-                r[META_REF] if not pd.isnull(r[META_REF]) else None,
-                r[META_NEW] if not pd.isnull(r[META_NEW]) else None), axis=1), dtype='string')
-        df['mutator'] = get_constant_category(CUSTOM_MUTATOR, df.shape[0])
+                get_nullable_field(r, META_REF),
+                get_nullable_field(r, META_NEW)), axis=1), dtype='string')
+        df[META_MUTATOR] = get_constant_category(CUSTOM_MUTATOR, df.shape[0])
         return renderer.get_metadata_table(df, options)
 
     def _get_pam_variant_annotations(self, codon_table: CodonTable, n: int) -> pd.Categorical:
@@ -371,6 +382,11 @@ class OligoTemplate:
                 for i, segment in self.target_segments
             ])), key=lambda t: t[0].value)
         ], ignore_index=True) if self.target_segments else None
+
+        if region_mutations is not None:
+
+            # Correct the mutation position before generating the name
+            self._correct_mut_pos(region_mutations)
 
         # Compute global mutations (custom variants)
         if self.custom_variants:
