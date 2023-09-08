@@ -90,6 +90,12 @@ class PositionRange(UIntRange):
 
         return PositionRange(pos + 1, e)
 
+    def overlaps_range(self, other: UIntRange, unstranded: bool = False) -> bool:
+        return (
+            (self.start <= other.start <= self.end) or
+            (self.start <= other.end <= self.end)
+        )
+
 
 @dataclass(frozen=True)
 class StrandedPositionRange(PositionRange):
@@ -126,6 +132,12 @@ class StrandedPositionRange(PositionRange):
     @classmethod
     def to_plus_strand(cls, pr: PositionRange) -> StrandedPositionRange:
         return cls(pr.start, pr.end, '+')
+
+    def overlaps_range(self, other: StrandedPositionRange, unstranded: bool = False) -> bool:
+        if not unstranded and other.strand != self.strand:
+            return False
+
+        return super().overlaps_range(other)
 
 
 @dataclass(frozen=True)
@@ -248,11 +260,7 @@ class GenomicRange(StrandedPositionRange):
     def overlaps_range(self, other: GenomicRange, unstranded: bool = False) -> bool:
         return (
             other.chromosome == self.chromosome and
-            (other.strand == self.strand if not unstranded else True) and
-            (
-                (self.start <= other.start <= self.end) or
-                (self.start <= other.end <= self.end)
-            )
+            super().overlaps_range(other, unstranded=unstranded)
         )
 
     def contains_position(self, genomic_position: GenomicPosition) -> bool:

@@ -20,6 +20,7 @@ from collections.abc import Sized
 from dataclasses import dataclass
 from typing import Generic, List, Tuple
 
+from .base import PositionRange
 from .uint_range import UIntRange
 from .variant import BaseVariantT, sort_variants
 from ..errors import InvalidVariantRef
@@ -73,11 +74,11 @@ class VariantGroup(Generic[BaseVariantT], Sized):
 
         return VariantGroup(list(filter(var_in_range, self.variants)))
 
-    def overlaps(self, variant: BaseVariantT) -> bool:
+    def overlaps_range(self, gr: PositionRange) -> bool:
         return any(
-            (
-                variant.ref_start_pos.in_range(r.ref_range) or
-                variant.ref_end_pos.in_range(r.ref_range)
-            )
+            r.ref_range.overlaps_range(gr, unstranded=True)
             for r in self.variants
         )
+
+    def overlaps(self, variant: BaseVariantT) -> bool:
+        return self.overlaps_range(variant.ref_range)

@@ -68,7 +68,7 @@ def test_oligo_compute_mutations(targetons, mutator, pam_protection):
     rsr = ReferenceSequenceRanges.from_config(
         TargetonConfig('X', '+', 1, 22, 1, 22, (0, 0), (empty, empty, empty), empty))
 
-    ot = OligoTemplate(rsr, TRANSCRIPT_INFO, pam_ref_seq, frozenset({DUMMY_PAM_SGRNA_ID}), set(), adaptor_5, adaptor_3, segments)
+    ot = OligoTemplate(rsr, None, TRANSCRIPT_INFO, pam_ref_seq, frozenset({DUMMY_PAM_SGRNA_ID}), set(), adaptor_5, adaptor_3, segments)
     for _, target_segment in ot.target_segments:
         mutation_collections = target_segment.compute_mutations(aux)
         df = mutation_collections[mutator].df
@@ -117,7 +117,7 @@ def test_oligo_template_get_custom_variant_mutation():
     sgrna_ids = frozenset({x.sgrna_id for x in pam_variants})
     segment = TargetonOligoSegment(targeton, frozenset())
     ot = OligoTemplate(
-        rsr, TRANSCRIPT_INFO, pam_ref_seq, sgrna_ids, {custom_variant}, None, None, [segment])
+        rsr, None, TRANSCRIPT_INFO, pam_ref_seq, sgrna_ids, {custom_variant}, None, None, [segment])
 
     cvm = ot._get_custom_variant_mutation(custom_variant)
 

@@ -116,7 +116,7 @@ class BaseVariant:
 
     @property
     def ref_end(self) -> int:
-        return self.start + min(0, self.ref_length - 1)
+        return self.start + max(0, self.ref_length - 1)
 
     @property
     def ref_start_pos(self) -> GenomicPosition:

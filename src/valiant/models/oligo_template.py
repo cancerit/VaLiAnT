@@ -23,12 +23,14 @@ import logging
 from typing import Dict, Iterable, List, Optional, Set, FrozenSet, Tuple
 import numpy as np
 import pandas as pd
+
+from .background_variants import GenomicPositionOffsets
 from ..metadata_utils import get_mave_nt_pam_from_row, get_mave_nt_ref_from_row, set_pam_extended_ref_alt, set_ref, set_ref_meta
 from .codon_table import CodonTable
 from .oligo_segment import OligoSegment, TargetonOligoSegment
 from .refseq_ranges import ReferenceSequenceRanges
 from .targeton import PamProtCDSTargeton
-from .base import GenomicRange, TranscriptInfo
+from .base import GenomicRange, PositionRange, TranscriptInfo
 from .custom_variants import CustomVariantMutation, CustomVariantMutationCollection
 from .custom_variant_oligo_renderer import CustomVariantOligoRenderer
 from .mutated_sequences import MutationCollection
@@ -153,6 +155,7 @@ class OligoMutationCollection:
 class OligoTemplate:
     __slots__ = {
         'ref_ranges',
+        'gpo',
         'transcript_info',
         'ref_seq',
         'sgrna_ids',
@@ -162,7 +165,8 @@ class OligoTemplate:
         'segments'
     }
 
-    ref_ranges: ReferenceSequenceRanges
+    ref_ranges: ReferenceSequenceRanges  # corrected for background
+    gpo: Optional[GenomicPositionOffsets]
     transcript_info: Optional[TranscriptInfo]
     ref_seq: PamBgAltSeqBuilder
     sgrna_ids: FrozenSet[str]
@@ -264,10 +268,21 @@ class OligoTemplate:
                 variant.get_ref_range(self.strand)),
             self._get_custom_variant_sgrna_ids(variant))
 
+    def _get_custom_variant_range(self, variant: CustomVariant) -> PositionRange:
+        ref_gr = variant.base_variant.ref_range
+        if not self.gpo:
+            return ref_gr
+
+        alt_gr = self.gpo.ref_to_alt_range(ref_gr)
+        logging.debug(f"REF {ref_gr} -> ALT {alt_gr}")
+        return PositionRange(alt_gr.start, alt_gr.end)
+
     def _compute_custom_variants(self) -> CustomVariantMutationCollection:
 
         def non_overlapping(variant: CustomVariant) -> bool:
-            return not self.ref_seq.overlaps_bg(variant.base_variant)
+            # Convert to ALT coordinates before checking
+            return not self.ref_seq.overlaps_bg_range(
+                self._get_custom_variant_range(variant))
 
         def log_overlapping(variant: CustomVariant) -> str:
             return f"Custom variant at {variant.base_variant.genomic_position} " \

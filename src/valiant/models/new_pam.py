@@ -24,7 +24,7 @@ import logging
 from typing import Dict, FrozenSet, Generic, List, Optional, TypeVar
 
 from .alt_seq_builder import AltSeqBuilder, AltSeqBuilderT
-from .base import GenomicRange, StrandedPositionRange
+from .base import GenomicRange, PositionRange, StrandedPositionRange
 from .cds_alt_seq_builder import CdsAltSeqBuilder
 from .codon_table import CodonTable
 from .custom_variants import CustomVariant
@@ -166,6 +166,9 @@ class PamBgAltSeqBuilder(BasePamBgAltSeqBuilder[AltSeqBuilder]):
         """Does the variant overlap with any of the background variants?"""
 
         return self.ab.overlaps_layer(LAYER_BG, variant)
+
+    def overlaps_bg_range(self, gr: PositionRange) -> bool:
+        return self.ab.overlaps_layer_range(LAYER_BG, gr)
 
 
 @dataclass(frozen=True)

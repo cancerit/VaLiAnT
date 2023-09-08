@@ -85,7 +85,7 @@ def resize_rsr(rsr: ReferenceSequenceRanges, gpo: GenomicPositionOffsets) -> Ref
 
 
 def get_oligo_template(
-    rsr: ReferenceSequenceRanges,
+    rsr_ref: ReferenceSequenceRanges,
     ref: ReferenceSequenceRepository,
     cds: Optional[CDSContextRepository],
     bg_variants: Set[BaseVariant],
@@ -100,21 +100,26 @@ def get_oligo_template(
 
     # 1. Generate PAM protected reference sequence
 
-    def get_sequence(genomic_range: GenomicRange) -> ReferenceSequence:
-        seq: Optional[str] = ref.get_genomic_range_subsequence(
-            rsr.ref_range, genomic_range.start, genomic_range.end)
-        if not seq:
-            raise ValueError("Sequence not found!")
-        return ReferenceSequence(seq, genomic_range)
+    # Fetch reference sequence
+    ref_seq = ref.get_genomic_range_sequence(rsr_ref.ref_range)
+    if not ref_seq:
+        raise ValueError("Sequence not found!")
 
-    pam_ref_seq = PamBgAltSeqBuilder.from_ref_seq(
-        get_sequence(rsr.ref_range), bg_variant_ls, pam_variant_ls)
+    pam_ref_seq = PamBgAltSeqBuilder.from_ref(
+        rsr_ref.ref_range, ref_seq, bg_variant_ls, pam_variant_ls)
 
-    offsets = GenomicPositionOffsets(
-        pam_ref_seq.start,
-        len(pam_ref_seq.ref_seq),
-        pam_ref_seq.bg_variants)
-    rsr_alt = resize_rsr(rsr, offsets)
+    offsets: Optional[GenomicPositionOffsets] = None
+
+    # TODO: to redesign the sequence splitting when ALT differs
+    rsr = rsr_ref
+    if bg_variants:
+        offsets = GenomicPositionOffsets(
+            pam_ref_seq.start,
+            len(pam_ref_seq.ref_seq),
+            pam_ref_seq.bg_variants
+        )
+        rsr_alt = resize_rsr(rsr_ref, offsets)
+        rsr = rsr_alt
 
     # 2. Get constant regions
 
@@ -195,8 +200,9 @@ def get_oligo_template(
                 return transcript_info
         return None
 
+    # TODO: use ALT instead
     potential_target_segments: List[OligoSegment] = list(map(
-        get_oligo_segment, rsr.target_regions))
+        get_oligo_segment, rsr_ref.target_regions))
 
     # 4. Assemble regions in order
     segments: List[OligoSegment] = [const_region_1] if const_region_1 else []
@@ -210,6 +216,7 @@ def get_oligo_template(
 
     return OligoTemplate(
         rsr,
+        offsets,
         transcript_info,
         pam_ref_seq,
         rsr.sgrna_ids,

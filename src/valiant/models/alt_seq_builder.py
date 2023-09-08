@@ -21,7 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional, TypeVar
 
-from .base import GenomicPosition, GenomicRange
+from .base import GenomicPosition, GenomicRange, PositionRange
 from .dna_str import DnaStr
 from .uint_range import UIntRange
 from .variant import BaseVariant, BaseVariantT as VariantT
@@ -189,7 +189,10 @@ class AltSeqBuilder:
         return self.variant_groups[variant_group_index]
 
     def overlaps_layer(self, variant_group_index: int, variant: BaseVariant) -> bool:
-        return self.get_variant_group(variant_group_index).overlaps(variant)
+        return self.overlaps_layer_range(variant_group_index, variant.ref_range)
+
+    def overlaps_layer_range(self, variant_group_index: int, gr: PositionRange) -> bool:
+        return self.get_variant_group(variant_group_index).overlaps_range(gr)
 
     def mutate_alt(self, variant: BaseVariant, variant_layer: Optional[int] = None, ref_check: bool = False) -> str:
         if not variant.in_range(self.gr):

@@ -91,7 +91,7 @@ def test_oligo_template_get_custom_variant_sgrna_ids(variant, non_cds_region):
         TargetonConfig('X', '+', 1, seq_length, 1, seq_length, (0, 0), (empty, empty, empty), empty))
 
     ot = OligoTemplate(
-        rsr, None, pam_seq, frozenset(all_sgrna_ids), {custom_variant}, None, None, segments)
+        rsr, None, None, pam_seq, frozenset(all_sgrna_ids), {custom_variant}, None, None, segments)
 
     # Get sgRNA of the PAM variants in codons that are included in the custom mutation
     sgrna_ids = ot._get_custom_variant_sgrna_ids(custom_variant)
