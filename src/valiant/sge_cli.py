@@ -357,21 +357,13 @@ def get_oligo_templates(
     return ots
 
 
-def get_oligo_template_qc_info(
-    ref: ReferenceSequenceRepository,
-    ot: OligoTemplate
-) -> List[str]:
-
+def get_oligo_template_qc_info(ot: OligoTemplate) -> List[str]:
     sequences: List[str] = [
         segment.sequence
         for segment in ot.ref_segments
     ]
 
     ranges: List[str] = [str(segment.start) for segment in ot.ref_segments]
-
-    if ref.get_genomic_range_sequence(ot.ref_range) != ''.join(sequences):
-        logging.critical("Invalid reference sequence splitting!")
-        sys.exit(1)
 
     return [ot.name, ot.ref_range.region] + list(chain.from_iterable(zip(ranges, sequences)))
 
@@ -488,7 +480,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         sys.exit(1)
 
     def get_qc_row(ot: OligoTemplate) -> List[str]:
-        return get_oligo_template_qc_info(ref, ot)
+        return get_oligo_template_qc_info(ot)
 
     write_reference_sequences(
         map(get_qc_row, oligo_templates),
