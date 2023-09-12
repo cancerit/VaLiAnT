@@ -20,13 +20,12 @@ import abc
 from dataclasses import dataclass
 from typing import Dict, FrozenSet, Generic, List, Optional
 
-from valiant.enums import MutationType, TargetonMutator
-
-from valiant.models.base import GenomicRange, StrandedPositionRange
-from valiant.models.codon_table import CodonTable
-from valiant.models.mutated_sequences import MutationCollection
-from valiant.models.snv_table import AuxiliaryTables
-from valiant.models.targeton import CDSTargeton, ITargeton, Targeton, TargetonT, PamProtected
+from .base import GenomicRange, StrandedPositionRange
+from .codon_table import CodonTable
+from .mutated_sequences import MutationCollection
+from .snv_table import AuxiliaryTables
+from .targeton import CDSTargeton, ITargeton, PamProtected, Targeton, TargetonT
+from ..enums import MutationType, TargetonMutator
 
 
 @dataclass
