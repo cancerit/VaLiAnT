@@ -90,6 +90,14 @@ def encode_pam_mutation_types(mutation_types: Iterable[Optional[MutationType]]) 
     ])
 
 
+def correct_mut_pos(gpo: Optional[GenomicPositionOffsets], df: pd.DataFrame) -> None:
+    """Convert the ALT mutation positions to REF (if they can differ)"""
+
+    if gpo is not None:
+        df[META_MUT_POSITION] = df[META_MUT_POSITION].apply(
+            gpo.alt_to_ref_position).astype(np.int32)
+
+
 @dataclass(init=False)
 class RegionOligoRenderer(BaseOligoRenderer):
     __slots__ = {
@@ -130,13 +138,15 @@ class OligoMutationCollection:
         'renderer',
         'mutator',
         'mutation_collection',
-        'target_region_start'
+        'target_region_start',
+        'gpo'
     }
 
     renderer: RegionOligoRenderer
     mutator: TargetonMutator
     mutation_collection: MutationCollection
     target_region_start: int
+    gpo: Optional[GenomicPositionOffsets]
 
     def get_metadata_table(self, options: Options) -> pd.DataFrame:
         if self.mutation_collection.is_empty:
@@ -145,7 +155,11 @@ class OligoMutationCollection:
 
         df: pd.DataFrame = self.mutation_collection.df  # type: ignore
         df[META_MUTATOR] = get_constant_category(self.mutator.value, df.shape[0])
+
+        # Correct the mutation position before generating the name
         df[META_MUT_POSITION] += self.target_region_start
+        correct_mut_pos(self.gpo, df)
+
         df[META_OLIGO_NAME] = self.renderer.get_oligo_names_from_dataframe(df)
 
         return self.renderer.get_metadata_table(df, options)
@@ -321,14 +335,8 @@ class OligoTemplate:
             renderer,
             mutator,
             mutation_collection,
-            target_segment.start)
-
-    def _correct_mut_pos(self, df: pd.DataFrame) -> None:
-        """Convert the ALT mutation positions to REF (if they can differ)"""
-
-        if self.gpo:
-            df[META_MUT_POSITION] = df[META_MUT_POSITION].apply(
-                self.gpo.alt_to_ref_position).astype(np.int32)
+            target_segment.start,
+            self.gpo)
 
     def _get_custom_variant_collection(self, options: Options) -> pd.DataFrame:
         renderer: CustomVariantOligoRenderer = CustomVariantOligoRenderer(
@@ -346,7 +354,7 @@ class OligoTemplate:
         df: pd.DataFrame = mc.df
 
         # Correct the mutation position before generating the name
-        self._correct_mut_pos(df)
+        correct_mut_pos(self.gpo, df)
 
         df[META_OLIGO_NAME] = pd.Series(
             df.apply(lambda r: renderer.get_oligo_name(
@@ -382,11 +390,6 @@ class OligoTemplate:
                 for i, segment in self.target_segments
             ])), key=lambda t: t[0].value)
         ], ignore_index=True) if self.target_segments else None
-
-        if region_mutations is not None:
-
-            # Correct the mutation position before generating the name
-            self._correct_mut_pos(region_mutations)
 
         # Compute global mutations (custom variants)
         if self.custom_variants:
