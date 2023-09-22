@@ -17,13 +17,12 @@
 #############################
 
 from __future__ import annotations
+
 from collections.abc import Sized
 from dataclasses import dataclass
-from itertools import groupby
-import logging
-from typing import List, Tuple
+from typing import List
 
-from .base import GenomicPosition, PositionRange, GenomicRange, StrandedPositionRange
+from .base import GenomicPosition, GenomicRange, PositionRange
 from ..errors import GenomicRangeOutOfBounds, NonUniqueError
 from ..sgrna_utils import get_codon_index, get_codon_indices_in_range
 from ..utils import has_duplicates, is_dna
@@ -81,7 +80,7 @@ class CdsReferenceSequence(ReferenceSequence):
         if (
             self.cds_prefix_length > 2 or
             self.cds_suffix_length > 2 or
-            self.ext_ref_seq_length % 3 != 0
+            self.ext_seq_length % 3 != 0
         ):
             raise ValueError("Invalid extended CDS sequence length: partial codons!")
 
@@ -103,7 +102,7 @@ class CdsReferenceSequence(ReferenceSequence):
 
     @property
     def codon_count(self) -> int:
-        return self.ext_seq_len // 3
+        return self.ext_seq_length // 3
 
     @property
     def last_codon_index(self) -> int:
@@ -114,10 +113,10 @@ class CdsReferenceSequence(ReferenceSequence):
         return f"{self.cds_prefix}{self.sequence}{self.cds_suffix}"
 
     def get_codon_index_at(self, p: GenomicPosition) -> int:
-        return get_codon_index(self.frame, self.genomic_range.start, p)
+        return get_codon_index(self.frame, self.genomic_range.start, p.position)
 
     def get_codon_indices_at(self, ps: List[GenomicPosition], no_duplicate_codons: bool = False) -> List[int]:
-        codon_indices = [self.get_ref_codon_index(x.position) for x in ps]
+        codon_indices = list(map(self.get_codon_index_at, ps))
 
         # Verify no two variants affect the same codon
         if no_duplicate_codons and has_duplicates(codon_indices):
