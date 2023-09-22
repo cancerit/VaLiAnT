@@ -16,5 +16,28 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from .seq import Seq as Sequence
-from .ref_seq import RefSeq as ReferenceSequence
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from .base import GenomicRange
+from .seq import Seq
+
+
+@dataclass(frozen=True)
+class RefSeq(Seq):
+    """Non-empty DNA sequence with genomic coordinates"""
+
+    __slots__ = [*Seq.__slots__, 'genomic_range']
+
+    genomic_range: GenomicRange
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if len(self.sequence) != len(self.genomic_range):
+            raise ValueError("Sequence and genomic range have different lengths!")
+
+    def get_subsequence(self, genomic_range: GenomicRange) -> RefSeq:
+        start, end = self.genomic_range.get_relative_subrange(genomic_range)
+        seq = self.sequence.slice(start, end)
+        return RefSeq(seq, genomic_range)

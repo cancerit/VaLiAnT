@@ -38,7 +38,7 @@ class CDNA(Sized):
         return StrandedPositionRange(1, len(self), '+')
 
     def get_subsequence(self, pr: PositionRange) -> Sequence:
-        return self.seq.get_rel_subsequence(pr)
+        return self.seq.get_rel_subsequence(1, pr)
 
     def get_subsequence_string(self, pr: PositionRange) -> str:
         return self.get_subsequence(pr).sequence

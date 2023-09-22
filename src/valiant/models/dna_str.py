@@ -22,11 +22,20 @@ from ..utils import is_dna
 
 
 class DnaStr(str):
+    """Non-ambiguous DNA string"""
+
     def __init__(self, s: str) -> None:
         super().__init__()
         if self and not is_dna(self):
             raise ValueError(f"Invalid DNA sequence '{self}'!")
 
+    @property
+    def is_empty(self) -> bool:
+        return len(self) == 0
+
     @classmethod
     def empty(cls) -> DnaStr:
         return cls('')
+
+    def slice(self, start: int, end: int) -> DnaStr:
+        return DnaStr(self[start:end])
