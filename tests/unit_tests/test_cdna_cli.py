@@ -27,6 +27,7 @@ from valiant.models.base import PositionRange, StrandedPositionRange
 from valiant.models.cdna import CDNA, AnnotatedCDNA
 from valiant.models.cdna_seq_repository import CDNASequenceRepository
 from valiant.models.cdna_targeton_configs import CDNATargetonConfig, CDNATargetonConfigCollection
+from valiant.models.dna_str import DnaStr
 from valiant.models.mutated_sequences import MutationCollection
 from valiant.models.sequence_info import SequenceInfo
 from valiant.models.sequences import Sequence
@@ -38,7 +39,7 @@ from .utils import load_codon_table
 POS_STRAND_SET = frozenset(['+'])
 
 cdna_1_id = 'cdna_1'
-cdna_1 = CDNA(Sequence("ATGACCGGTTTATACTGAGGTGTGTGTA"), SequenceInfo.empty())
+cdna_1 = CDNA(Sequence(DnaStr("ATGACCGGTTTATACTGAGGTGTGTGTA")), SequenceInfo.empty())
 cdna_1_annot = AnnotatedCDNA(cdna_1.seq, cdna_1.seq_info, StrandedPositionRange(1, 18, '+'))
 cdna_id_map = {
     cdna_1_id: cdna_1

@@ -20,6 +20,7 @@ import pytest
 from valiant.enums import TargetonMutator
 from valiant.models.base import GenomicPosition, GenomicRange, TranscriptInfo
 from valiant.models.custom_variants import CustomVariant
+from valiant.models.dna_str import DnaStr
 from valiant.models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
 from valiant.models.oligo_template import OligoTemplate, TargetonOligoSegment
 from valiant.models.pam_protection import PamVariant
@@ -27,6 +28,7 @@ from valiant.models.refseq_ranges import ReferenceSequenceRanges, TargetonConfig
 from valiant.models.sequences import ReferenceSequence
 from valiant.models.targeton import PamProtCDSTargeton
 from valiant.models.variant import SubstitutionVariant
+
 from .constants import DUMMY_PAM_PROTECTION_NT, DUMMY_PAM_SGRNA_ID
 from .utils import get_aux_tables, get_pam_bg_alt_seq_builder, get_ref_seq
 
@@ -43,7 +45,7 @@ aux = get_aux_tables()
 @pytest.mark.parametrize('mutator', [TargetonMutator.DEL1, TargetonMutator.SNV])
 def test_oligo_compute_mutations(targetons, mutator, pam_protection):
     gr = GenomicRange('X', 1, sum(len(seq) for seq in targetons), '+')
-    ref_seq = ReferenceSequence(''.join(targetons), gr)
+    ref_seq = ReferenceSequence(DnaStr(''.join(targetons)), gr)
 
     pam_ref_seq = get_pam_bg_alt_seq_builder(ref_seq, pam_protection)
 
@@ -107,7 +109,7 @@ def test_oligo_template_get_custom_variant_mutation():
 
     gr = GenomicRange('X', 1, len(ref_seq), '+')
     pam_ref_seq = PamBgAltSeqBuilder.from_ref_seq(
-        ReferenceSequence(ref_seq, gr), [], list(pam_variants))
+        ReferenceSequence(DnaStr(ref_seq), gr), [], list(pam_variants))
 
     print(pam_ref_seq)
 

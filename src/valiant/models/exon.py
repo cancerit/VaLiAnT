@@ -17,38 +17,21 @@
 #############################
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 from itertools import chain
-from typing import Dict, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
+
 import numpy as np
 import pandas as pd
 from pyranges import PyRanges
+
 from .base import GenomicRange, TranscriptInfo
-from ..loaders.gff import load_gff_cds
+from .exon_ext_info import ExonExtInfo
+from .exon_info import ExonInfo
 from ..utils import validate_strand
 
 GenomicRangePair = Tuple[Optional[GenomicRange], Optional[GenomicRange]]
-
-
-def pyrange_to_genomic_range(k: Tuple[str, str], record) -> GenomicRange:
-    return GenomicRange(k[0], record.Start + 1, record.End, k[1])
-
-
-@dataclass
-class ExonInfo:
-    __slots__ = {'transcript_info', 'genomic_range', 'exon_index'}
-
-    transcript_info: TranscriptInfo
-    genomic_range: GenomicRange
-    exon_index: int
-
-    @property
-    def transcript_id(self) -> str:
-        return self.transcript_info.transcript_id
-
-    @property
-    def gene_id(self) -> str:
-        return self.transcript_info.gene_id
 
 
 @dataclass(init=False)
@@ -68,7 +51,7 @@ class CDSContextRepository:
         self._target_ranges = target_ranges
 
     # TODO: investigate whether binding the chromosome and strand to each transcript
-    # would speed up things (only one DataFrame to go through)
+    #  would speed up things (only one DataFrame to go through)
     def get_cds_by_index(self, transcript_id: str, exon_index: int) -> GenomicRange:
         exon_ranges: PyRanges = self.cds_ranges[
             (self.cds_ranges.transcript_id == transcript_id)
@@ -95,64 +78,59 @@ class CDSContextRepository:
 
     def get_cds_genomic_ranges(
         self,
-        transcript_id: str,
-        strand: str,
-        exon_index: int,
-        genomic_range: GenomicRange,
-        delta_5p: int,
-        delta_3p: int,
-        cds_ext_5_length: int,
-        cds_ext_3_length: int
+        cds: ExonExtInfo
     ) -> GenomicRangePair:
+        exon_index: int = cds.exon_info.exon_index
+        genomic_range = cds.exon_info.genomic_range
 
         def get_ext_5() -> Optional[GenomicRange]:
 
             def get_ext_5_from_previous_exon() -> GenomicRange:
                 return self.get_cds_by_index(
-                    transcript_id,
+                    cds.exon_info.transcript_id,
                     exon_index - 1
-                ).get_from_3_prime(cds_ext_5_length)
+                ).get_from_3_prime(cds.cds_ext_5_length)
 
-            if cds_ext_5_length == 0:
+            if cds.cds_ext_5_length == 0:
                 return None
 
             if exon_index == 0:
                 raise ValueError("The first exon can't be out-of-frame!")
 
-            if delta_5p == 1 and cds_ext_5_length > 1:
+            if cds.delta_5p == 1 and cds.cds_ext_5_length > 1:
                 raise ValueError("Unsupported partial exon: CDS extension would include both same and previous exon nucleotides!")
 
             return (
-                get_ext_5_from_previous_exon() if delta_5p == 0 else
-                genomic_range.get_before_5_prime(cds_ext_5_length)
+                get_ext_5_from_previous_exon() if cds.delta_5p == 0 else
+                genomic_range.get_before_5_prime(cds.cds_ext_5_length)
             )
 
         def get_ext_3() -> Optional[GenomicRange]:
 
             def get_ext_3_from_next_exon() -> GenomicRange:
                 return self.get_cds_by_index(
-                    transcript_id,
+                    cds.exon_info.transcript_id,
                     exon_index + 1
-                ).get_from_5_prime(cds_ext_3_length)
+                ).get_from_5_prime(cds.cds_ext_3_length)
 
-            if cds_ext_3_length == 0:
+            if cds.cds_ext_3_length == 0:
                 return None
 
-            if delta_3p == 1 and cds_ext_3_length > 1:
+            if cds.delta_3p == 1 and cds.cds_ext_3_length > 1:
                 raise ValueError("Unsupported partial exon: CDS extension would include both same and next exon nucleotides!")
 
             return (
-                get_ext_3_from_next_exon() if delta_3p == 0 else
-                genomic_range.get_past_3_prime(cds_ext_3_length)
+                get_ext_3_from_next_exon() if cds.delta_3p == 0 else
+                genomic_range.get_past_3_prime(cds.cds_ext_3_length)
             )
 
-        validate_strand(strand)
+        validate_strand(cds.strand)
 
-        if cds_ext_5_length == 0 and cds_ext_3_length == 0:
+        if cds.cds_ext_5_length == 0 and cds.cds_ext_3_length == 0:
             return None, None
 
         return (
-            (get_ext_5(), get_ext_3()) if strand == '+' else
+            (get_ext_5(), get_ext_3()) if cds.strand == '+' else
             (get_ext_3(), get_ext_5())
         )
 
@@ -194,38 +172,19 @@ class CDSContextRepository:
 
         exonic_ranges['cds_ext_3_length'] = (3 - (exonic_ranges.len + exonic_ranges.frame) % 3) % 3
 
-        target_cds_extension_info: Dict[GenomicRange, Tuple[str, str, str, int, int, int, int, int]] = {
-            pyrange_to_genomic_range(k, record): (
-                record.gene_id,
-                record.transcript_id,
-                record.Strand,
-                record.exon_index,
-                record.delta_5p,
-                record.delta_3p,
-                record.frame,
-                record.cds_ext_3_length
-            )
+        target_cds_extension_info: List[ExonExtInfo] = [
+            ExonExtInfo.from_pyr(k, record)
             for k, ranges in PyRanges(df=exonic_ranges)
             for record in ranges.itertuples()
-        }
+        ]
         del exonic_ranges
 
         # TODO: optimise the retrieval of exons by transcript and index
         self._target_cds_contexts = {
-            genomic_range: (
-                ExonInfo(TranscriptInfo(gene_id, transcript_id), genomic_range, exon_index),
-                self.get_cds_genomic_ranges(
-                    transcript_id, strand, exon_index, genomic_range, delta_5p, delta_3p, cds_ext_5_length, cds_ext_3_length))
-            for genomic_range, (
-                gene_id,
-                transcript_id,
-                strand,
-                exon_index,
-                delta_5p,
-                delta_3p,
-                cds_ext_5_length,
-                cds_ext_3_length
-            ) in target_cds_extension_info.items()
+            x.exon_info.genomic_range: (
+                x.exon_info,
+                self.get_cds_genomic_ranges(x))
+            for x in target_cds_extension_info
         }
 
     def get_cds_extensions(self, genomic_range: GenomicRange) -> Optional[GenomicRangePair]:
@@ -251,51 +210,3 @@ class CDSContextRepository:
     def get_transcript_info(self, genomic_range: GenomicRange) -> Optional[TranscriptInfo]:
         exon_info: Optional[ExonInfo] = self.get_exon_info(genomic_range)
         return exon_info.transcript_info if exon_info else None
-
-
-@dataclass
-class UTRRepository:
-    __slots__ = {'utr_ranges'}
-
-    utr_ranges: PyRanges
-
-    def get_transcript_infos(self, ref_ranges: PyRanges) -> Dict[GenomicRange, TranscriptInfo]:
-        if not ref_ranges:
-            return {}
-
-        matches: PyRanges = ref_ranges.join(self.utr_ranges, strandedness='same')
-
-        if not matches:
-            return {}
-
-        return {
-            pyrange_to_genomic_range(k, record): TranscriptInfo(
-                record.gene_id,
-                record.transcript_id)
-            for k, ranges in matches
-            for record in ranges.itertuples()
-        }
-
-
-@dataclass
-class AnnotationRepository:
-    __slots__ = {'cds', 'utr'}
-
-    cds: Optional[CDSContextRepository]
-    utr: Optional[UTRRepository]
-
-    @classmethod
-    def from_ranges(
-        cls,
-        cds_ranges: Optional[PyRanges] = None,
-        utr_ranges: Optional[PyRanges] = None
-    ) -> AnnotationRepository:
-        return cls(
-            CDSContextRepository(cds_ranges) if cds_ranges is not None else None,
-            UTRRepository(utr_ranges) if utr_ranges is not None else None
-        )
-
-    @classmethod
-    def from_gff(cls, fp: str) -> AnnotationRepository:
-        cds_ranges, utr_ranges = load_gff_cds(fp)
-        return cls.from_ranges(cds_ranges, utr_ranges)

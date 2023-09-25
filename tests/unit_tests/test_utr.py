@@ -20,7 +20,7 @@ import pandas as pd
 from pyranges import from_string
 import pytest
 from valiant.models.base import GenomicRange, TranscriptInfo
-from valiant.models.exon import UTRRepository
+from valiant.models.utr_repository import UTRRepository
 
 UTR_RANGES = from_string("""
 Chromosome	Start	End	Strand	gene_id	transcript_id

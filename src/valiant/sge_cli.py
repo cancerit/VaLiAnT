@@ -31,7 +31,8 @@ from .models.base import GenomicRange
 from .models.codon_table import CodonTable
 from .models.custom_variants import CustomVariant
 from .models.dna_str import DnaStr
-from .models.exon import AnnotationRepository, CDSContextRepository, GenomicRangePair, TranscriptInfo
+from .models.exon import CDSContextRepository, GenomicRangePair, TranscriptInfo
+from .models.annotation_repository import AnnotationRepository
 from .models.metadata_table import MetadataTable
 from .models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
 from .models.oligo_generation_info import OligoGenerationInfo

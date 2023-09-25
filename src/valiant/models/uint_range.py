@@ -47,7 +47,7 @@ class UIntRange(Sized, Container):
         if self.end < 0:
             raise ValueError("Invalid range end!")
         if self.end < self.start:
-            raise ValueError("Invalid range!")
+            raise ValueError(f"Invalid range [{self.start}, {self.end}]!")
 
     def __len__(self) -> int:
         return self.end - self.start + 1
@@ -69,6 +69,11 @@ class UIntRange(Sized, Container):
             self.end < other.end if self.start == other.start else
             self.start < other.start
         )
+
+    def __add__(self, b) -> UIntRange:
+        if isinstance(b, int):
+            return UIntRange(self.start + b, self.end + b)
+        err_unsupported_operand()
 
     def __sub__(self, b) -> UIntRange:
         if isinstance(b, int):

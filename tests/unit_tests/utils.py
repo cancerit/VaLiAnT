@@ -23,11 +23,13 @@ from typing import List
 import pandas as pd
 from valiant.models.base import GenomicPosition, GenomicRange
 from valiant.models.codon_table import CodonTable
+from valiant.models.dna_str import DnaStr
 from valiant.models.new_pam import PamBgAltSeqBuilder
 from valiant.models.pam_protection import PamVariant
 from valiant.models.sequences import ReferenceSequence
 from valiant.models.snv_table import AuxiliaryTables
 from valiant.models.targeton import Targeton
+
 from .constants import DUMMY_PAM_PROTECTION_NT, DUMMY_PAM_SGRNA_ID, CODON_TABLE_FP, FRAMES, STRANDS
 
 cds_extension_slices = {
@@ -74,7 +76,7 @@ def seq2triplets(seq):
 
 def get_ref_seq(seq, chromosome='X', strand='+', pos=1):
     gr = GenomicRange(chromosome, pos, pos + len(seq) - 1, strand)
-    return ReferenceSequence(seq, gr)
+    return ReferenceSequence(DnaStr(seq), gr)
 
 
 def get_consecutive_pam_variants(

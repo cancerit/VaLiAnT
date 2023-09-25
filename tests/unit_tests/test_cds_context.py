@@ -19,8 +19,10 @@
 import pandas as pd
 from pyranges import PyRanges
 import pytest
-from valiant.models.base import GenomicRange
+
+from valiant.models.base import GenomicRange, TranscriptInfo
 from valiant.models.exon import ExonInfo, CDSContextRepository
+from valiant.models.exon_ext_info import ExonExtInfo
 
 PYRANGES_FIELDS = ['Chromosome', 'Strand', 'Start', 'End']
 GID = 'GENE_ID_001'
@@ -81,7 +83,9 @@ def test_cds_context_repository_get_cds_genomic_ranges(strand, len5p, len3p, exp
     transcript_id = TID
     exon_index = 1
     ccr = CDSContextRepository(PyRanges(df=CDS_RANGES_DF))
-    cds_pre, cds_suf = ccr.get_cds_genomic_ranges(transcript_id, strand, exon_index, GR, 0, 0, len5p, len3p)
+    cds_pre, cds_suf = ccr.get_cds_genomic_ranges(ExonExtInfo(
+        ExonInfo(TranscriptInfo("GENE_ID", transcript_id), GR, exon_index),
+        strand, 0, 0, len5p, len3p))
 
     assert cds_pre == exp_cds_pre
     assert cds_suf == exp_cds_suf

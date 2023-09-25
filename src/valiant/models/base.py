@@ -183,6 +183,12 @@ class GenomicRange(StrandedPositionRange):
         ):
             raise ValueError("Invalid genomic range!")
 
+    @classmethod
+    def from_pyr(cls, k: Tuple[str, str], record) -> GenomicRange:
+        """Construct from a PyRange data frame key and record"""
+
+        return cls(k[0], record.Start + 1, record.End, k[1])
+
     @property
     def region(self) -> str:
         return get_region(self.chromosome, self.start, self.end)
