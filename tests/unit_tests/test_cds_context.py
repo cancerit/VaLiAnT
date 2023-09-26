@@ -83,7 +83,7 @@ def test_cds_context_repository_get_cds_genomic_ranges(strand, len5p, len3p, exp
     transcript_id = TID
     exon_index = 1
     ccr = CDSContextRepository(PyRanges(df=CDS_RANGES_DF))
-    cds_pre, cds_suf = ccr.get_cds_genomic_ranges(ExonExtInfo(
+    cds_pre, cds_suf = ccr.get_exon_ext_genomic_ranges(ExonExtInfo(
         ExonInfo(TranscriptInfo("GENE_ID", transcript_id), GR, exon_index),
         strand, 0, 0, len5p, len3p))
 

@@ -36,7 +36,16 @@ GenomicRangePair = Tuple[Optional[GenomicRange], Optional[GenomicRange]]
 
 @dataclass(init=False)
 class CDSContextRepository:
-    __slots__ = {'cds_ranges', '_target_ranges', '_target_cds_contexts'}
+    """
+    Positional and reading frame information on the transcript exons
+
+    - cds_ranges: genomic ranges of all transcript exons
+    - _target_ranges: regions of interest (to filter the exons)
+    - _target_cds_contexts: non-adjacent nucleotide genomic ranges of the
+      liminal codons of the exons of interest
+    """
+
+    __slots__ = ['cds_ranges', '_target_ranges', '_target_cds_contexts']
 
     cds_ranges: PyRanges
     _target_ranges: Optional[PyRanges]
@@ -76,10 +85,15 @@ class CDSContextRepository:
         row = rows[0]
         return GenomicRange(row[0], row[2] + 1, row[3], row[1])
 
-    def get_cds_genomic_ranges(
+    def get_exon_ext_genomic_ranges(
         self,
         cds: ExonExtInfo
     ) -> GenomicRangePair:
+        """
+        Retrieve the genomic ranges of the non-adjacent nucleotides of the codons
+        crossing the exon boundaries, if any
+        """
+
         exon_index: int = cds.exon_info.exon_index
         genomic_range = cds.exon_info.genomic_range
 
@@ -183,7 +197,7 @@ class CDSContextRepository:
         self._target_cds_contexts = {
             x.exon_info.genomic_range: (
                 x.exon_info,
-                self.get_cds_genomic_ranges(x))
+                self.get_exon_ext_genomic_ranges(x))
             for x in target_cds_extension_info
         }
 
