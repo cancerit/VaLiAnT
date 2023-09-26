@@ -19,6 +19,7 @@
 import pytest
 
 from valiant.models.base import GenomicRange, GenomicPosition
+from valiant.models.dna_str import DnaStr
 from valiant.models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
 from valiant.models.refseq_ranges import ReferenceSequenceRanges, TargetonConfig
 from valiant.models.sequences import ReferenceSequence
@@ -28,7 +29,6 @@ from valiant.models.oligo_template import OligoTemplate
 from valiant.models.targeton import PamProtTargeton, PamProtCDSTargeton
 from valiant.models.pam_protection import PamVariant
 from valiant.models.variant import DeletionVariant, SubstitutionVariant, InsertionVariant
-
 
 CHR = 'X'
 STRAND = '+'
@@ -58,7 +58,7 @@ def test_oligo_template_get_custom_variant_sgrna_ids(variant, non_cds_region):
         for sgrna_id, offset in zip(all_sgrna_ids, pam_variant_offsets)
     ]
     ref_seq = ReferenceSequence(
-        'A' * seq_length, GenomicRange(CHR, seq_start, seq_start + seq_length - 1, STRAND))
+        DnaStr('A' * seq_length), GenomicRange(CHR, seq_start, seq_start + seq_length - 1, STRAND))
 
     pam_seq = PamBgAltSeqBuilder.from_ref_seq(
         ref_seq, [], pam_variants)

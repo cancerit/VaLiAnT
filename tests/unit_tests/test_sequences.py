@@ -19,6 +19,7 @@
 from contextlib import nullcontext
 import pytest
 from valiant.models.base import GenomicRange
+from valiant.models.dna_str import DnaStr
 from valiant.models.sequences import Sequence, ReferenceSequence
 
 
@@ -31,7 +32,7 @@ def test_sequence_init(seq, valid):
     with pytest.raises(ValueError) if not valid else nullcontext():
 
         # Initialise sequence
-        sequence = Sequence(seq)
+        sequence = Sequence(DnaStr(seq))
 
     if valid:
 
@@ -49,7 +50,7 @@ def test_reference_sequence_init(seq, start, end, valid):
     with pytest.raises(ValueError) if not valid else nullcontext():
 
         # Initialise reference sequence
-        ReferenceSequence(seq, gr)
+        ReferenceSequence(DnaStr(seq), gr)
 
 
 def test_reference_sequence_get_subsequence():
@@ -58,7 +59,7 @@ def test_reference_sequence_get_subsequence():
     gr_sub = GenomicRange('X', 100, 102, '+')
 
     # Initialise reference sequence
-    ref_seq = ReferenceSequence(seq, gr)
+    ref_seq = ReferenceSequence(DnaStr(seq), gr)
 
     # Extract reference subsequence
     sub_ref_seq = ref_seq.get_subsequence(gr_sub)

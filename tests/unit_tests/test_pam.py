@@ -19,6 +19,7 @@
 import pytest
 from contextlib import nullcontext
 from valiant.models.base import GenomicPosition, GenomicRange
+from valiant.models.dna_str import DnaStr
 from valiant.models.new_pam import PamBgAltSeqBuilder
 from valiant.models.sequences import ReferenceSequence
 from valiant.models.pam_protection import PamVariant
@@ -38,7 +39,7 @@ def test_pam_protected_sequence_from_reference_sequence(seq, pos, ref, alt, ppse
     variant = PamVariant(GenomicPosition(chromosome, pos), ref, alt, 'sgrna-1')
 
     gr = GenomicRange(chromosome, start, end, '+')
-    ref_seq = ReferenceSequence(seq, gr)
+    ref_seq = ReferenceSequence(DnaStr(seq), gr)
     with pytest.raises(Exception) if not valid else nullcontext():
         pam_ref_seq = PamBgAltSeqBuilder.from_ref_seq(
             ref_seq, [], [variant])
