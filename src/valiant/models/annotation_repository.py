@@ -24,14 +24,16 @@ from typing import Optional
 from pyranges import PyRanges
 
 from .exon import CDSContextRepository
+from .exon_repository import ExonRepository
 from .utr_repository import UTRRepository
 from ..loaders.gff import load_gff_cds
 
 
 @dataclass
 class AnnotationRepository:
-    __slots__ = ['cds', 'utr']
+    __slots__ = ['exons', 'cds', 'utr']
 
+    exons: Optional[ExonRepository]
     cds: Optional[CDSContextRepository]
     utr: Optional[UTRRepository]
 
@@ -42,7 +44,8 @@ class AnnotationRepository:
         utr_ranges: Optional[PyRanges] = None
     ) -> AnnotationRepository:
         return cls(
-            CDSContextRepository(cds_ranges) if cds_ranges is not None else None,
+            ExonRepository(cds_ranges) if cds_ranges is not None else None,
+            None,
             UTRRepository(utr_ranges) if utr_ranges is not None else None
         )
 

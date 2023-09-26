@@ -23,6 +23,7 @@ import pytest
 from valiant.models.base import GenomicRange, TranscriptInfo
 from valiant.models.exon import ExonInfo, CDSContextRepository
 from valiant.models.exon_ext_info import ExonExtInfo
+from valiant.models.exon_repository import ExonRepository
 
 PYRANGES_FIELDS = ['Chromosome', 'Strand', 'Start', 'End']
 GID = 'GENE_ID_001'
@@ -47,24 +48,16 @@ CDS_RANGES_DF = pd.DataFrame.from_records([
 ], columns=PYRANGES_FIELDS + ['gene_id', 'transcript_id', 'frame', 'exon_index'])
 
 
-def test_cds_context_repository_init():
+def test_exon_repository_init():
     ranges = PyRanges(df=RANGES)
-    ccr = CDSContextRepository(ranges)
+    ccr = ExonRepository(ranges)
 
     assert ccr.cds_ranges == ranges
 
 
-def test_cds_context_repository_register_target_ranges():
-    ranges = PyRanges(df=RANGES)
-    ccr = CDSContextRepository(ranges)
-    ccr.register_target_ranges(ranges)
-
-    assert ccr._target_ranges == ranges
-
-
-def test_cds_context_repository_get_cds_by_index():
+def test_exon_repository_get_cds_by_index():
     chromosome, strand, start, end, _, transcript_id, _, exon_index = CDS_RANGES[0]
-    ccr = CDSContextRepository(PyRanges(df=CDS_RANGES_DF))
+    ccr = ExonRepository(PyRanges(df=CDS_RANGES_DF))
     gr = ccr.get_cds_by_index(transcript_id, exon_index)
 
     assert gr.chromosome == chromosome
@@ -79,11 +72,11 @@ def test_cds_context_repository_get_cds_by_index():
 @pytest.mark.parametrize('strand,len5p,len3p,exp_cds_pre,exp_cds_suf', [
     ('+', 0, 0, None, None)
 ])
-def test_cds_context_repository_get_cds_genomic_ranges(strand, len5p, len3p, exp_cds_pre, exp_cds_suf):
+def test_exon_repository_get_cds_genomic_ranges(strand, len5p, len3p, exp_cds_pre, exp_cds_suf):
     transcript_id = TID
     exon_index = 1
-    ccr = CDSContextRepository(PyRanges(df=CDS_RANGES_DF))
-    cds_pre, cds_suf = ccr.get_exon_ext_genomic_ranges(ExonExtInfo(
+    exons = ExonRepository(PyRanges(df=CDS_RANGES_DF))
+    cds_pre, cds_suf = exons.get_exon_ext_genomic_ranges(ExonExtInfo(
         ExonInfo(TranscriptInfo("GENE_ID", transcript_id), GR, exon_index),
         strand, 0, 0, len5p, len3p))
 
@@ -107,12 +100,11 @@ def test_cds_context_repository_compute_cds_contexts(start, end, exp_ext_5, exp_
     ], columns=PYRANGES_FIELDS))
     target_ranges.is_const = False
 
-    # Initialise repository
-    ccr = CDSContextRepository(cds_ranges)
-    ccr.register_target_ranges(target_ranges)
+    # Initialise exon repository
+    exons = ExonRepository(cds_ranges)
 
     # Compute CDS contexts
-    ccr.compute_cds_contexts()
+    ccr = CDSContextRepository.from_exons(target_ranges, exons)
 
     # Check CDS contexts
     assert len(ccr._target_cds_contexts) == 1

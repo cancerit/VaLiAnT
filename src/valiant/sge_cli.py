@@ -27,12 +27,13 @@ from pyranges import PyRanges
 from .enums import TargetonMutator
 from .errors import GenomicRangeOutOfBounds, InvalidBackground, InvalidVariantRef, SequenceNotFound
 from .models.background_variants import GenomicPositionOffsets
-from .models.base import GenomicRange
+from .models.base import GenomicRange, GenomicRangePair
 from .models.codon_table import CodonTable
 from .models.custom_variants import CustomVariant
 from .models.dna_str import DnaStr
-from .models.exon import CDSContextRepository, GenomicRangePair, TranscriptInfo
+from .models.exon import CDSContextRepository, TranscriptInfo
 from .models.annotation_repository import AnnotationRepository
+from .models.exon_repository import ExonRepository
 from .models.metadata_table import MetadataTable
 from .models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
 from .models.oligo_generation_info import OligoGenerationInfo
@@ -415,7 +416,6 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     # Load CDS, stop codon, and UTR features from GTF/GFF2 file (if any)
     annotation: Optional[AnnotationRepository] = _load_gff_file(config.gff_fp)
     is_annotation_available: bool = annotation is not None
-    exons: Optional[CDSContextRepository] = annotation.cds if is_annotation_available else None
 
     # Load oligonucleotide templates
     rsrs: ReferenceSequenceRangeCollection = _load_oligo_templates(config.oligo_info_fp)
@@ -425,14 +425,13 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
     variants = VariantRepositoryCollection.load(config, rsrs)
 
-    if exons:
-
-        exons.register_target_ranges(rsrs.target_ranges)
+    if is_annotation_available and annotation.exons:
 
         # Retrieve CDS context (if any) for target regions
         # Only exonic sequences will have a CDS context
         try:
-            exons.compute_cds_contexts()
+            annotation.cds = CDSContextRepository.from_exons(
+                rsrs.target_ranges, annotation.exons)
         except ValueError as ex:
             logging.critical(ex.args[0])
             logging.critical("Failed to match the CDS context!")
@@ -442,7 +441,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             sys.exit(1)
 
         # Add CDS prefix and suffix ranges to ranges to fetch from reference
-        ref_ranges |= exons.get_all_cds_extensions()
+        ref_ranges |= annotation.cds.get_all_cds_extensions()
 
     # Initialise auxiliary tables
     all_mutators = rsrs.mutarors

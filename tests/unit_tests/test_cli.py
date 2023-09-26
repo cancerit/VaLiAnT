@@ -72,7 +72,8 @@ def test_load_gff_file_valid():
 
     # Check annotation repository
     assert isinstance(annotation, AnnotationRepository)
-    assert annotation.cds is not None
+    assert annotation.exons is not None
+    assert annotation.cds is None
 
 
 def test_load_pam_protection_vcf_none():

@@ -299,6 +299,9 @@ class GenomicRange(StrandedPositionRange):
         return PositionRange(self.start, self.end)
 
 
+GenomicRangePair = Tuple[Optional[GenomicRange], Optional[GenomicRange]]
+
+
 @dataclass
 class TranscriptInfo:
     __slots__ = {'gene_id', 'transcript_id'}
