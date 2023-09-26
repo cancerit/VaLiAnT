@@ -136,14 +136,6 @@ class BaseVariant:
             self.ref_end_pos.in_range(genomic_range)
         )
 
-    def get_ref_offset(self, ref_seq: ReferenceSequence) -> int:
-        if not ref_seq.genomic_range.contains_position(self.genomic_position):
-            raise ValueError(
-                f"Variant at {self.genomic_position} "
-                f"not in genomic range {ref_seq.genomic_range.region}!")
-
-        return self.genomic_position.position - ref_seq.genomic_range.start
-
     def _get_relative_position(self, seq_start: int) -> int:
         if seq_start < 1:
             raise ValueError("Invalid sequence start position!")
@@ -177,20 +169,6 @@ def sort_variants(variants: Iterable[BaseVariantT]) -> List[BaseVariantT]:
     return sorted(variants, key=lambda x: x.genomic_position.position)
 
 
-def apply_variants(ref_seq: ReferenceSequence, variants: List[BaseVariant], ref_check: bool = False) -> str:
-    alt_seq: str = ref_seq.sequence
-
-    for variant in variants:
-
-        # Validate variant genomic position relative to the sequence's
-        offset: int = variant.get_ref_offset(ref_seq)
-
-        # Update altered sequence
-        alt_seq = variant.mutate_from(alt_seq, offset, ref_check=ref_check)
-
-    return alt_seq
-
-
 @dataclass(frozen=True)
 class SubstitutionVariant(BaseVariant):
     __slots__ = {'genomic_position', 'ref', 'alt'}
@@ -203,12 +181,6 @@ class SubstitutionVariant(BaseVariant):
     def __post_init__(self) -> None:
         _validate_ref(self.ref)
         _validate_alt(self.alt)
-
-    @classmethod
-    def from_variant_record(cls, r: VariantRecord) -> SubstitutionVariant:
-        if not r.ref or not r.alts or not r.alts[0]:
-            raise ValueError("Not a substitution!")
-        return cls(GenomicPosition(r.contig, r.pos), r.ref, r.alts[0])
 
     def get_pyrange_record(self) -> Tuple[str, int, int]:
         position: int = self.genomic_position.position - 1
