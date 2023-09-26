@@ -23,7 +23,7 @@ from typing import Optional
 
 from pyranges import PyRanges
 
-from .exon import CDSContextRepository
+from .cds_context_repository import CDSContextRepository
 from .exon_repository import ExonRepository
 from .utr_repository import UTRRepository
 from ..loaders.gff import load_gff_cds

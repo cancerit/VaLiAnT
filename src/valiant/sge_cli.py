@@ -31,7 +31,7 @@ from .models.base import GenomicRange, GenomicRangePair
 from .models.codon_table import CodonTable
 from .models.custom_variants import CustomVariant
 from .models.dna_str import DnaStr
-from .models.exon import CDSContextRepository, TranscriptInfo
+from .models.cds_context_repository import CDSContextRepository, TranscriptInfo
 from .models.annotation_repository import AnnotationRepository
 from .models.exon_repository import ExonRepository
 from .models.metadata_table import MetadataTable

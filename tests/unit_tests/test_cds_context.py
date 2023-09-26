@@ -21,7 +21,8 @@ from pyranges import PyRanges
 import pytest
 
 from valiant.models.base import GenomicRange, TranscriptInfo
-from valiant.models.exon import ExonInfo, CDSContextRepository
+from valiant.models.cds_context_repository import CDSContextRepository
+from valiant.models.exon_info import ExonInfo
 from valiant.models.exon_ext_info import ExonExtInfo
 from valiant.models.exon_repository import ExonRepository
 
