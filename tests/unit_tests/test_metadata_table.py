@@ -63,8 +63,8 @@ def _check_csv(out_dir, header, rown, fn):
         assert len(fh.readlines()) == rown
 
 
-def test_metadata_table_init():
-    mt = MetadataTable(partial_meta.copy(), 1, max_oligo_length)
+def test_metadata_table_from_df():
+    mt = MetadataTable.from_df(partial_meta.copy(), 1, max_oligo_length)
     assert mt.short_oligo_n == 1
     assert mt.long_oligo_n == 3
     assert np.array_equal(mt.oligo_length_mask.values, [False] * 3 + [True])
