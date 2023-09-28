@@ -43,6 +43,14 @@ class ExonExtInfo:
     cds_ext_5_length: int
     cds_ext_3_length: int
 
+    @property
+    def frame(self) -> int:
+        return self.cds_ext_5_length
+
+    @property
+    def genomic_range(self) -> GenomicRange:
+        return self.exon_info.genomic_range
+
     @classmethod
     def from_pyr(cls, chr_strand: Tuple[str, str], record) -> ExonExtInfo:
         return ExonExtInfo(
