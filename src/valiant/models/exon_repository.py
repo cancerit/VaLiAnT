@@ -9,31 +9,32 @@ from pyranges import PyRanges
 from .base import GenomicRange, GenomicRangePair
 from .cds_info import CdsInfo
 from .exon_ext_info import ExonExtInfo
+from ..constants import PYR_CHR, PYR_END, PYR_START, PYR_STRAND
 from ..utils import validate_strand
 
 
 @dataclass(frozen=True)
 class ExonRepository:
-    __slots__ = ['cds_ranges']
+    __slots__ = ['exon_ranges']
 
-    cds_ranges: PyRanges
+    exon_ranges: PyRanges
 
     # TODO: investigate whether binding the chromosome and strand to each transcript
     #  would speed up things (only one DataFrame to go through)
     def get_cds_by_index(self, transcript_id: str, exon_index: int) -> GenomicRange:
-        exon_ranges: PyRanges = self.cds_ranges[
-            (self.cds_ranges.transcript_id == transcript_id)
-            & (self.cds_ranges.exon_index == exon_index)
+        exon_ranges: PyRanges = self.exon_ranges[
+            (self.exon_ranges.transcript_id == transcript_id)
+            & (self.exon_ranges.exon_index == exon_index)
         ]
 
         if not exon_ranges:
             raise RuntimeError(f"Exon index {exon_index} for transcript '{transcript_id}' not found!")
 
         rows: np.ndarray = exon_ranges.as_df()[[
-            'Chromosome',
-            'Strand',
-            'Start',
-            'End'
+            PYR_CHR,
+            PYR_STRAND,
+            PYR_START,
+            PYR_END
         ]].to_numpy()
 
         n = len(rows)
@@ -111,10 +112,10 @@ class ExonRepository:
 
     def get_exons(self, targets: Optional[PyRanges] = None) -> List[ExonExtInfo]:
         exons = (
-            self.cds_ranges.join(targets, strandedness='same', suffix='_t').drop([
+            self.exon_ranges.join(targets, strandedness='same', suffix='_t').drop([
                 'Start_t',
                 'End_t'
-            ]) if targets is not None else self.cds_ranges
+            ]) if targets is not None else self.exon_ranges
         ).drop_duplicate_positions().as_df()
         exons['len'] = exons.End - exons.Start
         exons['cds_ext_3_length'] = (3 - (exons.len + exons.frame) % 3) % 3

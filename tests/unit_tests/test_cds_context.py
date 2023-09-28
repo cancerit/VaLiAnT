@@ -53,7 +53,7 @@ def test_exon_repository_init():
     ranges = PyRanges(df=RANGES)
     ccr = ExonRepository(ranges)
 
-    assert ccr.cds_ranges == ranges
+    assert ccr.exon_ranges == ranges
 
 
 def test_exon_repository_get_cds_by_index():

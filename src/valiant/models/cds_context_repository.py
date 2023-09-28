@@ -41,7 +41,7 @@ def compute_cds_contexts(targets: PyRanges, exons: ExonRepository) -> Dict[Genom
         return df.loc[mask, 'End_b'] - df.loc[mask, 'End']
 
     exonic_ranges: pd.DataFrame = targets.join(
-        exons.cds_ranges, strandedness='same').drop(['Strand_b', 'is_const']).as_df()
+        exons.exon_ranges, strandedness='same').drop(['Strand_b', 'is_const']).as_df()
 
     # Skip if no CDS targets are found
     if exonic_ranges.shape[0] == 0:
