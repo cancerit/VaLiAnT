@@ -78,8 +78,10 @@ def test_exon_repository_get_cds_genomic_ranges(strand, len5p, len3p, exp_cds_pr
     exon_index = 1
     exons = ExonRepository(PyRanges(df=CDS_RANGES_DF))
     cds_pre, cds_suf = exons.get_exon_ext_genomic_ranges(ExonExtInfo(
-        ExonInfo(TranscriptInfo("GENE_ID", transcript_id), GR, exon_index),
-        strand, 0, 0, len5p, len3p))
+        TranscriptInfo("GENE_ID", transcript_id),
+        GR,
+        exon_index,
+        len5p, len3p))
 
     assert cds_pre == exp_cds_pre
     assert cds_suf == exp_cds_suf

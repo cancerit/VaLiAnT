@@ -27,7 +27,7 @@ import pandas as pd
 from pyranges import PyRanges
 
 from .base import GenomicRange, GenomicRangePair, TranscriptInfo
-from .exon_ext_info import ExonExtInfo
+from .cds_info import CdsInfo
 from .exon_info import ExonInfo
 from .exon_repository import ExonRepository
 
@@ -66,11 +66,8 @@ def compute_cds_contexts(targets: PyRanges, exons: ExonRepository) -> Dict[Genom
 
     exonic_ranges['cds_ext_3_length'] = (3 - (exonic_ranges.len + exonic_ranges.frame) % 3) % 3
 
-    print(exons.cds_ranges)
-    print(exonic_ranges.to_string())
-
-    target_cds_extension_info: List[ExonExtInfo] = [
-        ExonExtInfo.from_pyr(k, record)
+    target_cds_extension_info = [
+        CdsInfo.from_pyr(k, record)
         for k, ranges in PyRanges(df=exonic_ranges)
         for record in ranges.itertuples()
     ]
@@ -78,8 +75,8 @@ def compute_cds_contexts(targets: PyRanges, exons: ExonRepository) -> Dict[Genom
 
     # TODO: optimise the retrieval of exons by transcript and index
     return {
-        x.exon_info.genomic_range: (
-            x.exon_info,
+        x.genomic_range: (
+            x.get_exon_info(),
             exons.get_exon_ext_genomic_ranges(x))
         for x in target_cds_extension_info
     }

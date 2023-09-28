@@ -328,12 +328,12 @@ class ReferenceSequenceRangeCollection:
         self._rsrs = {rsr_id: rsr for rsr_id, rsr in enumerate(rsrs)}
 
         # Collect reference sequence unstranded genomic ranges (unique)
-        self._ref_ranges = genomic_ranges_to_unstranded_pyranges(
+        self._ref_ranges = genomic_ranges_to_pyranges(
             rsr.ref_range for rsr in self._rsrs.values())
 
         # Collect reference sequence unstranded genomic ranges
         # for the purposes of background variant filtering
-        self._ref_bg_ranges = genomic_ranges_to_unstranded_pyranges(
+        self._ref_bg_ranges = genomic_ranges_to_pyranges(
             chain.from_iterable(
                 rsr.bg_ranges for rsr in self._rsrs.values()))
 

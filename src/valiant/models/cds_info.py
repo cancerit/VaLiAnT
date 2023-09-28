@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
+# Copyright (C) 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,30 +22,36 @@ from dataclasses import dataclass
 from typing import Tuple
 
 from .base import GenomicRange, TranscriptInfo
+from .exon_ext_info import ExonExtInfo
 from .exon_info import ExonInfo
 
 
 @dataclass
-class ExonExtInfo(ExonInfo):
+class CdsInfo(ExonExtInfo):
     __slots__ = [
-        *ExonInfo.__slots__,
-        'cds_ext_5_length',
-        'cds_ext_3_length'
+        *ExonExtInfo.__slots__,
+        'delta_5p',
+        'delta_3p'
     ]
 
-    cds_ext_5_length: int
-    cds_ext_3_length: int
+    delta_5p: int
+    delta_3p: int
 
     @property
-    def frame(self) -> int:
-        return self.cds_ext_5_length
+    def strand(self) -> str:
+        return self.genomic_range.strand
 
     @classmethod
-    def from_pyr(cls, chr_strand: Tuple[str, str], record) -> ExonExtInfo:
-        return ExonExtInfo(
+    def from_pyr(cls, chr_strand: Tuple[str, str], record) -> CdsInfo:
+        return cls(
             TranscriptInfo(record.gene_id, record.transcript_id),
             GenomicRange.from_pyr(chr_strand, record),
             record.exon_index,
-            record.frame,
-            record.cds_ext_3_length
+            cds_ext_5_length=record.frame,
+            cds_ext_3_length=record.cds_ext_3_length,
+            delta_5p=record.delta_5p,
+            delta_3p=record.delta_3p
         )
+
+    def get_exon_info(self) -> ExonInfo:
+        return ExonInfo(self.transcript_info, self.genomic_range, self.exon_index)
