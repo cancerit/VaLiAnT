@@ -18,16 +18,19 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional, Tuple
+from dataclasses import dataclass, replace
+from typing import Optional, Tuple, TypeVar
 
 from .uint_range import UIntRange
 from ..utils import get_region, is_strand
 
 
+PositionRangeT = TypeVar('PositionRangeT', bound='PositionRange')
+
+
 @dataclass(frozen=True)
 class PositionRange(UIntRange):
-    __slots__ = {'start', 'end'}
+    __slots__ = UIntRange.__slots__
 
     start: int
     end: int
@@ -51,8 +54,8 @@ class PositionRange(UIntRange):
     def to_uintr(self) -> UIntRange:
         return UIntRange(self.start, self.end)
 
-    def _from_uintr(self, x: UIntRange) -> PositionRange:
-        return PositionRange(x.start, x.end)
+    def _from_uintr(self, x: UIntRange) -> PositionRangeT:
+        return replace(self, start=x.start, end=x.end)
 
     def get_subrange_before(self, pos: int, length: Optional[int] = None) -> Optional[PositionRange]:
         if pos < 1:
@@ -99,7 +102,7 @@ class PositionRange(UIntRange):
 
 @dataclass(frozen=True)
 class StrandedPositionRange(PositionRange):
-    __slots__ = {'start', 'end', 'strand'}
+    __slots__ = [*PositionRange.__slots__, 'strand']
 
     strand: str
 
@@ -126,8 +129,10 @@ class StrandedPositionRange(PositionRange):
         else:
             raise TypeError("Unsupported operation!")
 
-    def _from_uintr(self, x: UIntRange) -> StrandedPositionRange:
-        return StrandedPositionRange(x.start, x.end, self.strand)
+    def reshape(self, x: UIntRange) -> GenomicRange:
+        """Clone replacing the start and end positions"""
+
+        return self._from_uintr(x)
 
     @classmethod
     def to_plus_strand(cls, pr: PositionRange) -> StrandedPositionRange:
@@ -142,7 +147,7 @@ class StrandedPositionRange(PositionRange):
 
 @dataclass(frozen=True)
 class GenomicPosition:
-    __slots__ = {'chromosome', 'position'}
+    __slots__ = ['chromosome', 'position']
 
     chromosome: str
     position: int
@@ -165,7 +170,7 @@ class GenomicPosition:
 
 @dataclass(frozen=True, init=False)
 class GenomicRange(StrandedPositionRange):
-    __slots__ = {'chromosome', 'start', 'end', 'strand'}
+    __slots__ = [*StrandedPositionRange.__slots__, 'chromosome']
 
     chromosome: str
 
@@ -290,9 +295,6 @@ class GenomicRange(StrandedPositionRange):
         start: int = child.start - self.start
         end: int = child.end - self.start + 1
         return start, end
-
-    def _from_uintr(self, x: UIntRange) -> GenomicRange:
-        return GenomicRange(self.chromosome, x.start, x.end, self.strand)
 
     @property
     def pos_range(self) -> PositionRange:
