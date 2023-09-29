@@ -84,7 +84,7 @@ def _map_variants(variants: pd.DataFrame, var_type: int, is_custom: bool, mask: 
 def _regions_to_chromosome_boundaries(regions: PyRanges) -> Dict[str, Tuple[int, int]]:
     return {
         chromosome: (df.Start.min() + 1, df.End.max())
-        for chromosome, df in regions.dfs.items()  # type: ignore
+        for chromosome, df in regions.unstrand().dfs.items()  # type: ignore
     }
 
 
