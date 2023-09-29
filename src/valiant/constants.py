@@ -41,6 +41,9 @@ PYR_STRAND = 'Strand'
 PYR_START = 'Start'
 PYR_END = 'End'
 
+# PyRanges custom field names
+PYR_FRAME = 'frame'
+
 # Valid metadata table field names
 META_OLIGO_NAME = 'oligo_name'
 META_SPECIES = 'species'

@@ -22,13 +22,17 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 import numpy as np
+import pandas as pd
 from pyranges import PyRanges
 
+from .background_variants import GenomicPositionOffsets
 from .base import GenomicRange, GenomicRangePair
 from .cds_info import CdsInfo
 from .exon_ext_info import ExonExtInfo
-from ..constants import PYR_CHR, PYR_END, PYR_START, PYR_STRAND
-from ..utils import validate_strand
+from ..constants import PYR_CHR, PYR_END, PYR_FRAME, PYR_START, PYR_STRAND
+from ..utils import get_cds_ext_3_length, get_frame_complement_scalar, validate_strand
+
+REMAP_FIELDS = [PYR_START, PYR_END, PYR_FRAME]
 
 
 @dataclass(frozen=True)
@@ -128,13 +132,21 @@ class ExonRepository:
             (ext_3, ext_5)
         )
 
-    def get_exons(self, targets: Optional[PyRanges] = None) -> List[ExonExtInfo]:
-        exons = (
+    def _as_df(self, targets: Optional[PyRanges] = None) -> pd.DataFrame:
+        return (
             self.exon_ranges.join(targets, strandedness='same', suffix='_t').drop([
                 'Start_t',
                 'End_t'
-            ]) if targets is not None else self.exon_ranges
-        ).drop_duplicate_positions().as_df()
+            ]).drop_duplicate_positions() if targets is not None else
+            self.exon_ranges
+        ).as_df()
+
+    def get_exons(self, targets: Optional[PyRanges] = None) -> List[ExonExtInfo]:
+        """
+        Get exon information, optionally filtering exons based on overlapping targets
+        """
+
+        exons = self._as_df(targets=targets)
         exons['len'] = exons.End - exons.Start
         exons['cds_ext_3_length'] = (3 - (exons.len + exons.frame) % 3) % 3
         return [
@@ -142,3 +154,33 @@ class ExonRepository:
             for k, ranges in PyRanges(df=exons)
             for record in ranges.itertuples()
         ]
+
+    def remap(self, gpo: GenomicPositionOffsets) -> ExonRepository:
+        frame: int = 0
+
+        def remap_exon(r):
+            nonlocal frame
+
+            def ref_to_alt(field: str) -> int:
+                return gpo.ref_to_alt_position(int(r[field]))
+
+            alt_start = ref_to_alt(PYR_START)
+            alt_end = ref_to_alt(PYR_END)
+
+            # Clone and edit the row
+            t = r.copy(deep=True)
+            t[PYR_FRAME] = frame
+            t[PYR_START] = alt_start
+            t[PYR_END] = alt_end
+
+            # Set the frame for the next exon to the complement of the 3' frame
+            frame = get_frame_complement_scalar(get_cds_ext_3_length(frame, alt_end - alt_start))
+
+            return t
+
+        exons = self._as_df().sort_values(by=['exon_index'])
+
+        # Update exon start, end, and frame
+        exons.loc[:, REMAP_FIELDS] = exons.loc[:, REMAP_FIELDS].apply(remap_exon, axis=1)
+        exons[PYR_FRAME] = exons[PYR_FRAME].astype(np.int8)
+        return ExonRepository(PyRanges(df=exons))
