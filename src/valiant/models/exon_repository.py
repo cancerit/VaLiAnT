@@ -141,6 +141,13 @@ class ExonRepository:
             self.exon_ranges
         ).as_df()
 
+    def get_exon_ranges(self, targets: Optional[PyRanges] = None) -> List[GenomicRange]:
+        exons = self._as_df(targets=targets)
+        return [
+            GenomicRange.from_pyr_full(x)
+            for x in exons.itertuples(index=False)
+        ]
+
     def get_exons(self, targets: Optional[PyRanges] = None) -> List[ExonExtInfo]:
         """
         Get exon information, optionally filtering exons based on overlapping targets
