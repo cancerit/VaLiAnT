@@ -311,6 +311,13 @@ class ReferenceSequenceRanges:
             for trr in self.target_regions
         ]
 
+    @property
+    def target_region_pyr(self) -> PyRanges:
+        return PyRanges(df=pd.DataFrame.from_records([
+            trr.genomic_range.as_pyrange()
+            for trr in self.target_regions
+        ]))
+
 
 @dataclass(init=False)
 class ReferenceSequenceRangeCollection:
