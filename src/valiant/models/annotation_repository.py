@@ -31,10 +31,9 @@ from ..loaders.gff import load_gff_cds
 
 @dataclass
 class AnnotationRepository:
-    __slots__ = ['exons', 'cds', 'utr']
+    __slots__ = ['exons', 'utr']
 
     exons: Optional[ExonRepository]
-    cds: Optional[CDSContextRepository]
     utr: Optional[UTRRepository]
 
     @classmethod
@@ -45,7 +44,6 @@ class AnnotationRepository:
     ) -> AnnotationRepository:
         return cls(
             ExonRepository(cds_ranges) if cds_ranges is not None else None,
-            None,
             UTRRepository(utr_ranges) if utr_ranges is not None else None
         )
 
