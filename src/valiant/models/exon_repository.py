@@ -32,7 +32,7 @@ from .exon_ext_info import ExonExtInfo
 from ..constants import PYR_CHR, PYR_END, PYR_FRAME, PYR_START, PYR_STRAND
 from ..utils import get_cds_ext_3_length, get_frame_complement_scalar, validate_strand
 
-REMAP_FIELDS = [PYR_START, PYR_END, PYR_FRAME]
+PYR_START_END = [PYR_START, PYR_END]
 
 
 @dataclass(frozen=True)
@@ -158,29 +158,23 @@ class ExonRepository:
     def remap(self, gpo: GenomicPositionOffsets) -> ExonRepository:
         frame: int = 0
 
-        def remap_exon(r):
+        def remap_exon(r: pd.Series) -> int:
             nonlocal frame
 
-            def ref_to_alt(field: str) -> int:
-                return gpo.ref_to_alt_position(int(r[field]))
-
-            alt_start = ref_to_alt(PYR_START)
-            alt_end = ref_to_alt(PYR_END)
+            alt_start = int(r[PYR_START])
+            alt_end = int(r[PYR_END])
 
             # Clone and edit the row
-            t = r.copy(deep=True)
-            t[PYR_FRAME] = frame
-            t[PYR_START] = alt_start
-            t[PYR_END] = alt_end
+            curr_frame: int = frame
 
             # Set the frame for the next exon to the complement of the 3' frame
             frame = get_frame_complement_scalar(get_cds_ext_3_length(frame, alt_end - alt_start))
 
-            return t
+            return curr_frame
 
         exons = self._as_df().sort_values(by=['exon_index'])
 
         # Update exon start, end, and frame
-        exons.loc[:, REMAP_FIELDS] = exons.loc[:, REMAP_FIELDS].apply(remap_exon, axis=1)
-        exons[PYR_FRAME] = exons[PYR_FRAME].astype(np.int8)
+        exons[PYR_START_END] = exons[PYR_START_END].applymap(gpo.ref_to_alt_position).astype(np.int32)
+        exons[PYR_FRAME] = exons[PYR_START_END].apply(remap_exon, axis=1).astype(np.int8)
         return ExonRepository(PyRanges(df=exons))
