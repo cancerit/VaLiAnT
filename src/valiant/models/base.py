@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+from collections import namedtuple
 from dataclasses import dataclass, replace
 from typing import Optional, Tuple, TypeVar
 
@@ -27,6 +28,13 @@ from ..utils import get_region, is_strand
 
 
 PositionRangeT = TypeVar('PositionRangeT', bound='PositionRange')
+
+
+def _get_start_end_from_pyr(r: namedtuple) -> Tuple[int, int]:
+    return (
+        int(getattr(r, PYR_START)) + 1,
+        int(getattr(r, PYR_END))
+    )
 
 
 @dataclass(frozen=True)
@@ -190,16 +198,18 @@ class GenomicRange(StrandedPositionRange):
             raise ValueError("Invalid genomic range!")
 
     @classmethod
-    def from_pyr(cls, k: Tuple[str, str], record) -> GenomicRange:
+    def from_pyr(cls, k: Tuple[str, str], r: namedtuple) -> GenomicRange:
         """Construct from a PyRange data frame key and record"""
 
-        return cls(k[0], record.Start + 1, record.End, k[1])
+        start, end = _get_start_end_from_pyr(r)
+        return cls(k[0], start, end, k[1])
 
     @classmethod
-    def from_pyr_full(cls, r):
+    def from_pyr_full(cls, r: namedtuple):
         """Construct from a PyRange data frame record"""
 
-        return cls(r[PYR_CHR], int(r[PYR_START]) + 1, int(r[PYR_END]), r[PYR_STRAND])
+        start, end = _get_start_end_from_pyr(r)
+        return cls(getattr(r, PYR_CHR), start, end, getattr(r, PYR_STRAND))
 
     @property
     def region(self) -> str:
