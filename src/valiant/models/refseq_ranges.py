@@ -42,6 +42,8 @@ CSV_HEADER = [
     'sgrna_vector'
 ]
 
+PYR_RANGE_FIELDS = [PYR_CHR, PYR_STRAND, PYR_START, PYR_END]
+
 TargetonRegionTuple = Tuple[
     Optional[GenomicRange],
     Optional[GenomicRange],
@@ -316,7 +318,7 @@ class ReferenceSequenceRanges:
         return PyRanges(df=pd.DataFrame.from_records([
             trr.genomic_range.as_pyrange()
             for trr in self.target_regions
-        ]))
+        ], columns=PYR_RANGE_FIELDS))
 
 
 @dataclass(init=False)
@@ -349,7 +351,7 @@ class ReferenceSequenceRangeCollection:
             (*r, i)
             for i, rsr in self._rsrs.items()
             for r in rsr.regions_as_pyranges()
-        ]), columns=[PYR_CHR, PYR_STRAND, PYR_START, PYR_END, 'is_const', 'targeton_id'])
+        ]), columns=[*PYR_RANGE_FIELDS, 'is_const', 'targeton_id'])
         df.targeton_id = df.targeton_id.astype(get_smallest_int_type(max(self._rsrs.keys())))
         self._region_ranges = PyRanges(df=df)
 
