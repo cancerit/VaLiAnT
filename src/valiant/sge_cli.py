@@ -16,23 +16,29 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from dataclasses import replace
 from itertools import chain
 import logging
 import os
 import sys
-from typing import Callable, Dict, Iterable, List, Optional, FrozenSet, Set, Tuple
+from typing import Callable, Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
+
 import click
 from pyranges import PyRanges
 
+from .cli_utils import load_codon_table
+from .common_cli import common_params, existing_file, finalise
 from .enums import TargetonMutator
 from .errors import GenomicRangeOutOfBounds, InvalidBackground, InvalidVariantRef, SequenceNotFound
+from .models.annotation_repository import AnnotationRepository
 from .models.background_variants import GenomicPositionOffsets
 from .models.base import GenomicRange, GenomicRangePair
+from .models.cds_context_repository import CDSContextRepository, TranscriptInfo
 from .models.codon_table import CodonTable
 from .models.custom_variants import CustomVariant
 from .models.dna_str import DnaStr
-from .models.cds_context_repository import CDSContextRepository, TranscriptInfo
-from .models.annotation_repository import AnnotationRepository
+from .models.exon_ext_info import ExonExtInfo
+from .models.exon_info import ExonInfo
 from .models.exon_repository import ExonRepository
 from .models.metadata_table import MetadataTable
 from .models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
@@ -41,18 +47,17 @@ from .models.oligo_segment import InvariantOligoSegment, OligoSegment, TargetonO
 from .models.oligo_template import OligoTemplate
 from .models.options import Options
 from .models.pam_protection import PamVariant
-from .models.refseq_ranges import genomic_ranges_to_pyranges, ReferenceSequenceRangeCollection, ReferenceSequenceRanges, TargetReferenceRegion
+from .models.ref_seq import RefSeq
+from .models.refseq_ranges import genomic_ranges_to_pyranges, ReferenceSequenceRangeCollection, ReferenceSequenceRanges, \
+    TargetReferenceRegion
 from .models.refseq_repository import fetch_reference_sequences, ReferenceSequenceRepository
-from .models.sequences import ReferenceSequence
 from .models.sge_config import SGEConfig
 from .models.snv_table import AuxiliaryTables
 from .models.stats import Stats
 from .models.targeton import ITargeton, PamProtCDSTargeton, PamProtTargeton
 from .models.variant import BaseVariant, BaseVariantT
 from .models.variant_repository_collection import VariantRepositoryCollection
-from .common_cli import common_params, existing_file, finalise
-from .cli_utils import load_codon_table
-from .viz import get_text_diagram
+from .utils import get_cds_ext_3_length, get_frame_complement_scalar
 from .writers import write_reference_sequences
 
 
@@ -89,7 +94,7 @@ def resize_rsr(rsr: ReferenceSequenceRanges, gpo: GenomicPositionOffsets) -> Ref
 def get_oligo_template(
     rsr_ref: ReferenceSequenceRanges,
     ref: ReferenceSequenceRepository,
-    cds: Optional[CDSContextRepository],
+    exons: Optional[ExonRepository],
     bg_variants: Set[BaseVariant],
     pam_variants: Set[PamVariant],
     custom_variants: Set[CustomVariant],
@@ -111,6 +116,7 @@ def get_oligo_template(
         rsr_ref.ref_range, ref_seq, bg_variant_ls, pam_variant_ls)
 
     offsets: Optional[GenomicPositionOffsets] = None
+    cds: Optional[CDSContextRepository] = None
 
     # TODO: to redesign the sequence splitting when ALT differs
     rsr = rsr_ref
@@ -122,6 +128,21 @@ def get_oligo_template(
         )
         rsr_alt = resize_rsr(rsr_ref, offsets)
         rsr = rsr_alt
+
+        if exons:
+            # Retrieve CDS context (if any) for target regions
+            # Only exonic sequences will have a CDS context
+            try:
+                # TODO: use the ALT exons to build the CDS repository
+                cds = CDSContextRepository.from_exons(
+                    rsr_ref.target_region_pyr, exons)
+            except ValueError as ex:
+                logging.critical(ex.args[0])
+                logging.critical("Failed to match the CDS context!")
+                sys.exit(1)
+            except NotImplementedError as ex:
+                logging.critical(ex.args[0])
+                sys.exit(1)
 
     # 2. Get constant regions
 
@@ -306,7 +327,7 @@ def get_oligo_templates(
         return get_oligo_template(
             rsr,
             ref,
-            annotation.cds if annotation else None,
+            annotation.exons if annotation else None,
             bg_variants,
             pam_variants,
             variants.custom.get_variants(rsr.ref_range) if variants.custom else set(),
@@ -427,21 +448,9 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
     if is_annotation_available and annotation.exons:
 
-        # Retrieve CDS context (if any) for target regions
-        # Only exonic sequences will have a CDS context
-        try:
-            annotation.cds = CDSContextRepository.from_exons(
-                rsrs.target_ranges, annotation.exons)
-        except ValueError as ex:
-            logging.critical(ex.args[0])
-            logging.critical("Failed to match the CDS context!")
-            sys.exit(1)
-        except NotImplementedError as ex:
-            logging.critical(ex.args[0])
-            sys.exit(1)
-
-        # Add CDS prefix and suffix ranges to ranges to fetch from reference
-        ref_ranges |= annotation.cds.get_all_cds_extensions()
+        # Add the ranges of all transcript exons
+        # TODO: optimise to overlapping the targeton plus one preceding and one following
+        ref_ranges |= set(annotation.exons.get_exon_ranges())
 
     # Initialise auxiliary tables
     all_mutators = rsrs.mutarors

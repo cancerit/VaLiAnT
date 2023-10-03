@@ -41,7 +41,7 @@ def compute_cds_contexts(targets: PyRanges, exons: ExonRepository) -> Dict[Genom
         return df.loc[mask, 'End_b'] - df.loc[mask, 'End']
 
     exonic_ranges: pd.DataFrame = targets.join(
-        exons.exon_ranges, strandedness='same').drop(['Strand_b', 'is_const']).as_df()
+        exons.exon_ranges, strandedness='same').drop(['Strand_b']).as_df()
 
     # Skip if no CDS targets are found
     if exonic_ranges.shape[0] == 0:
@@ -125,3 +125,9 @@ class CDSContextRepository:
     def get_transcript_info(self, genomic_range: GenomicRange) -> Optional[TranscriptInfo]:
         exon_info: Optional[ExonInfo] = self.get_exon_info(genomic_range)
         return exon_info.transcript_info if exon_info else None
+
+    def get_exons(self) -> List[ExonInfo]:
+        return [
+            exon_info
+            for exon_info, _ in self._target_cds_contexts.values()
+        ]

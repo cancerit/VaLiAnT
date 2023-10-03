@@ -16,13 +16,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from __future__ import annotations
+
 from enum import Enum
 from functools import lru_cache
 import logging
 import os
 import pathlib
 import re
-from typing import Any, Callable, FrozenSet, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Dict, FrozenSet, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -42,6 +44,9 @@ i8_2: np.int8 = np.int8(2)
 
 i8_1_2: List[np.int8] = [i8_1, i8_2]
 i8_2_1: List[np.int8] = [i8_2, i8_1]
+
+
+FRAME_COMPLEMENT: Dict[int, int] = {0: 0, 1: 2, 2: 1}
 
 
 def opt_str_length(s: Optional[str]) -> int:
@@ -116,6 +121,19 @@ def get_out_of_frame_offset(cds_ext_length: int) -> int:
 
 def get_frame_complement(frame: pd.Series) -> pd.Series:
     return frame.replace(i8_1_2, i8_2_1)
+
+
+def get_frame_complement_scalar(frame: int) -> int:
+    return FRAME_COMPLEMENT[frame]
+
+
+def get_cds_ext_3_length(frame: int, length: int) -> int:
+    """
+    Calculate how many nucleotides are missing from the last codon
+    given the reading frame and the length of the sequence
+    """
+
+    return (3 - (length + frame) % 3) % 3
 
 
 def get_inner_cds_relative_boundaries(seq_len: int, frame: int) -> Tuple[int, int]:
