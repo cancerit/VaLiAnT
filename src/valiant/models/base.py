@@ -22,6 +22,7 @@ from dataclasses import dataclass, replace
 from typing import Optional, Tuple, TypeVar
 
 from .uint_range import UIntRange
+from ..constants import PYR_CHR, PYR_END, PYR_START, PYR_STRAND
 from ..utils import get_region, is_strand
 
 
@@ -193,6 +194,12 @@ class GenomicRange(StrandedPositionRange):
         """Construct from a PyRange data frame key and record"""
 
         return cls(k[0], record.Start + 1, record.End, k[1])
+
+    @classmethod
+    def from_pyr_full(cls, r):
+        """Construct from a PyRange data frame record"""
+
+        return cls(r[PYR_CHR], int(r[PYR_START]) + 1, int(r[PYR_END]), r[PYR_STRAND])
 
     @property
     def region(self) -> str:
