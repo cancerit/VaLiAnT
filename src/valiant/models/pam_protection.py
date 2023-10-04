@@ -17,15 +17,19 @@
 #############################
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 import logging
-from typing import Dict, List, Optional, Set, FrozenSet
+from typing import Dict, FrozenSet, List, Optional, Set
+
 import pandas as pd
 from pyranges import PyRanges
 
+from .base import GenomicRange
+from .genomic_position_dict import GenomicPositionDict
+from .variant import get_variant, SubstitutionVariant
 from ..loaders.vcf import get_vcf
 from ..utils import get_id_column
-from .variant import get_variant, SubstitutionVariant
 
 
 @dataclass(frozen=True)
@@ -48,8 +52,14 @@ class PamVariant(SubstitutionVariant):
         return PamVariant(var.genomic_position, var.ref, var.alt, sgrna_id)
 
 
+@dataclass(init=False)
 class PamProtectionVariantRepository:
-    __slots__ = {'sgrna_ids', '_variants', '_ranges'}
+    __slots__ = ['sgrna_ids', '_variants', '_ranges', '_pos_variants']
+
+    sgrna_ids: FrozenSet[str]
+    _variants: Dict[str, Set[PamVariant]]
+    _ranges: PyRanges
+    _pos_variants: GenomicPositionDict[PamVariant]
 
     def __init__(self, sgrna_ids: FrozenSet[str] = None) -> None:
         self.sgrna_ids = sgrna_ids or frozenset()
@@ -57,11 +67,21 @@ class PamProtectionVariantRepository:
             sgrna_id: set()
             for sgrna_id in sgrna_ids
         } if sgrna_ids else {}
+        self._pos_variants = GenomicPositionDict()
         self._ranges: Optional[PyRanges] = None
 
     @property
     def count(self) -> int:
         return sum(map(len, self._variants.values()))
+
+    def get_variants(self, r: GenomicRange) -> Set[PamVariant]:
+        if self._ranges is None:
+            raise RuntimeError("PPE ranges not initialised!")
+        pyr = self._ranges[r.chromosome, r.start - 1:r.end]
+        return set([
+            self._pos_variants.get_at(x.Chromosome, x.Start + 1)
+            for x in pyr.as_df().itertuples(index=False)
+        ])
 
     def get_sgrna_variants(self, sgrna_id: str) -> FrozenSet[PamVariant]:
         try:
@@ -84,8 +104,10 @@ class PamProtectionVariantRepository:
             for record in variant_file.fetch():
                 sgrna_id: str = record.info['SGRNA'].strip()
                 if sgrna_id in self._variants:
-                    self._variants[sgrna_id].add(
-                        PamVariant.from_substitution(get_variant(record), sgrna_id))
+                    pam_variant = PamVariant.from_substitution(
+                        get_variant(record), sgrna_id)
+                    self._variants[sgrna_id].add(pam_variant)
+                    self._pos_variants.set(pam_variant.genomic_position, pam_variant)
 
         # Log loaded variant statistics
         logging.debug("Collected %d PAM protection variants." % self.count)
