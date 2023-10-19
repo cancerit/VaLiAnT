@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,9 +24,9 @@ import click
 
 from .constants import DEFAULT_OLIGO_MAX_LENGTH, DEFAULT_OLIGO_MIN_LENGTH, OUTPUT_CONFIG_FILE_NAME
 from .errors import InvalidConfig
-from .models.config import BaseConfig
-from .models.main_config import get_main_config_from_config
-from .models.stats import Stats
+from .config import BaseConfig
+from .main_config import get_main_config_from_config
+from .stats import Stats
 
 
 existing_file = click.Path(exists=True, file_okay=True, dir_okay=False)

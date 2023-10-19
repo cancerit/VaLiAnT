@@ -16,28 +16,23 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-NTS = set('ACGT')
+import csv
+from typing import Generator
 
-NT_SNVS = {
-    nt: sorted(NTS - {nt})
-    for nt in NTS
-}
+from .utils import detect_encoding
 
-# Stop symbol (codon table)
-STOP = 'STOP'
 
-# Path to the package data directory
-DATA_PATH = 'data'
+def load_csv(fp: str, columns: list[str] | None = None, delimiter: str = ',') -> Generator[list[str], None, None]:
+    """Validate header and parse all rows of a CSV or TSV file as lists of strings"""
 
-# Database DDL script file name
-DDL_FN = 'ddl.sql'
+    with open(fp, encoding=detect_encoding(fp)) as fh:
+        reader = csv.reader(fh, delimiter=delimiter)
 
-# Default codon table file name
-CODON_TABLE_FN = 'default_codon_table.csv'
+        # Validate header
+        if columns is not None and next(reader) != columns:
+            t = 'TSV' if delimiter == '\t' else 'CSV'
+            raise ValueError(f"Invalid {t} header!")
 
-# Output configuration file name
-OUTPUT_CONFIG_FILE_NAME = 'config.json'
-
-# Default parameters
-DEFAULT_OLIGO_MAX_LENGTH = 300
-DEFAULT_OLIGO_MIN_LENGTH = 1
+        # Load rows
+        for r in reader:
+            yield r

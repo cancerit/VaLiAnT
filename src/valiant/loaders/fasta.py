@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -17,9 +17,14 @@
 #############################
 
 import logging
-from typing import Dict, Iterable
+from contextlib import contextmanager
+from typing import Iterable, Generator
+
 from pysam import FastaFile
-from ..errors import SequenceNotFound
+
+
+class SequenceNotFound(Exception):
+    pass
 
 
 # TODO: use explicit index path instead?
@@ -31,15 +36,22 @@ def get_fasta_file(fp: str) -> FastaFile:
         raise ex
 
 
-def load_from_multi_fasta(fp: str, ids: Iterable[str]) -> Dict[str, str]:
-    ff: FastaFile = get_fasta_file(fp)
+@contextmanager
+def open_fasta(fp: str) -> Generator[FastaFile, None, None]:
+    ff = get_fasta_file(fp)
     try:
-        return {
-            sid: ff.fetch(sid)
-            for sid in ids
-        }
-    except KeyError as ex:
-        logging.critical("Error while loading multi-FASTA file '%s': %s!" % (fp, ex.args[0]))
-        raise SequenceNotFound()
+        yield ff
     finally:
         ff.close()
+
+
+def load_from_multi_fasta(fp: str, ids: Iterable[str]) -> dict[str, str]:
+    with open_fasta(fp) as ff:
+        try:
+            return {
+                sid: ff.fetch(sid)
+                for sid in ids
+            }
+        except KeyError as ex:
+            logging.critical("Error while loading multi-FASTA file '%s': %s!" % (fp, ex.args[0]))
+            raise SequenceNotFound()

@@ -860,7 +860,7 @@ pip install -r unit_tests/requirements.txt
 
 ```none
 VaLiAnT
-Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as

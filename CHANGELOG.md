@@ -6,6 +6,10 @@
 
 - Background variant support
 
+### Fixed
+
+- Fix codon tables loaded from files where the codons are not grouped by amino acid
+
 ## [3.0.1] - 2023-07-18
 
 ### Fixed

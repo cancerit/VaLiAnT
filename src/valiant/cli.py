@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -23,10 +23,9 @@ import os
 import click
 from typing import Optional
 from . import __version__
-from .cdna_cli import cdna, run_cdna
 from .common_cli import existing_file
 from .errors import InvalidConfig
-from .models.main_config import BaseMainConfig, CDNAMainConfig, MainConfigLoader, SGEMainConfig
+from .main_config import BaseMainConfig, CDNAMainConfig, MainConfigLoader, SGEMainConfig
 from .sge_cli import run_sge, sge
 
 
@@ -91,7 +90,7 @@ def main(ctx: click.Context, config_fp: Optional[str]):
                 run_sge(config.params, False)
 
             elif isinstance(config, CDNAMainConfig):
-                run_cdna(config.params)
+                raise NotImplementedError("cDNA mode not implemented!")
 
             else:
                 logging.critical("Invalid configuration!")
@@ -105,4 +104,3 @@ def main(ctx: click.Context, config_fp: Optional[str]):
 
 
 main.add_command(sge)
-main.add_command(cdna)

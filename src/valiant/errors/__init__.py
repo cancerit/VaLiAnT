@@ -16,28 +16,40 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-NTS = set('ACGT')
+from abc import ABC, abstractmethod
 
-NT_SNVS = {
-    nt: sorted(NTS - {nt})
-    for nt in NTS
-}
 
-# Stop symbol (codon table)
-STOP = 'STOP'
+class CustomException(Exception, ABC):
 
-# Path to the package data directory
-DATA_PATH = 'data'
+    @property
+    @abstractmethod
+    def message(self) -> str:
+        pass
 
-# Database DDL script file name
-DDL_FN = 'ddl.sql'
 
-# Default codon table file name
-CODON_TABLE_FN = 'default_codon_table.csv'
+class NonUniqueError(Exception):
+    pass
 
-# Output configuration file name
-OUTPUT_CONFIG_FILE_NAME = 'config.json'
 
-# Default parameters
-DEFAULT_OLIGO_MAX_LENGTH = 300
-DEFAULT_OLIGO_MIN_LENGTH = 1
+class SequenceNotFound(Exception):
+    pass
+
+
+class InvalidMutatorForTarget(ValueError):
+    pass
+
+
+class InvalidConfig(Exception):
+    pass
+
+
+class InvalidBackground(Exception):
+    pass
+
+
+class InvalidVariantRef(Exception):
+    pass
+
+
+class GenomicRangeOutOfBounds(Exception):
+    pass

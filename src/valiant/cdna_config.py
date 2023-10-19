@@ -16,28 +16,24 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-NTS = set('ACGT')
+from pydantic import Field
 
-NT_SNVS = {
-    nt: sorted(NTS - {nt})
-    for nt in NTS
-}
+from .config import BaseConfig
+from .options import Options
 
-# Stop symbol (codon table)
-STOP = 'STOP'
 
-# Path to the package data directory
-DATA_PATH = 'data'
+class CDNAConfig(BaseConfig):
+    annot_fp: str | None = Field(alias='annotationFilePath')
 
-# Database DDL script file name
-DDL_FN = 'ddl.sql'
+    def get_options(self) -> Options:
+        return Options(
+            revcomp_minus_strand=False,
+            oligo_max_length=self.max_length,
+            oligo_min_length=self.min_length)
 
-# Default codon table file name
-CODON_TABLE_FN = 'default_codon_table.csv'
-
-# Output configuration file name
-OUTPUT_CONFIG_FILE_NAME = 'config.json'
-
-# Default parameters
-DEFAULT_OLIGO_MAX_LENGTH = 300
-DEFAULT_OLIGO_MIN_LENGTH = 1
+    @property
+    def input_file_paths(self) -> list[str]:
+        fps = super().input_file_paths
+        if self.annot_fp is not None:
+            fps.append(self.annot_fp)
+        return fps

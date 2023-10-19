@@ -16,505 +16,206 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from dataclasses import replace
-from itertools import chain
 import logging
 import os
-import sys
-from typing import Callable, Dict, FrozenSet, Iterable, List, Optional, Set, Tuple
+from sqlite3 import Connection
 
 import click
-from pyranges import PyRanges
-
-from .cli_utils import load_codon_table
-from .common_cli import common_params, existing_file, finalise
-from .enums import TargetonMutator
-from .errors import GenomicRangeOutOfBounds, InvalidBackground, InvalidVariantRef, SequenceNotFound
-from .models.annotation_repository import AnnotationRepository
-from .models.background_variants import GenomicPositionOffsets
-from .models.base import GenomicRange, GenomicRangePair
-from .models.cds_context_repository import CDSContextRepository, TranscriptInfo
-from .models.codon_table import CodonTable
-from .models.custom_variants import CustomVariant
-from .models.dna_str import DnaStr
-from .models.exon_ext_info import ExonExtInfo
-from .models.exon_info import ExonInfo
-from .models.exon_repository import ExonRepository
-from .models.metadata_table import MetadataTable
-from .models.new_pam import CdsPamBgAltSeqBuilder, PamBgAltSeqBuilder
-from .models.oligo_generation_info import OligoGenerationInfo
-from .models.oligo_segment import InvariantOligoSegment, OligoSegment, TargetonOligoSegment
-from .models.oligo_template import OligoTemplate
-from .models.options import Options
-from .models.pam_protection import PamVariant
-from .models.ref_seq import RefSeq
-from .models.refseq_ranges import genomic_ranges_to_pyranges, ReferenceSequenceRangeCollection, ReferenceSequenceRanges, \
-    TargetReferenceRegion
-from .models.refseq_repository import fetch_reference_sequences, ReferenceSequenceRepository
-from .models.sge_config import SGEConfig
-from .models.snv_table import AuxiliaryTables
-from .models.stats import Stats
-from .models.targeton import ITargeton, PamProtCDSTargeton, PamProtTargeton
-from .models.variant import BaseVariant, BaseVariantT
-from .models.variant_repository_collection import VariantRepositoryCollection
-from .utils import get_cds_ext_3_length, get_frame_complement_scalar
-from .writers import write_reference_sequences
-
-
-def _load_gff_file(fp: Optional[str]) -> Optional[AnnotationRepository]:
-    if fp:
-        logging.debug("Loading GTF/GFF2 file...")
-        try:
-            return AnnotationRepository.from_gff(fp)
-        except ValueError as ex:
-            logging.critical(ex.args[0])
-            logging.critical("Failed to load GTF/GFF2 file!")
-            sys.exit(1)
-    else:
-        logging.info("No GTF/GFF2 file provided.")
-        return None
-
-
-def _load_oligo_templates(fp: str) -> ReferenceSequenceRangeCollection:
-    try:
-        return ReferenceSequenceRangeCollection.load(fp)
-    except ValueError as ex:
-        logging.critical(ex.args[0])
-        logging.critical("Failed to load oligonucleotide templates!")
-        sys.exit(1)
-
-
-def resize_rsr(rsr: ReferenceSequenceRanges, gpo: GenomicPositionOffsets) -> ReferenceSequenceRanges:
-    def resize_f(gr: GenomicRange) -> GenomicRange:
-        return gr.resize(gpo.ref_to_alt_range(gr))
-
-    return rsr.resize_regions(resize_f)
-
-
-def get_oligo_template(
-    rsr_ref: ReferenceSequenceRanges,
-    ref: ReferenceSequenceRepository,
-    exons: Optional[ExonRepository],
-    bg_variants: Set[BaseVariant],
-    pam_variants: Set[PamVariant],
-    custom_variants: Set[CustomVariant],
-    codon_table: CodonTable,
-    config: SGEConfig
-) -> OligoTemplate:
-
-    bg_variant_ls = list(bg_variants)
-    pam_variant_ls = list(pam_variants)
-
-    # 1. Generate PAM protected reference sequence
-
-    # Fetch reference sequence
-    ref_seq = ref.get_genomic_range_sequence(rsr_ref.ref_range)
-    if not ref_seq:
-        raise ValueError("Sequence not found!")
-
-    pam_ref_seq = PamBgAltSeqBuilder.from_ref(
-        rsr_ref.ref_range, ref_seq, bg_variant_ls, pam_variant_ls)
-
-    offsets: Optional[GenomicPositionOffsets] = None
-    cds: Optional[CDSContextRepository] = None
-
-    # TODO: to redesign the sequence splitting when ALT differs
-    rsr = rsr_ref
-    if bg_variants:
-        offsets = GenomicPositionOffsets(
-            pam_ref_seq.start,
-            len(pam_ref_seq.ref_seq),
-            pam_ref_seq.bg_variants
-        )
-        rsr_alt = resize_rsr(rsr_ref, offsets)
-        rsr = rsr_alt
-
-        if exons:
-            # Retrieve CDS context (if any) for target regions
-            # Only exonic sequences will have a CDS context
-            try:
-                # TODO: use the ALT exons to build the CDS repository
-                cds = CDSContextRepository.from_exons(
-                    rsr_ref.target_region_pyr, exons)
-            except ValueError as ex:
-                logging.critical(ex.args[0])
-                logging.critical("Failed to match the CDS context!")
-                sys.exit(1)
-            except NotImplementedError as ex:
-                logging.critical(ex.args[0])
-                sys.exit(1)
-
-    # 2. Get constant regions
-
-    def get_cds_targeton(
-        region_pam_seq: PamBgAltSeqBuilder,
-        exg_gr_pair: GenomicRangePair
-    ) -> PamProtCDSTargeton:
-
-        # Annotate region as CDS
-        b = CdsPamBgAltSeqBuilder.from_noncds(
-            region_pam_seq,
-            get_cds_extension_sequence(exg_gr_pair[0]),
-            get_cds_extension_sequence(exg_gr_pair[1]))
-
-        # Validate background variants
-        if not b.is_background_valid(
-            codon_table,
-            config.force_bg_fs,
-            config.force_bg_ns
-        ):
-            raise InvalidBackground("Invalid background variants!")
-        return PamProtCDSTargeton(b)
-
-    def get_targeton(region_pam_seq: PamBgAltSeqBuilder) -> ITargeton:
-        if cds:
-            exg_gr_pair: Optional[GenomicRangePair] = cds.get_cds_extensions(
-                region_pam_seq.pos_range)
-            if exg_gr_pair is not None:
-                return get_cds_targeton(region_pam_seq, exg_gr_pair)
-        return PamProtTargeton(region_pam_seq)
-
-    def get_constant_region_segment(gr: Optional[GenomicRange]) -> Optional[InvariantOligoSegment]:
-        return InvariantOligoSegment(
-            get_targeton(pam_ref_seq.get_pam_sub(gr))) if gr else None
-
-    const_region_1: Optional[InvariantOligoSegment] = get_constant_region_segment(rsr.const_region_1)
-    const_region_2: Optional[InvariantOligoSegment] = get_constant_region_segment(rsr.const_region_2)
-
-    # 3. Get potential target regions
-
-    def get_cds_extension_sequence(genomic_range: Optional[GenomicRange]) -> DnaStr:
-        if genomic_range is None:
-            return DnaStr.empty()
-
-        is_local: bool = genomic_range.overlaps_range(
-            pam_ref_seq.pos_range, unstranded=True)
-
-        # TODO: should PAM variants be included?
-        # Assumption: the local extension range is already in [local] cell-line coordinates
-        sequence: Optional[str] = None
-        try:
-            sequence = (
-                pam_ref_seq.get_pam_sub(genomic_range).pam_seq if is_local else
-                ref.get_genomic_range_sequence(genomic_range)
-            )
-        except GenomicRangeOutOfBounds as ex:
-            # TODO: handle CDS extension partially out of bounds
-            logging.error(ex.args[0])
-
-        if sequence is None:
-            raise SequenceNotFound("CDS extension sequence not found!")
-
-        return DnaStr(sequence)
-
-    def get_oligo_segment(trr: TargetReferenceRegion) -> OligoSegment:
-        region_pam_seq = pam_ref_seq.get_pam_sub(trr.genomic_range)
-        return (
-            TargetonOligoSegment(get_targeton(region_pam_seq), trr.mutators) if trr.mutators else
-            get_constant_region_segment(trr.genomic_range)
-        )
-
-    def get_transcript_info(genomic_ranges: Iterable[GenomicRange]) -> Optional[TranscriptInfo]:
-        if not cds:
-            return None
-        for genomic_range in genomic_ranges:
-            transcript_info: Optional[TranscriptInfo] = cds.get_transcript_info(genomic_range)
-            if transcript_info:
-                return transcript_info
-        return None
-
-    # TODO: use ALT instead
-    potential_target_segments: List[OligoSegment] = list(map(
-        get_oligo_segment, rsr_ref.target_regions))
-
-    # 4. Assemble regions in order
-    segments: List[OligoSegment] = [const_region_1] if const_region_1 else []
-    segments.extend(potential_target_segments)
-    if const_region_2:
-        segments.append(const_region_2)
-
-    # Extract exon info (if any is available)
-    transcript_info: Optional[TranscriptInfo] = get_transcript_info(
-        segment.genomic_range for segment in segments)
-
-    return OligoTemplate(
-        rsr,
-        offsets,
-        transcript_info,
-        pam_ref_seq,
-        rsr.sgrna_ids,
-        custom_variants,
-        config.adaptor_5,
-        config.adaptor_3,
-        segments)
-
-
-def get_oligo_templates(
-    rsrs: ReferenceSequenceRangeCollection,
-    ref: ReferenceSequenceRepository,
-    variants: VariantRepositoryCollection,
-    annotation: Optional[AnnotationRepository],
-    codon_table: CodonTable,
-    config: SGEConfig
-) -> List[OligoTemplate]:
-
-    def match_ref_regions_pam_variants() -> Dict[Tuple[str, int, int], Set[str]]:
-        if not pam_variants_available:
-            return {
-                gr.as_unstranded(): set()
-                for gr in rsrs.ref_ranges
-            }
-
-        # Map sgRNA variants to regions (ignoring their strandedness)
-        range_variants: PyRanges = rsrs._ref_ranges.join(
-            variants.pam._ranges, strandedness=False)
-
-        # Count the number of variants per sgRNA per region for validation purposes
-        # (chromosome, start, end) -> sgRNA ID -> variant count
-        return {
-            (chromosome, start + 1, end): set(rdf.sgrna_id.unique())
-            for (chromosome, start, end), rdf in range_variants[[
-                'sgrna_id',
-                'variant_id'
-            ]].as_df().groupby([
-                'Chromosome',
-                'Start',
-                'End'
-            ])
-        }
-
-    def get_missing_sgrna_err(genomic_range: GenomicRange, sgrna_ids: FrozenSet[str]) -> ValueError:
-        return ValueError(
-            "Expected sgRNA ID{} {} not found in region {}!".format(
-                "'s" if len(sgrna_ids) > 1 else '',
-                ', '.join(sgrna_ids),
-                genomic_range.region)
-        )
-
-    def get_pam_variants(rsr: ReferenceSequenceRanges) -> Set[PamVariant]:
-        if not rsr.sgrna_ids:
-            return set()
-
-        k: Tuple[str, int, int] = rsr.ref_range.as_unstranded()
-        if k not in ref_ranges_sgrna_ids:
-            raise get_missing_sgrna_err(rsr.ref_range, rsr.sgrna_ids)
-
-        matching_sgrna_ids = ref_ranges_sgrna_ids[k]
-        if rsr.sgrna_ids - matching_sgrna_ids:
-            raise get_missing_sgrna_err(rsr.ref_range, rsr.sgrna_ids - matching_sgrna_ids)
-
-        # Retrieve PAM protection variants
-        return set(variants.pam.get_sgrna_variants_bulk(rsr.sgrna_ids))
-
-    def get_bg_variants(rsr: ReferenceSequenceRanges) -> Set[BaseVariant]:
-        return variants.background.get_variants(rsr.ref_range) if variants.background else set()
-
-    def get_rsr_oligo_template(rsr: ReferenceSequenceRanges) -> OligoTemplate:
-
-        def get_vars(label: str, cond: bool, f: Callable[[ReferenceSequenceRanges], Set[BaseVariantT]]) -> Set[BaseVariantT]:
-            try:
-                return f(rsr) if cond else set()
-            except ValueError as ex:
-                logging.critical(ex.args[0])
-                logging.critical(
-                    "Failed to retrieve %s variants "
-                    "for region %s!" % (label, rsr.ref_range.region))
-                sys.exit(1)
-
-        bg_variants: Set[BaseVariant] = get_vars('background', bg_variants_available, get_bg_variants)
-        pam_variants: Set[PamVariant] = get_vars('PAM protection', pam_variants_available, get_pam_variants)
-
-        return get_oligo_template(
-            rsr,
-            ref,
-            annotation.exons if annotation else None,
-            bg_variants,
-            pam_variants,
-            variants.custom.get_variants(rsr.ref_range) if variants.custom else set(),
-            codon_table,
-            config)
-
-    # Pass sgRNA variants to oligonucleotide template generation
-    pam_variants_available: bool = variants.pam.count > 0
-    bg_variants_available: bool = variants.background is not None
-    ref_ranges_sgrna_ids = match_ref_regions_pam_variants()
-
-    # Generate oligonucleotide templates
-    ots: List[OligoTemplate] = list(map(get_rsr_oligo_template, rsrs._rsrs.values()))
-
-    # Retrieve reference ranges of oligonucleotide templates with no transcript info (if any)
-    ref_ranges_no_info: Set[GenomicRange] = set(
-        ot.ref_range
-        for ot in ots
-        if not ot.transcript_info
-    )
-
-    # Return oligonucleotide templates if all have transcript information
-    if not ref_ranges_no_info:
-        return ots
-
-    if annotation and annotation.utr:
-
-        # Collect transcript information from UTR features
-        utr_transcript_info: Dict[GenomicRange, TranscriptInfo] = annotation.utr.get_transcript_infos(
-            genomic_ranges_to_pyranges(ref_ranges_no_info))
-
-        if utr_transcript_info:
-
-            utr_ranges: Set[GenomicRange] = set(utr_transcript_info.keys())
-            ref_ranges_no_info -= utr_ranges
-
-            # Log UTR matches
-            for genomic_range in utr_ranges:
-                logging.info(f"UTR found within region {genomic_range.region}.")
-
-            # Set retrieved transcript information
-            for ot in ots:
-                if ot.ref_range in utr_ranges:
-                    ot.transcript_info = utr_transcript_info[ot.ref_range]
-
-    # Log missing transcript information if it could not be retrieved
-    for genomic_range in ref_ranges_no_info:
-        logging.info(f"No transcript information found for region {genomic_range.region}.")
-
-    return ots
-
-
-def get_oligo_template_qc_info(ot: OligoTemplate) -> List[str]:
-    sequences: List[str] = [
-        segment.sequence
-        for segment in ot.ref_segments
+from pysam.libcfaidx import FastaFile
+
+from .annotation import Annotation
+from .codon_table import CodonTable
+from .codon_table_loader import load_codon_table_rows
+from .common_cli import common_params, existing_file
+from .constants import OUTPUT_CONFIG_FILE_NAME
+from .contig_filter import ContigFilter
+from .custom_variant import CustomVariant
+from .db import get_db_conn, cursor, dump_all
+from .loaders.experiment import ExperimentConfig
+from .loaders.fasta import open_fasta
+from .loaders.gtf import GtfLoader
+from .loaders.vcf_manifest import VcfManifest
+from .pam_variant import PamVariant
+from .pattern_variant import PatternVariant
+from .queries import insert_custom_variant_collection, insert_exons, insert_background_variants, \
+    insert_pam_protection_edits, insert_gene_offsets, insert_mutator_types, insert_pattern_variants
+from .seq import Seq
+from .sge_config import SGEConfig
+from .strings.dna_str import DnaStr
+from .uint_range import UIntRange
+from .utils import get_default_codon_table_path, get_ddl_path
+from .variant import Variant
+
+
+def fetch_sequence(fa: FastaFile, contig: str, r: UIntRange) -> Seq:
+    # TODO: verify coordinate convention and need to extend for the purposes of VCF generation
+    logging.debug("Fetching reference sequence at %s:%d-%d." %
+                  (contig, r.start, r.end))
+    return Seq(r.start, DnaStr(
+        fa.fetch(reference=contig, start=r.start - 1, end=r.end).upper()))
+
+
+def load_sequences(fa: FastaFile, contig: str, ranges: list[UIntRange]) -> list[Seq]:
+    logging.debug("Fetching %d reference sequences..." % len(ranges))
+    return [
+        fetch_sequence(fa, contig, r)
+        for r in ranges
     ]
 
-    ranges: List[str] = [str(segment.start) for segment in ot.ref_segments]
 
-    return [ot.name, ot.ref_range.region] + list(chain.from_iterable(zip(ranges, sequences)))
+def load_custom_variants(conn: Connection, vcf_manifest_fp: str, contig: str, targeton_ranges: list[UIntRange]) -> None:
+
+    # Load manifest file
+    manifest = VcfManifest.load(vcf_manifest_fp)
+    manifest.test_vcf_extance()
+
+    # Set positional filter
+    contig_ft = ContigFilter.from_ranges(contig, targeton_ranges)
+
+    total_custom_variants: int = 0
+    for vcf_proxy in manifest.vcfs:
+
+        # Load variants from VCF file
+        custom_vars = CustomVariant.load_vcf(
+            vcf_proxy.vcf_path,
+            contig_ft,
+            vcf_id_tag=vcf_proxy.vcf_id_tag)
+
+        # Push the variants to the database
+        insert_custom_variant_collection(
+            conn, vcf_proxy.vcf_alias, custom_vars)
+
+        total_custom_variants += len(custom_vars)
+
+    logging.debug("Collected %d custom variants." % total_custom_variants)
 
 
-def generate_oligos(output: str, ref_repository: ReferenceSequenceRepository, aux: AuxiliaryTables, ot: OligoTemplate, species: str, assembly: str, options: Options) -> OligoGenerationInfo:
+def load_background_variants(conn: Connection, vcf_fp: str, contig: str, ranges: list[UIntRange]) -> None:
 
-    # Generate metadata table
-    mutation_df = ot.get_mutation_table(aux, options)
-    metadata = MetadataTable.from_partial(
-        species,
-        assembly,
-        mutation_df,
-        options.oligo_min_length,
-        options.oligo_max_length
-    ) if mutation_df is not None else MetadataTable.empty()
+    # Set positional filter
+    contig_ft = ContigFilter.from_ranges(contig, ranges)
 
-    # Generate file name prefix
-    base_fn = (
-        '_'.join([ot.name] + sorted(ot.sgrna_ids)) if ot.sgrna_ids else
-        ot.name
-    )
+    # Load variants from VCF file
+    bg_vars = CustomVariant.load_vcf(vcf_fp, contig_ft)
+    logging.debug("Collected %d background variants." % len(bg_vars))
 
-    # Write to files
-    metadata.write_sge_files(output, base_fn, ref_repository)
+    # Push the variants to the database
+    insert_background_variants(conn, bg_vars)
 
-    # Log
-    if metadata.short_oligo_n == 0:
-        logging.warning(
-            "Empty metadata table for targeton at %s (%s): no file generated!" % (
-                ot.ref_range.region,
-                ', '.join(ot.sgrna_ids) if ot.sgrna_ids else 'no PAM protection'
-            ))
-        logging.warning(
-            "Empty unique oligonucleotides table for targeton at %s (%s): no file generated!" % (
-                ot.ref_range.region,
-                ', '.join(ot.sgrna_ids) if ot.sgrna_ids else 'no PAM protection'
-            ))
 
-    return metadata.get_info()
+def load_pam_variants(conn: Connection, vcf_fp: str, contig: str, ranges: list[UIntRange]) -> None:
+
+    # Set positional filter
+    contig_ft = ContigFilter.from_ranges(contig, ranges)
+
+    # Load variants from VCF file
+    pam_vars = PamVariant.load_vcf(vcf_fp, contig_ft)
+    logging.debug("Collected %d PAM variants." % len(pam_vars))
+
+    # Push the variants to the database
+    insert_pam_protection_edits(conn, pam_vars)
+
+
+def init_database(conn: Connection) -> None:
+    with open(get_ddl_path()) as fh:
+        with cursor(conn) as cur:
+            cur.executescript(fh.read())
 
 
 def run_sge(config: SGEConfig, sequences_only: bool) -> None:
+
+    # Load options
     options = config.get_options()
 
     # Load codon table
-    ct: CodonTable = load_codon_table(config.codon_table_fp)
+    if not config.codon_table_fp:
+        logging.info(
+            "Codon table not specified, the default one will be used.")
+    codon_table = CodonTable.from_list(load_codon_table_rows(
+        config.codon_table_fp or get_default_codon_table_path()))
 
-    # Load CDS, stop codon, and UTR features from GTF/GFF2 file (if any)
-    annotation: Optional[AnnotationRepository] = _load_gff_file(config.gff_fp)
-    is_annotation_available: bool = annotation is not None
+    # Load experiment configuration
+    exp = ExperimentConfig.load(config.oligo_info_fp)
+    targeton_ranges = exp.ref_ranges
 
-    # Load oligonucleotide templates
-    rsrs: ReferenceSequenceRangeCollection = _load_oligo_templates(config.oligo_info_fp)
+    # Load annotation
+    annot: Annotation | None = None
+    if config.gff_fp:
+        annot = GtfLoader(exp.contig, exp.strand).load_gtf(config.gff_fp)
 
-    # Collect all genomic ranges for which reference sequences have to be fetched
-    ref_ranges = rsrs.ref_ranges
+    all_ranges = targeton_ranges + [
+        UIntRange(x.start, x.end)
+        for x in annot.cds.ranges
+    ] if annot else []
 
-    variants = VariantRepositoryCollection.load(config, rsrs)
+    # Get FASTA file
+    with open_fasta(config.ref_fasta_fp) as fa:
+        # TODO: load all sequences at once
+        targeton_ref_seqs = load_sequences(fa, exp.contig, targeton_ranges)
+        if annot:
+            cds_ref_seqs = load_sequences(fa, exp.contig, annot.cds.ranges)
 
-    if is_annotation_available and annotation.exons:
+    # TODO: correct targeton region bounds based on background
+    pattern_variants: list[Variant] = []
+    targetons = {
+        s.start: s
+        for s in targeton_ref_seqs
+    }
+    with get_db_conn() as conn:
+        init_database(conn)
+        insert_mutator_types(conn)
 
-        # Add the ranges of all transcript exons
-        # TODO: optimise to overlapping the targeton plus one preceding and one following
-        ref_ranges |= set(annotation.exons.get_exon_ranges())
+        for t in exp.targeton_configs:
+            # TODO: apply pattern variants to R1 and R3 as well
+            for i, r in enumerate([None, t.region_2, None]):
+                if r is None:
+                    continue
+                targeton = targetons[t.ref.start]
+                print(f"targeton={targeton}")
+                mutators = t.mutators[i]
+                r_seq = targeton.subseq(t.region_2, rel=False)
+                print(f"r_seq={r_seq}")
+                if mutators:
+                    r_vars = mutators.get_variants(r_seq)
+                    pattern_variants.extend(r_vars)
+                    print(f"r_vars={r_vars}")
+                    insert_pattern_variants(conn,  r_vars)
 
-    # Initialise auxiliary tables
-    all_mutators = rsrs.mutarors
-    aux: AuxiliaryTables = AuxiliaryTables(
-        ct,
-        rsrs.strands,
-        TargetonMutator.SNV in all_mutators,
-        TargetonMutator.SNV_RE in all_mutators,
-        TargetonMutator.AA in all_mutators)
-    del all_mutators
+        # Load background variants (targetons & exons)
+        if config.bg_fp:
 
-    # Fetch reference sequences
-    try:
-        ref: ReferenceSequenceRepository = fetch_reference_sequences(config.ref_fasta_fp, ref_ranges)
-    except ValueError as ex:
-        logging.critical(ex.args[0])
-        logging.critical("Failed to retrieve reference sequences!")
-        sys.exit(1)
+            # Identify minimal context required
+            t_min = min(t.start for t in targeton_ranges)
+            t_max = max(t.end for t in targeton_ranges)
+            if annot:
+                # Assumption: CDS ranges are sorted by position
+                c_min = annot.cds.ranges[0].start
+                c_max = annot.cds.ranges[-1].end
+                assert c_min < c_max
 
-    # Prepare oligonucleotides
-    try:
-        oligo_templates: List[OligoTemplate] = get_oligo_templates(
-            rsrs,
-            ref,
-            variants,
-            annotation,
-            aux.codon_table,
-            config)
-    except (SequenceNotFound, InvalidBackground) as ex:
-        logging.critical(ex.args[0])
-        sys.exit(1)
-    except InvalidVariantRef as ex:
-        logging.critical(ex.args[0])
-        if variants.background:
-            logging.critical("Please check your background variants for overlaps!")
-        sys.exit(1)
+                bg_ctx = UIntRange(min(t_min, c_min), max(t_max, c_max))
+            else:
+                bg_ctx = UIntRange(t_min, t_max)
 
-    def get_qc_row(ot: OligoTemplate) -> List[str]:
-        return get_oligo_template_qc_info(ot)
+            load_background_variants(conn, config.bg_fp, exp.contig, [bg_ctx])
+            insert_gene_offsets(conn, bg_ctx.start, bg_ctx.end)
 
-    write_reference_sequences(
-        map(get_qc_row, oligo_templates),
-        os.path.join(config.output_dir, "ref_sequences.csv"))
+        if config.pam_fp:
+            load_pam_variants(conn, config.pam_fp, exp.contig, targeton_ranges)
 
-    if sequences_only:
-        sys.exit(0)
+        # Load custom variants (targetons)
+        if config.vcf_fp:
+            load_custom_variants(conn, config.vcf_fp,
+                                 exp.contig, targeton_ranges)
 
-    stats = Stats()
-    info: OligoGenerationInfo
-    for ot in oligo_templates:
-        try:
+        if annot:
+            insert_exons(conn, annot.cds.ranges)
 
-            # Generate all oligonucleotides and write to file
-            info = generate_oligos(
-                config.output_dir, ref, aux, ot, config.species, config.assembly, options)
+        # TODO: remove (DEBUG only!)
+        dump_all(conn)
 
-        except ValueError as ex:
-            logging.critical(ex.args[0])
-            logging.critical("Failed to generate oligonucleotides!")
-            sys.exit(1)
-
-        stats.update(info)
-
-    finalise(config, stats)
+    # Write JSON configuration to file
+    config.write(os.path.join(config.output_dir, OUTPUT_CONFIG_FILE_NAME))
 
 
 @click.command()
@@ -546,11 +247,11 @@ def sge(
     # Input files
     oligo_info_fp: str,
     ref_fasta_fp: str,
-    codon_table_fp: Optional[str],
-    gff_fp: Optional[str],
-    bg_fp: Optional[str],
-    pam_fp: Optional[str],
-    vcf_fp: Optional[str],
+    codon_table_fp: str | None,
+    gff_fp: str | None,
+    bg_fp: str | None,
+    pam_fp: str | None,
+    vcf_fp: str | None,
 
     # Output directory
     output_dir: str,
@@ -560,8 +261,8 @@ def sge(
     assembly: str,
 
     # Adaptor sequences
-    adaptor_5: Optional[str],
-    adaptor_3: Optional[str],
+    adaptor_5: str | None,
+    adaptor_3: str | None,
 
     # Background variants
     force_bg_ns: bool,

@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
+# Copyright (C) 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,28 +16,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-NTS = set('ACGT')
+from __future__ import annotations
 
-NT_SNVS = {
-    nt: sorted(NTS - {nt})
-    for nt in NTS
-}
+from dataclasses import dataclass
 
-# Stop symbol (codon table)
-STOP = 'STOP'
+from .uint_range import UIntRangeSortedList, UIntRange
 
-# Path to the package data directory
-DATA_PATH = 'data'
 
-# Database DDL script file name
-DDL_FN = 'ddl.sql'
+@dataclass(slots=True)
+class ContigFilter:
+    contigs: dict[str, UIntRangeSortedList]
 
-# Default codon table file name
-CODON_TABLE_FN = 'default_codon_table.csv'
-
-# Output configuration file name
-OUTPUT_CONFIG_FILE_NAME = 'config.json'
-
-# Default parameters
-DEFAULT_OLIGO_MAX_LENGTH = 300
-DEFAULT_OLIGO_MIN_LENGTH = 1
+    @classmethod
+    def from_ranges(cls, contig: str, ranges: list[UIntRange]) -> ContigFilter:
+        return cls({
+            contig: UIntRangeSortedList(ranges)
+        })

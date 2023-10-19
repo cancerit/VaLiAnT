@@ -16,28 +16,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-NTS = set('ACGT')
+from dataclasses import dataclass
+from .oligo_generation_info import OligoGenerationInfo
 
-NT_SNVS = {
-    nt: sorted(NTS - {nt})
-    for nt in NTS
-}
 
-# Stop symbol (codon table)
-STOP = 'STOP'
+@dataclass(slots=True, init=False)
+class Stats:
+    short_oligo_n: int
+    long_oligo_n: int
 
-# Path to the package data directory
-DATA_PATH = 'data'
+    def __init__(self) -> None:
+        self.short_oligo_n = 0
+        self.long_oligo_n = 0
 
-# Database DDL script file name
-DDL_FN = 'ddl.sql'
-
-# Default codon table file name
-CODON_TABLE_FN = 'default_codon_table.csv'
-
-# Output configuration file name
-OUTPUT_CONFIG_FILE_NAME = 'config.json'
-
-# Default parameters
-DEFAULT_OLIGO_MAX_LENGTH = 300
-DEFAULT_OLIGO_MIN_LENGTH = 1
+    def update(self, info: OligoGenerationInfo) -> None:
+        self.short_oligo_n += info.short_oligo_n
+        self.long_oligo_n += info.long_oligo_n

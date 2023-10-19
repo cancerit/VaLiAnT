@@ -16,241 +16,63 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from __future__ import annotations
-
-from enum import Enum
-from functools import lru_cache
-import logging
 import os
 import pathlib
 import re
-from typing import Any, Callable, Dict, FrozenSet, Iterable, List, Optional, Set, Tuple, Type, TypeVar, Union
+from dataclasses import fields
+from itertools import groupby
+from typing import Callable, Iterable
 
-import numpy as np
-import pandas as pd
+from .constants import DATA_PATH, CODON_TABLE_FN, DDL_FN
 
-from .constants import SRC_TYPES
-from .enums import TargetonMutator
-
-T = TypeVar('T')
-S = TypeVar('S')
-
+dna_re = re.compile('^[ACGT]*$')
 dna_complement_tr_table = str.maketrans('ACGT', 'TGCA')
-dna_re = re.compile('^[ACGT]+$')
-
-i8_0: np.int8 = np.int8(0)
-i8_1: np.int8 = np.int8(1)
-i8_2: np.int8 = np.int8(2)
-
-i8_1_2: List[np.int8] = [i8_1, i8_2]
-i8_2_1: List[np.int8] = [i8_2, i8_1]
 
 
-FRAME_COMPLEMENT: Dict[int, int] = {0: 0, 1: 2, 2: 1}
-
-
-def opt_str_length(s: Optional[str]) -> int:
-    return len(s) if s is not None else 0
-
-
-def get_data_file_path(fp: str) -> str:
-    return os.path.join(pathlib.Path(__file__).parent.absolute(), 'data', fp)
-
-
-def is_dna(seq: str) -> bool:
-    return dna_re.match(seq) is not None
-
-
-def is_strand(strand: str) -> bool:
-    return strand == '+' or strand == '-'
-
-
-def validate_strand(strand: str) -> None:
-    if not is_strand(strand):
-        raise ValueError(f"Invalid strand '{strand}'!")
-
-
-def get_region(chromosome: str, start: int, end: int) -> str:
-    return f"{chromosome}:{start}-{end}"
+def is_dna(s: str) -> bool:
+    return dna_re.match(s) is not None
 
 
 def reverse_complement(seq: str) -> str:
     return seq[::-1].translate(dna_complement_tr_table)
 
 
-def parse_list(s: str) -> List[str]:
-    return [
-        item for item in [
-            raw.strip()
-            for raw in s.split(',')
-        ]
-        if item
-    ]
+def parse_opt_int_group(m: re.Match, i: int) -> int:
+    g = m.group(i)
+    return int(g) if g else 0
 
 
-def get_smallest_int_type(max_value: int) -> Type:
-    if max_value < 0:
-        raise ValueError("Only non-negative integers supported!")
-    return (
-        np.int8 if max_value <= np.iinfo(np.int8).max else
-        np.int16 if max_value <= np.iinfo(np.int16).max else
-        np.int32 if max_value <= np.iinfo(np.int32).max else
-        np.int64
-    )
+def safe_group_by(a: Iterable, k: Callable):
+    return groupby(sorted(a, key=k), key=k)
 
 
-def get_id_column(rown: int) -> np.ndarray:
-    return np.arange(rown, dtype=get_smallest_int_type(rown))
+def get_data_file_path(fp):
+    return os.path.join(pathlib.Path(__file__).parent.absolute(), DATA_PATH, fp)
 
 
-def get_constant_category(s: str, n: int, categories: List[str] = None) -> pd.Categorical:
-    if categories and s not in categories:
-        raise ValueError(f"Invalid category '{s}'!")
-    return pd.Categorical([s], categories=categories or [s]).repeat(n)
+def get_default_codon_table_path() -> str:
+    return get_data_file_path(CODON_TABLE_FN)
 
 
-@lru_cache()
-def get_empty_category_column(categories: Iterable[str], n: int) -> pd.Categorical:
-    return pd.Categorical(np.empty(n), categories=sorted(categories))
+def get_ddl_path() -> str:
+    return get_data_file_path(DDL_FN)
 
 
-@lru_cache(maxsize=4)
-def get_out_of_frame_offset(cds_ext_length: int) -> int:
-    return (3 - cds_ext_length) if cds_ext_length > 0 else 0
-
-
-def get_frame_complement(frame: pd.Series) -> pd.Series:
-    return frame.replace(i8_1_2, i8_2_1)
-
-
-def get_frame_complement_scalar(frame: int) -> int:
-    return FRAME_COMPLEMENT[frame]
-
-
-def get_cds_ext_3_length(frame: int, length: int) -> int:
-    """
-    Calculate how many nucleotides are missing from the last codon
-    given the reading frame and the length of the sequence
-    """
-
-    return (3 - (length + frame) % 3) % 3
-
-
-def get_inner_cds_relative_boundaries(seq_len: int, frame: int) -> Tuple[int, int]:
-    inner_cds_start: int = 0 if frame == 0 else (3 - frame)
-    inner_cds_end: int = seq_len - (seq_len - inner_cds_start) % 3
-    return inner_cds_start, inner_cds_end
-
-
-def get_var_types(var_types: pd.Series) -> List[int]:
-    return [
-        int(k)
-        for k, v in dict(var_types.value_counts()).items()
-        if v > 0
-    ]
-
-
-@lru_cache(maxsize=16)
-def parse_mutator(s: str) -> TargetonMutator:
-    try:
-        return TargetonMutator(s)
-    except ValueError:
-        raise ValueError(f"Invalid mutator '{s}'!")
-
-
-def parse_mutators(s: str) -> FrozenSet[TargetonMutator]:
-    return frozenset(map(parse_mutator, parse_list(s)))
-
-
-def get_source_type_column(src_type: str, n: int) -> pd.Series:
-    return get_constant_category(src_type, n, categories=SRC_TYPES)
-
-
-def repr_enum_list(enums: Iterable[Enum]) -> str:
-    return ', '.join(str(e.value) for e in enums)
-
-
-def has_duplicates(items: List[int]) -> bool:
+def has_duplicates(items: list) -> bool:
     return len(set(items)) != len(items)
 
 
-def is_adaptor_valid(adaptor: Optional[str]) -> None:
-    return adaptor is None or is_dna(adaptor)
+def get_dataclass_fields(cls) -> list[str]:
+    return [f.name for f in fields(cls)]
 
 
-def get_not_none(it: Iterable) -> Any:
+def get_enum_values(cls) -> list:
+    return [x.value for x in cls]
+
+
+def get_not_none(it):
     return [x for x in it if x is not None]
 
 
-def diff(a: List[int]) -> List[int]:
-    if len(a) < 2:
-        raise ValueError("Pairwise differences undefined for lists of less than two items!")
-    return [y - x for x, y in zip(a, a[1:])]
-
-
-def group_consecutive(items: List[Tuple[int, T]]) -> List[List[T]]:
-    n: int = len(items)
-    if n == 0:
-        return [[]]
-    if n == 1:
-        return [[items[0][1]]]
-
-    consecutive_items: List[List[T]] = []
-    diffs: List[int] = diff([i for i, _ in items])
-    start: int = 0
-    end: int
-    for i in range(n - 1):
-        if diffs[i] != 1:
-            end = i + 1
-            consecutive_items.append([x for _, x in items[start:end]])
-            start = end
-    consecutive_items.append([x for _, x in items[start:]])
-
-    return consecutive_items
-
-
-def init_nullable_int_field(df: pd.DataFrame, field: str) -> None:
-    df[field] = np.empty(df.shape[0], dtype=pd.Int32Dtype)
-
-
-def init_string_field(df: pd.DataFrame, field: str) -> None:
-    df[field] = ''
-    df[field] = df[field].astype('string')
-
-
-def does_any_set_intersect(sets: Iterable[Set[T]]) -> bool:
-    items: Set[T] = set()
-    for s in sets:
-        if items & s:
-            return True
-        items |= s
-
-    return False
-
-
-def get_nullable_field(s: Union[pd.Series, Tuple], field: str, default: Optional[T] = None) -> Optional[T]:
-    x: T = getattr(s, field)
-    return x if not pd.isnull(x) else default  # type: ignore
-
-
-def map_filter_log(
-    map_f: Callable[[T], S],
-    ft_f: Callable[[T], bool],
-    log_f: Callable[[T], str],
-    items: Iterable[T],
-    sort_f: Optional[Callable[[S], Any]] = None,
-    level: int = logging.WARNING
-) -> List[S]:
-    """Map, filter, and optionally sort, logging discarded items"""
-
-    res: List[S] = []
-    for item in items:
-        if ft_f(item):
-            res.append(map_f(item))
-        else:
-            logging.log(level, log_f(item))
-    return sorted(res, key=sort_f) if sort_f is not None else res
-
-
-def apply_nonnull(x: Optional[T], f: Callable[[T], S]) -> Optional[S]:
-    return f(x) if x is not None else None
+def is_adaptor_valid(adaptor: str | None) -> None:
+    return adaptor is None or is_dna(adaptor)

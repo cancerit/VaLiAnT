@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
+# Copyright (C) 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,28 +16,32 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-NTS = set('ACGT')
+from __future__ import annotations
 
-NT_SNVS = {
-    nt: sorted(NTS - {nt})
-    for nt in NTS
-}
+from ..uint_range import UIntRange
+from ..utils import is_dna
 
-# Stop symbol (codon table)
-STOP = 'STOP'
 
-# Path to the package data directory
-DATA_PATH = 'data'
+class DnaStr(str):
 
-# Database DDL script file name
-DDL_FN = 'ddl.sql'
+    def __init__(self, s: str) -> None:
+        if not is_dna(s):
+            raise ValueError(f"Invalid DNA sequence: {s}!")
+        super().__init__()
 
-# Default codon table file name
-CODON_TABLE_FN = 'default_codon_table.csv'
+    @classmethod
+    def parse(cls, s: str | None):
+        return cls(s) if s else cls.empty()
 
-# Output configuration file name
-OUTPUT_CONFIG_FILE_NAME = 'config.json'
+    @classmethod
+    def empty(cls):
+        return cls('')
 
-# Default parameters
-DEFAULT_OLIGO_MAX_LENGTH = 300
-DEFAULT_OLIGO_MIN_LENGTH = 1
+    def as_nullable(self) -> str | None:
+        return str(self) if self else None
+
+    def slice(self, sl: slice) -> DnaStr:
+        return DnaStr(self[sl])
+
+    def substr(self, r: UIntRange) -> DnaStr:
+        return self.slice(r.to_slice())
