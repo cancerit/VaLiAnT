@@ -31,6 +31,10 @@ from ..variant import Variant
 pt_codon = IntPatternBuilder(0, 3)
 
 
+def get_variant_from_ref(ref: Seq, alt: DnaStr) -> Variant:
+    return Variant(ref.start, ref.s, alt)
+
+
 @dataclass(frozen=True, init=False)
 class BaseCodonMutator(BaseMutator, ABC):
     def __init__(self) -> None:
@@ -45,11 +49,10 @@ class CodonMutator(BaseCodonMutator, ABC):
         return Codon(self.codon_table.get_top_codon(aa))
 
     def _get_codon_replacements(self, seq: Seq, value: Codon | None) -> list[Variant]:
-        refs = self.get_refs(seq)
         alt = DnaStr(value or '')
         return [
-            Variant(ref.start, ref.s, alt)
-            for ref in refs
+            get_variant_from_ref(ref, alt)
+            for ref in self.get_refs(seq)
         ]
 
 
@@ -95,7 +98,7 @@ class StopMutator(BaseReplaceCodonMutator):
 
 
 @dataclass(frozen=True, slots=True)
-class AminoAcidMutator(BaseReplaceCodonMutator):
+class AminoAcidMutator(CodonMutator):
     TYPE = MutatorType.AA
 
     def get_alt_aa_codons(self, codon: str) -> list[str]:
@@ -107,9 +110,8 @@ class AminoAcidMutator(BaseReplaceCodonMutator):
         ]
 
     def get_variants(self, seq: Seq) -> list[Variant]:
-        refs = self.get_refs(seq)
         return [
-            Variant(ref.start, ref.s, DnaStr(alt_codon))
-            for ref in refs
+            get_variant_from_ref(ref, DnaStr(alt_codon))
+            for ref in self.get_refs(seq)
             for alt_codon in self.get_alt_aa_codons(ref.s)
         ]
