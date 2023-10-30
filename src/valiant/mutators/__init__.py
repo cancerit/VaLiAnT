@@ -22,8 +22,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar
 
-from ..uint_range import UIntRange
 from ..seq import Seq
+from ..uint_range import UIntRange
 from ..variant import Variant
 
 
@@ -45,17 +45,13 @@ class IntPatternBuilder:
 
 
 pt_nt = IntPatternBuilder(0, 1)
-pt_codon = IntPatternBuilder(0, 3)
 
 
-@dataclass(slots=True, init=True, frozen=True)
+@dataclass(frozen=True)
 class BaseMutator(ABC):
     TYPE: ClassVar[str]
 
     pt: IntPatternBuilder
-
-    def set_pt(self, pt: IntPatternBuilder) -> None:
-        object.__setattr__(self, 'pt', pt)
 
     def get_refs(self, seq: Seq) -> list[Seq]:
         """Get the mutation start relative positions and reference sequences"""
@@ -71,14 +67,7 @@ class BaseMutator(ABC):
         pass
 
 
-@dataclass(slots=True, init=False, frozen=True)
+@dataclass(frozen=True, init=False)
 class SingleBaseMutator(BaseMutator, ABC):
     def __init__(self) -> None:
-        self.set_pt(pt_nt)
-
-
-@dataclass(slots=True, init=False, frozen=True)
-class BaseCodonMutator(BaseMutator, ABC):
-    def __init__(self) -> None:
-        # TODO: should the offset be a function of the frame?
-        self.set_pt(pt_nt)
+        super().__init__(pt_nt)

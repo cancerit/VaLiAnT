@@ -24,12 +24,12 @@ from ..seq import Seq
 from ..variant import Variant
 
 
-@dataclass(slots=True, init=False, frozen=True)
+@dataclass(frozen=True, slots=True, init=False)
 class DeletionMutator(BaseMutator):
     TYPE = MutatorType.DEL
 
     def __init__(self, offset: int, span: int) -> None:
-        self.set_pt(IntPatternBuilder(offset, span))
+        super().__init__(IntPatternBuilder(offset, span))
 
     def get_variants(self, seq: Seq) -> list[Variant]:
         refs = self.get_refs(seq)

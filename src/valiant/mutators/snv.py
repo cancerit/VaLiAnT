@@ -26,7 +26,7 @@ from ..strings.nucleotide import Nucleotide
 from ..variant import Variant
 
 
-@dataclass(slots=True, init=False, frozen=True)
+@dataclass(frozen=True, slots=True)
 class SnvMutator(SingleBaseMutator):
     TYPE = MutatorType.SNV
 
