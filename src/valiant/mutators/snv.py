@@ -19,16 +19,24 @@
 from dataclasses import dataclass
 from itertools import chain
 
-from . import SingleBaseMutator
+from . import BaseMutator, IntPatternBuilder
 from ..mutator_type import MutatorType
 from ..seq import Seq
 from ..strings.nucleotide import Nucleotide
 from ..variant import Variant
 
+pt_nt = IntPatternBuilder(0, 1)
 
-@dataclass(frozen=True, slots=True)
-class SnvMutator(SingleBaseMutator):
+
+# TODO: add slots back when CPython fixes 90562
+#  https://github.com/python/cpython/issues/90562
+@dataclass(frozen=True, slots=False, init=False)
+class SnvMutator(BaseMutator):
     TYPE = MutatorType.SNV
+
+    def __init__(self) -> None:
+        # Would break in Python 3.11.3 if slots were set
+        super().__init__(pt_nt)
 
     def get_variants(self, seq: Seq) -> list[Variant]:
         refs = self.get_refs(seq)

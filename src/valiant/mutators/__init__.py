@@ -44,9 +44,6 @@ class IntPatternBuilder:
         return UIntRange.from_length(start, self.span)
 
 
-pt_nt = IntPatternBuilder(0, 1)
-
-
 @dataclass(frozen=True)
 class BaseMutator(ABC):
     TYPE: ClassVar[str]
@@ -65,9 +62,3 @@ class BaseMutator(ABC):
     @abstractmethod
     def get_variants(self, seq: Seq) -> list[Variant]:
         pass
-
-
-@dataclass(frozen=True, init=False)
-class SingleBaseMutator(BaseMutator, ABC):
-    def __init__(self) -> None:
-        super().__init__(pt_nt)
