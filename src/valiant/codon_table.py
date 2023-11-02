@@ -63,28 +63,24 @@ class CodonTable:
 
         return cls(codon_to_aa, aa_to_codon, codon_to_syn)
 
-    def get_codons(self, aa: str) -> list[str]:
+    def get_codons(self, aa: TranslationSymbol) -> list[Codon]:
         return self.aa_to_codons[aa]
 
-    def get_top_codon(self, aa: str) -> str:
+    def get_top_codon(self, aa: TranslationSymbol) -> str:
         """Get highest-ranking (most frequent) codon translating to an amino acid"""
 
         # Assumption: aa_to_codons has its values (codons) sorted by rank
         return self.get_codons(aa)[0]
 
-    def translate(self, codon: str) -> str:
+    def translate(self, codon: Codon) -> TranslationSymbol:
         try:
             return self.codon_to_aa[codon]
         except KeyError:
             raise CodonNotFound(codon)
 
-    def get_aa_change(self, codon_a: str, codon_b: str) -> MutationType:
+    def get_aa_change(self, codon_a: Codon, codon_b: Codon) -> MutationType:
         aa_a = self.translate(codon_a)
         aa_b = self.translate(codon_b)
 
         # Compare the amino acids
-        return (
-            MutationType.NONSENSE if aa_b == STOP else
-            MutationType.SYNONYMOUS if aa_b == aa_a else
-            MutationType.MISSENSE
-        )
+        return aa_a.get_aa_change(aa_b)

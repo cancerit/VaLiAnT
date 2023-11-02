@@ -16,7 +16,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from __future__ import annotations
+
+from functools import lru_cache
+
 from ..constants import STOP
+from ..enums import MutationType
 
 
 class TranslationSymbol(str):
@@ -24,3 +29,11 @@ class TranslationSymbol(str):
         if len(s) != 1 and s != STOP:
             raise ValueError(f"Invalid translation symbol: {s}!")
         super().__init__()
+
+    @lru_cache(maxsize=512)
+    def get_aa_change(self, aa_b: TranslationSymbol) -> MutationType:
+        return (
+            MutationType.NONSENSE if aa_b == STOP else
+            MutationType.SYNONYMOUS if aa_b == self else
+            MutationType.MISSENSE
+        )
