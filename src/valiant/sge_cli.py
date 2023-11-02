@@ -179,7 +179,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
                     r_vars = mutators.get_variants(r_seq)
                     pattern_variants.extend(r_vars)
                     print(f"r_vars={r_vars}")
-                    insert_pattern_variants(conn,  r_vars)
+                    insert_pattern_variants(conn, r_vars)
 
         # Load background variants (targetons & exons)
         if config.bg_fp:
