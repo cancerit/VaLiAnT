@@ -66,6 +66,14 @@ class CodonTable:
     def get_codons(self, aa: TranslationSymbol) -> list[Codon]:
         return self.aa_to_codons[aa]
 
+    def get_synonymous_codons(self, codon: Codon) -> list[Codon]:
+        aa = self.translate(codon)
+        return [
+            syn_codon
+            for syn_codon in self.get_codons(aa)
+            if syn_codon != codon
+        ]
+
     def get_top_codon(self, aa: TranslationSymbol) -> str:
         """Get highest-ranking (most frequent) codon translating to an amino acid"""
 
