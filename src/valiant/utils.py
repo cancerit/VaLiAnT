@@ -76,10 +76,3 @@ def get_not_none(it):
 
 def is_adaptor_valid(adaptor: str | None) -> bool:
     return adaptor is None or is_dna(adaptor)
-
-
-def replace_character_at(s: str, i: int, new: str) -> str:
-    assert len(new) == 1
-    return ''.join([
-        c if j != i else new
-        for j, c in enumerate(s)
