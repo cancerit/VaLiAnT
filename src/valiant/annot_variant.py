@@ -27,7 +27,6 @@ from .seq import Seq
 from .strings.codon import Codon
 from .strings.translation_symbol import TranslationSymbol
 from .uint_range import UIntRange
-from .utils import replace_character_at
 from .variant import Variant
 
 
@@ -41,8 +40,9 @@ def get_codon_range_offset(pos: int, frame: int = 0) -> tuple[UIntRange, int]:
 
 @dataclass
 class AnnotVariant(Variant):
-    codon: Codon
     codon_offset: int
+    codon_ref: Codon
+    codon_alt: Codon
     aa_ref: TranslationSymbol
     aa_alt: TranslationSymbol
 
@@ -52,26 +52,31 @@ class AnnotVariant(Variant):
         if not (0 <= self.codon_offset < 3):
             raise ValueError("Invalid codon offset!")
 
+    @classmethod
+    def from_codons(cls, codon_table: CodonTable, v: Variant, offset: int, ref: Codon, alt: Codon) -> AnnotVariant:
+        return cls(
+            v.pos, v.ref, v.alt,
+            offset, ref, alt,
+            codon_table.translate(ref),
+            codon_table.translate(alt))
+
     @property
     def codon_start(self) -> int:
         return self.pos - self.codon_offset
 
-    @property
-    def alt_codon(self) -> Codon:
-        return Codon(replace_character_at(
-            self.codon, self.codon_offset, self.alt))
-
-    @property
     def mutation_type(self) -> MutationType:
         return self.aa_ref.get_aa_change(self.aa_alt)
 
     @classmethod
     def annotate(cls, codon_table: CodonTable, seq: Seq, v: Variant, frame: int = 0) -> AnnotVariant:
-        codon_range, codon_offset = get_codon_range_offset(v.pos, frame=frame)
+        var_offset = seq.get_offset(v.pos)
+        # TODO: handle
+        assert 0 <= var_offset < len(seq)
+        codon_range, codon_offset = get_codon_range_offset(
+            v.pos - seq.start, frame=frame)
         # TODO: verify it is not a partial codon (expect seq to be a complete CDS?)
-        codon_seq = Codon(seq.substr(codon_range, rel=False))
+        codon_ref = Codon(seq.substr(codon_range, rel=True))
+        codon_alt = Codon(
+            codon_ref.replace_substr(UIntRange.from_pos(codon_offset), v.alt))
 
-        aa_ref = TranslationSymbol(codon_table.translate(codon_seq))
-        aa_alt = aa_ref  # TODO: replace! DEBUG only!
-
-        return AnnotVariant(v.pos, v.ref, v.alt, codon_seq, codon_offset, aa_ref, aa_alt)
+        return AnnotVariant.from_codons(codon_table, v, codon_offset, codon_ref, codon_alt)

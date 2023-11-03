@@ -66,7 +66,7 @@ class Variant:
         """Create the three SNV's for a given position"""
 
         return [
-            cls(pos, nt, nt_alt)
+            cls(pos, nt, DnaStr(nt_alt))
             for nt_alt in NT_SNVS[nt]
         ]
 

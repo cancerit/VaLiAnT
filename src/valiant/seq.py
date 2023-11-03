@@ -52,3 +52,6 @@ class Seq(Sized):
 
     def subseq(self, r: UIntRange, rel: bool = True) -> Seq:
         return Seq(r.start, self.substr(r, rel=rel))
+
+    def get_offset(self, pos: int) -> int:
+        return pos - self.start

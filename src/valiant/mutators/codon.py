@@ -26,7 +26,9 @@ from ..mutator_type import MutatorType
 from ..seq import Seq
 from ..strings.codon import Codon
 from ..strings.dna_str import DnaStr
+from ..strings.translation_symbol import TranslationSymbol
 from ..variant import Variant
+
 
 pt_codon = IntPatternBuilder(0, 3)
 
@@ -35,17 +37,15 @@ def get_variant_from_ref(ref: Seq, alt: DnaStr) -> Variant:
     return Variant(ref.start, ref.s, alt)
 
 
-@dataclass(frozen=True, init=False)
-class BaseCodonMutator(BaseMutator, ABC):
-    def __init__(self) -> None:
-        super().__init__(pt_codon)
-
-
 @dataclass(frozen=True)
-class CodonMutator(BaseCodonMutator, ABC):
+class CodonMutator(BaseMutator, ABC):
     codon_table: CodonTable
 
-    def get_top_codon(self, aa: str) -> Codon:
+    def __init__(self, codon_table: CodonTable) -> None:
+        super().__init__(pt_codon)
+        object.__setattr__(self, 'codon_table', codon_table)
+
+    def get_top_codon(self, aa: TranslationSymbol) -> Codon:
         return Codon(self.codon_table.get_top_codon(aa))
 
     def _get_codon_replacements(self, seq: Seq, value: Codon | None) -> list[Variant]:
@@ -83,8 +83,8 @@ class AlaMutator(BaseReplaceCodonMutator):
 
     @property
     def alt(self) -> Codon | None:
-        # TODO: verify!
-        return self.get_top_codon('ala')
+        # TODO: verify!
+        return self.get_top_codon(TranslationSymbol('A'))
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,15 +93,15 @@ class StopMutator(BaseReplaceCodonMutator):
 
     @property
     def alt(self) -> Codon | None:
-        # TODO: verify!
-        return self.get_top_codon(STOP)
+        # TODO: verify!
+        return self.get_top_codon(TranslationSymbol(STOP))
 
 
 @dataclass(frozen=True, slots=True)
 class AminoAcidMutator(CodonMutator):
     TYPE = MutatorType.AA
 
-    def get_alt_aa_codons(self, codon: str) -> list[str]:
+    def get_alt_aa_codons(self, codon: Codon) -> list[str]:
         return [
             alt_codon
             for alt_codon in self.codon_table.get_codons(
@@ -113,5 +113,5 @@ class AminoAcidMutator(CodonMutator):
         return [
             get_variant_from_ref(ref, DnaStr(alt_codon))
             for ref in self.get_refs(seq)
-            for alt_codon in self.get_alt_aa_codons(ref.s)
+            for alt_codon in self.get_alt_aa_codons(Codon(ref.s))
         ]

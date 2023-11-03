@@ -74,7 +74,7 @@ class CodonTable:
             if syn_codon != codon
         ]
 
-    def get_top_codon(self, aa: TranslationSymbol) -> str:
+    def get_top_codon(self, aa: TranslationSymbol) -> Codon:
         """Get highest-ranking (most frequent) codon translating to an amino acid"""
 
         # Assumption: aa_to_codons has its values (codons) sorted by rank

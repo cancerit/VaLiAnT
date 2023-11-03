@@ -45,3 +45,7 @@ class DnaStr(str):
 
     def substr(self, r: UIntRange) -> DnaStr:
         return self.slice(r.to_slice())
+
+    def replace_substr(self, r: UIntRange, alt: str) -> DnaStr:
+        # TODO: test for bounds!
+        return DnaStr(f"{self[:r.start]}{alt}{self[r.end + 1:]}")

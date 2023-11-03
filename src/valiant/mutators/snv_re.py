@@ -18,8 +18,6 @@
 
 from dataclasses import dataclass
 
-from .codon import CodonMutator
-from .snv import SnvMutator
 from ..annot_variant import AnnotVariant
 from ..codon_table import CodonTable
 from ..constants import STOP
@@ -27,19 +25,22 @@ from ..enums import MutationType
 from ..mutator_type import MutatorType
 from ..seq import Seq
 from ..strings.dna_str import DnaStr
+from ..strings.translation_symbol import TranslationSymbol
 from ..variant import Variant
+from .codon import CodonMutator
+from .snv import SnvMutator
 
 
 def snv_to_snvres(codon_table: CodonTable, snv: AnnotVariant) -> list[Variant]:
     def get_snvre(x: str) -> Variant:
-        return Variant(snv.codon_start, DnaStr(snv.codon), DnaStr(x))
+        return Variant(snv.codon_start, DnaStr(snv.codon_ref), DnaStr(x))
 
     mt = snv.mutation_type
     alts = (
-        codon_table.get_synonymous_codons(snv.codon) if mt == MutationType.SYNONYMOUS else
+        codon_table.get_synonymous_codons(snv.codon_ref) if mt == MutationType.SYNONYMOUS else
         codon_table.get_top_codon(
             snv.aa_alt if mt == MutationType.MISSENSE else
-            STOP  # NONSENSE
+            TranslationSymbol(STOP)  # NONSENSE
         )
     )
 

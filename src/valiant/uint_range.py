@@ -51,6 +51,10 @@ class UIntRange(Sized, Container):
     def from_length(cls, start: int, length: int) -> UIntRange:
         return cls(start, start + length - 1)
 
+    @classmethod
+    def from_pos(cls, pos: int) -> UIntRange:
+        return UIntRange(pos, pos)
+
     def to_slice(self, offset: int = 0) -> slice:
         return slice(self.start - offset, self.end - offset + 1)
 
