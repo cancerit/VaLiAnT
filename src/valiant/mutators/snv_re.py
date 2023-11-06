@@ -37,12 +37,12 @@ def snv_to_snvres(codon_table: CodonTable, snv: AnnotVariant) -> list[Variant]:
 
     mt = snv.mutation_type
     alts = (
-        codon_table.get_synonymous_codons(snv.codon_ref) if mt == MutationType.SYNONYMOUS else
-        codon_table.get_top_codon(
-            snv.aa_alt if mt == MutationType.MISSENSE else
-            TranslationSymbol(STOP)  # NONSENSE
-        )
-    )
+        codon_table.get_synonymous_codons(snv.codon_ref) if mt == MutationType.SYNONYMOUS else [
+            codon_table.get_top_codon(
+                snv.aa_alt if mt == MutationType.MISSENSE else
+                TranslationSymbol(STOP)  # NONSENSE
+            )
+        ])
 
     return list(map(get_snvre, alts))
 
