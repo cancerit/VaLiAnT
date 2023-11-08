@@ -22,14 +22,15 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar
 
-from .int_pattern_builder import IntPatternBuilder
+from ..mutator_type import MutatorType
 from ..seq import Seq
 from ..variant import Variant
+from .int_pattern_builder import IntPatternBuilder
 
 
 @dataclass(frozen=True)
 class BaseMutator(ABC):
-    TYPE: ClassVar[str]
+    TYPE: ClassVar[MutatorType]
 
     pt: IntPatternBuilder
 
