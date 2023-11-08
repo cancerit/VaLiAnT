@@ -51,7 +51,7 @@ def snv_to_snvres(codon_table: CodonTable, snv: AnnotVariant) -> list[Variant]:
 class SnvReMutator(CodonMutator):
     TYPE = MutatorType.SNV_RE
 
-    def get_variants(self, seq: Seq) -> list[Variant]:
+    def _get_variants(self, seq: Seq) -> list[Variant]:
         # TODO: avoid recomputing the SNV's
         snvs = [
             AnnotVariant.annotate(self.codon_table, seq, snv, frame=0)

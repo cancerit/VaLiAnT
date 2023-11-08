@@ -16,6 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from .mutator_type import MutatorType
@@ -25,3 +27,7 @@ from .variant import Variant
 @dataclass
 class PatternVariant(Variant):
     mutator_type: MutatorType
+
+    @classmethod
+    def from_variant(cls, t: MutatorType, v: Variant) -> PatternVariant:
+        return cls(pos=v.pos, ref=v.ref, alt=v.alt, mutator_type=t)

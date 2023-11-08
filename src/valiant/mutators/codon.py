@@ -56,6 +56,15 @@ class CodonMutator(BaseMutator, ABC):
             for ref in self.get_refs(seq)
         ]
 
+    @abstractmethod
+    def _get_variants(self, seq: Seq) -> list[Variant]:
+        pass
+
+    def get_variants(self, seq: Seq) -> list[Variant]:
+        if not seq.is_length_multiple_of_three:
+            raise ValueError("Invalid CDS sequence: length not a multiple of three!")
+        return self._get_variants(seq)
+
 
 @dataclass(frozen=True, slots=False, init=False)
 class BaseReplaceCodonMutator(CodonMutator, ABC):
@@ -65,7 +74,7 @@ class BaseReplaceCodonMutator(CodonMutator, ABC):
     def alt(self) -> Codon | None:
         pass
 
-    def get_variants(self, seq: Seq) -> list[Variant]:
+    def _get_variants(self, seq: Seq) -> list[Variant]:
         return super()._get_codon_replacements(seq, self.alt)
 
 
@@ -110,7 +119,7 @@ class AminoAcidMutator(CodonMutator):
             if alt_codon != codon
         ]
 
-    def get_variants(self, seq: Seq) -> list[Variant]:
+    def _get_variants(self, seq: Seq) -> list[Variant]:
         return [
             get_variant_from_ref(ref, DnaStr(alt_codon))
             for ref in self.get_refs(seq)

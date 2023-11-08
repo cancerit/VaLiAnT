@@ -35,8 +35,8 @@ from .loaders.experiment import ExperimentConfig
 from .loaders.fasta import open_fasta
 from .loaders.gtf import GtfLoader
 from .loaders.vcf_manifest import VcfManifest
+from .mutator import MutatorCollection
 from .pam_variant import PamVariant
-from .pattern_variant import PatternVariant
 from .queries import insert_custom_variant_collection, insert_exons, insert_background_variants, \
     insert_pam_protection_edits, insert_gene_offsets, insert_mutator_types, insert_pattern_variants
 from .seq import Seq
@@ -176,7 +176,8 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
                 r_seq = targeton.subseq(t.region_2, rel=False)
                 print(f"r_seq={r_seq}")
                 if mutators:
-                    r_vars = mutators.get_variants(r_seq)
+                    mc = MutatorCollection.from_configs(codon_table, mutators)
+                    r_vars = mc.get_variants(r_seq)
                     pattern_variants.extend(r_vars)
                     print(f"r_vars={r_vars}")
                     insert_pattern_variants(conn, r_vars)

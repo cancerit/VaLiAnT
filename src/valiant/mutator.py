@@ -19,7 +19,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from itertools import chain
 import logging
 from typing import ClassVar
 
@@ -32,8 +31,8 @@ from .mutators.codon import AlaMutator, StopMutator, AminoAcidMutator, InFrameDe
 from .mutators.deletion import DeletionMutator
 from .mutators.snv import SnvMutator
 from .mutators.snv_re import SnvReMutator
+from .pattern_variant import PatternVariant
 from .seq import Seq
-from .variant import Variant
 
 
 class MutatorBuilder:
@@ -119,10 +118,11 @@ class MutatorCollection:
                         # Assumption: no dependencies on parametric or CDS mutators
                         self.mutators.append(MutatorBuilder.from_type(dt))
 
-    def get_variants(self, seq: Seq) -> list[Variant]:
-        variants = list(chain.from_iterable([
-            m.get_variants(seq)
+    def get_variants(self, seq: Seq) -> list[PatternVariant]:
+        variants = [
+            PatternVariant.from_variant(m.TYPE, v)
             for m in self.mutators
-        ]))
+            for v in m.get_variants(seq)
+        ]
 
         return variants

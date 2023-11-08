@@ -180,7 +180,7 @@ sql_select_mutator_type_id = get_sql_select_name(DbTableName.MUTATOR_TYPES)
 def insert_pattern_variants(conn: Connection, vars: list[PatternVariant]) -> None:
     with cursor(conn) as cur:
         cur.executemany(sql_insert_pattern_variants, [
-            (v.start, v.ref, v.alt, v.mutator_type.value)
+            (v.pos, v.ref, v.alt, v.mutator_type.value)
             for v in vars
         ])
 

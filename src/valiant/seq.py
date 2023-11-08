@@ -34,6 +34,10 @@ class Seq(Sized):
         return len(self.s)
 
     @property
+    def is_length_multiple_of_three(self) -> bool:
+        return len(self) % 3 == 0
+
+    @property
     def end(self) -> int:
         return self.start + max(0, len(self) - 1)
 
