@@ -47,7 +47,7 @@ def snv_to_snvres(codon_table: CodonTable, snv: AnnotVariant) -> list[Variant]:
     return list(map(get_snvre, alts))
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, init=False, slots=True)
 class SnvReMutator(CodonMutator):
     TYPE = MutatorType.SNV_RE
 

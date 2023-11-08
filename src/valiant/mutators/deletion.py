@@ -18,7 +18,7 @@
 
 from dataclasses import dataclass
 
-from . import BaseMutator, IntPatternBuilder
+from . import BaseMutator
 from ..mutator_type import MutatorType
 from ..seq import Seq
 from ..variant import Variant
@@ -29,9 +29,6 @@ from ..variant import Variant
 @dataclass(frozen=True, slots=False, init=False)
 class DeletionMutator(BaseMutator):
     TYPE = MutatorType.DEL
-
-    def __init__(self, offset: int, span: int) -> None:
-        super().__init__(IntPatternBuilder(offset, span))
 
     def get_variants(self, seq: Seq) -> list[Variant]:
         refs = self.get_refs(seq)

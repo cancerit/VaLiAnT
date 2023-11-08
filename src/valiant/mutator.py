@@ -19,76 +19,110 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import ClassVar, Type
 from itertools import chain
+import logging
+from typing import ClassVar
 
-from .mutator_type import MutatorType, parse_mutator_type
+from .loaders.errors import InvalidMutator
+from .loaders.mutator_config import MutatorConfig
+from .codon_table import CodonTable
+from .mutator_type import DEPENDENT_MUTATOR_TYPES, PARAMETRIC_MUTATOR_TYPES, MutatorType
 from .mutators import BaseMutator
+from .mutators.codon import AlaMutator, StopMutator, AminoAcidMutator, InFrameDeletionMutator, CodonMutator
 from .mutators.deletion import DeletionMutator
 from .mutators.snv import SnvMutator
+from .mutators.snv_re import SnvReMutator
 from .seq import Seq
-from .utils import safe_group_by
 from .variant import Variant
 
 
 class MutatorBuilder:
-    FIXED_MUTATORS: ClassVar[dict[MutatorType, Type[BaseMutator]]] = {
+
+    MUTATOR_CLASSES: ClassVar[dict[MutatorType, type[BaseMutator]]] = {
+        MutatorType.DEL: DeletionMutator,
         MutatorType.SNV: SnvMutator
     }
 
+    CDS_MUTATOR_CLASSES: ClassVar[dict[MutatorType, type[CodonMutator]]] = {
+        MutatorType.SNV_RE: SnvReMutator,
+        MutatorType.ALA: AlaMutator,
+        MutatorType.STOP: StopMutator,
+        MutatorType.AA: AminoAcidMutator,
+        MutatorType.IN_FRAME: InFrameDeletionMutator
+    }
+
+    @classmethod
+    def _from_config_cds(cls, codon_table: CodonTable, config: MutatorConfig) -> CodonMutator:
+        mutator_cls: type[CodonMutator] = cls.CDS_MUTATOR_CLASSES[config.type]
+        print(mutator_cls)
+        return mutator_cls(codon_table)
+
+    @classmethod
+    def _from_config_noncds(cls, config: MutatorConfig) -> BaseMutator:
+        mutator_cls: type[BaseMutator] = cls.MUTATOR_CLASSES[config.type]
+
+        if config.type in PARAMETRIC_MUTATOR_TYPES:
+            if not config.pt:
+                raise InvalidMutator("Parametric mutator missing parameters!")
+            return mutator_cls(config.pt)
+
+        # Assumption: all nonparametric mutator classes have zero-argument constructors
+        # TODO: add abstract subclass with zero-argument constructor
+        return mutator_cls()  # type: ignore
+
     @classmethod
     def from_type(cls, t: MutatorType) -> BaseMutator:
-        assert not t.is_parametric
-        try:
-            return cls.FIXED_MUTATORS[t]()
-        except KeyError:
-            raise NotImplementedError(f"Mutator type {t} not implemented!")
+        return cls.MUTATOR_CLASSES[t]()  # type: ignore
 
     @classmethod
-    def parse(cls, s: str) -> BaseMutator:
-        t, params = parse_mutator_type(s)
+    def from_config(cls, codon_table: CodonTable, config: MutatorConfig) -> BaseMutator:
+        t: MutatorType = config.type
 
-        if t == MutatorType.DEL:
-            # Parametric deletion
-            assert params is not None
-            offset, span = params
-            return DeletionMutator(offset, span)
+        if t in cls.MUTATOR_CLASSES:
+            return cls._from_config_noncds(config)
+
+        elif t in cls.CDS_MUTATOR_CLASSES:
+            return cls._from_config_cds(codon_table, config)
+
         else:
-            # Fixed single-nucleotide or codon change
-            return cls.from_type(MutatorType(s))
+            raise NotImplementedError(f"Mutator type '{t.value}' not supported!")
 
 
 @dataclass(slots=True)
 class MutatorCollection:
-    mutators: dict[MutatorType, BaseMutator]
+    mutator_types: set[MutatorType]
+    mutators: list[BaseMutator]
 
     @classmethod
-    def from_mutators(cls, mutators: set[BaseMutator]) -> MutatorCollection:
-        return cls({
-            t: list(ms)
-            for t, ms in safe_group_by(mutators, lambda x: x.TYPE)
-        })
+    def from_configs(cls, codon_table: CodonTable, configs: list[MutatorConfig]) -> MutatorCollection:
+        types: set[MutatorType] = set()
+        mutators: list[BaseMutator] = []
+
+        t: MutatorType
+        for config in configs:
+            t = config.type
+            types.add(t)
+            mutators.append(MutatorBuilder.from_config(codon_table, config))
+
+        return cls(types, mutators)
 
     def __post_init__(self) -> None:
-        if (
-            MutatorType.SNV_RE in self.mutators and
-            MutatorType.SNV not in self.mutators
-        ):
-            self.mutators[MutatorType.SNV] = {
-                MutatorBuilder.from_type(MutatorType.SNV)}
+        for t in list(self.mutator_types):
+            if t in DEPENDENT_MUTATOR_TYPES:
+                for dt in DEPENDENT_MUTATOR_TYPES[t]:
+                    if dt not in self.mutator_types:
+                        logging.info(
+                            "Adding dependent mutator '%s' (required by '%s')..." %
+                            (dt.value, t.value))
+                        self.mutator_types.add(dt)
+
+                        # Assumption: no dependencies on parametric or CDS mutators
+                        self.mutators.append(MutatorBuilder.from_type(dt))
 
     def get_variants(self, seq: Seq) -> list[Variant]:
-        snvs = []
-        # TODO: assign a generic priority score to each variant type instead?
-        if MutatorType.SNV in self.mutators:
-            snvs = MutatorBuilder.from_type(MutatorType.SNV).get_variants(seq)
-
-        variants = snvs + list(chain.from_iterable([
-            m.get_variants(
-                seq, snvs=snvs) if t == MutatorType.SNV_RE else m.get_variants(seq)
-            for t, muts in self.mutators.items()
-            for m in muts
-            if t != MutatorType.SNV
+        variants = list(chain.from_iterable([
+            m.get_variants(seq)
+            for m in self.mutators
         ]))
 
         return variants

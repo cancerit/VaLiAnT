@@ -19,7 +19,8 @@
 from dataclasses import dataclass
 from itertools import chain
 
-from . import BaseMutator, IntPatternBuilder
+from .int_pattern_builder import IntPatternBuilder
+from . import BaseMutator
 from ..mutator_type import MutatorType
 from ..seq import Seq
 from ..strings.nucleotide import Nucleotide

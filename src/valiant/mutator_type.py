@@ -31,6 +31,13 @@ class MutatorType(str, Enum):
     STOP = 'stop'
     AA = 'aa'
 
-    @property
-    def is_parametric(self) -> bool:
-        return self == MutatorType.DEL
+
+PARAMETRIC_MUTATOR_TYPES: set[MutatorType] = {
+    MutatorType.DEL
+}
+
+
+# Mutator types based on the output of other mutators
+DEPENDENT_MUTATOR_TYPES: dict[MutatorType, set[MutatorType]] = {
+    MutatorType.SNV_RE: {MutatorType.SNV}
+}

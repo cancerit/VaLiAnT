@@ -19,7 +19,8 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from . import BaseMutator, IntPatternBuilder
+from . import BaseMutator
+from .int_pattern_builder import IntPatternBuilder
 from ..codon_table import CodonTable
 from ..constants import STOP
 from ..mutator_type import MutatorType
@@ -56,7 +57,7 @@ class CodonMutator(BaseMutator, ABC):
         ]
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=False, init=False)
 class BaseReplaceCodonMutator(CodonMutator, ABC):
 
     @property
@@ -68,7 +69,7 @@ class BaseReplaceCodonMutator(CodonMutator, ABC):
         return super()._get_codon_replacements(seq, self.alt)
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=False, init=False)
 class InFrameDeletionMutator(BaseReplaceCodonMutator):
     TYPE = MutatorType.IN_FRAME
 
@@ -77,7 +78,7 @@ class InFrameDeletionMutator(BaseReplaceCodonMutator):
         return None
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=False, init=False)
 class AlaMutator(BaseReplaceCodonMutator):
     TYPE = MutatorType.ALA
 
@@ -87,7 +88,7 @@ class AlaMutator(BaseReplaceCodonMutator):
         return self.get_top_codon(TranslationSymbol('A'))
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=False, init=False)
 class StopMutator(BaseReplaceCodonMutator):
     TYPE = MutatorType.STOP
 
@@ -97,7 +98,7 @@ class StopMutator(BaseReplaceCodonMutator):
         return self.get_top_codon(TranslationSymbol(STOP))
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=False, init=False)
 class AminoAcidMutator(CodonMutator):
     TYPE = MutatorType.AA
 
