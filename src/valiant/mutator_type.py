@@ -16,12 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from __future__ import annotations
-
 from enum import Enum
-import re
-
-from .utils import parse_opt_int_group
 
 
 class MutatorType(str, Enum):
@@ -39,21 +34,3 @@ class MutatorType(str, Enum):
     @property
     def is_parametric(self) -> bool:
         return self == MutatorType.DEL
-
-
-MUTATOR_TYPE_RE = {
-    MutatorType.DEL: re.compile(r"^(\d+)del(\d*)$")
-}
-
-
-def parse_mutator_type(s: str) -> tuple[MutatorType, tuple[int, int] | None]:
-    for t, pattern in MUTATOR_TYPE_RE.items():
-        m = pattern.match(s)
-        if m:
-            # Parametric pattern
-            span = int(m.group(1))
-            offset = parse_opt_int_group(m, 2)
-            return t, (offset, span)
-
-    # Fixed pattern
-    return MutatorType(s), None

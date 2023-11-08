@@ -16,32 +16,5 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from __future__ import annotations
-
-from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import ClassVar
-
-from .int_pattern_builder import IntPatternBuilder
-from ..seq import Seq
-from ..variant import Variant
-
-
-@dataclass(frozen=True)
-class BaseMutator(ABC):
-    TYPE: ClassVar[str]
-
-    pt: IntPatternBuilder
-
-    def get_refs(self, seq: Seq) -> list[Seq]:
-        """Get the mutation start relative positions and reference sequences"""
-
-        starts = self.pt.build(seq.start, len(seq) - 1)
-        return [
-            seq.subseq(self.pt.get_range(start), rel=False)
-            for start in starts
-        ]
-
-    @abstractmethod
-    def get_variants(self, seq: Seq) -> list[Variant]:
-        pass
+class InvalidMutator(ValueError):
+    pass
