@@ -24,7 +24,9 @@ from ..seq import Seq
 from ..variant import Variant
 
 
-@dataclass(frozen=True, slots=True, init=False)
+# TODO: add slots back when CPython fixes 90562
+#  https://github.com/python/cpython/issues/90562
+@dataclass(frozen=True, slots=False, init=False)
 class DeletionMutator(BaseMutator):
     TYPE = MutatorType.DEL
 
