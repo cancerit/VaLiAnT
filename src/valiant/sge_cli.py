@@ -31,20 +31,20 @@ from .constants import OUTPUT_CONFIG_FILE_NAME
 from .contig_filter import ContigFilter
 from .custom_variant import CustomVariant
 from .db import get_db_conn, cursor, dump_all
-from .loaders.experiment import ExperimentConfig
+from .loaders.experiment import ExperimentConfig, TargetonConfig
 from .loaders.fasta import open_fasta
 from .loaders.gtf import GtfLoader
 from .loaders.vcf_manifest import VcfManifest
 from .mutator import MutatorCollection
 from .pam_variant import PamVariant
+from .pattern_variant import PatternVariant
 from .queries import insert_custom_variant_collection, insert_exons, insert_background_variants, \
-    insert_pam_protection_edits, insert_gene_offsets, insert_mutator_types, insert_pattern_variants
+    insert_pam_protection_edits, insert_gene_offsets, insert_mutator_types, insert_pattern_variants, select_exons_in_range
 from .seq import Seq
 from .sge_config import SGEConfig
 from .strings.dna_str import DnaStr
 from .uint_range import UIntRange
 from .utils import get_default_codon_table_path, get_ddl_path
-from .variant import Variant
 
 
 def fetch_sequence(fa: FastaFile, contig: str, r: UIntRange) -> Seq:
@@ -122,6 +122,55 @@ def init_database(conn: Connection) -> None:
             cur.executescript(fh.read())
 
 
+def get_targeton_region_exon_id(conn: Connection, targeton: Seq) -> int | None:
+    exon_ids = select_exons_in_range(conn, targeton.start, targeton.end)
+    print(exon_ids)
+
+    en: int = len(exon_ids)
+    match en:
+        case 0:
+            return None
+        case 1:
+            return exon_ids[0]
+        case _:
+            raise ValueError("Invalid targeton region: overlaps multiple exons!")
+
+
+def get_pattern_variants_from_region(conn: Connection, targeton: Seq, region: UIntRange, mc: MutatorCollection) -> list[PatternVariant]:
+    print(f"targeton={targeton}")
+
+    # Get overlapping exon ID's
+    exon_id = get_targeton_region_exon_id(conn, targeton)
+
+    is_cds = exon_id is not None
+
+    r_seq = targeton.subseq(region, rel=False)
+    print(f"r_seq={r_seq}")
+
+    # TODO: CDS variants on the extended sequence only!
+    r_vars = mc.get_variants(r_seq)
+    print(f"r_vars={r_vars}")
+    insert_pattern_variants(conn, r_vars)
+
+    return r_vars
+
+
+def process_targeton_config(conn: Connection, codon_table: CodonTable, targetons: dict[int, Seq], t: TargetonConfig) -> list[PatternVariant]:
+    pattern_variants: list[PatternVariant] = []
+
+    # TODO: apply pattern variants to R1 and R3 as well
+    for i, r in enumerate([None, t.region_2, None]):
+        if r is not None:
+            mutators = t.mutators[i]
+            if mutators:
+                targeton = targetons[t.ref.start]
+                mc = MutatorCollection.from_configs(codon_table, mutators)
+                pattern_variants.extend(
+                    get_pattern_variants_from_region(conn, targeton, r, mc))
+
+    return pattern_variants
+
+
 def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
     # Load options
@@ -156,7 +205,6 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             cds_ref_seqs = load_sequences(fa, exp.contig, annot.cds.ranges)
 
     # TODO: correct targeton region bounds based on background
-    pattern_variants: list[Variant] = []
     targetons = {
         s.start: s
         for s in targeton_ref_seqs
@@ -165,22 +213,13 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         init_database(conn)
         insert_mutator_types(conn)
 
+        if annot:
+
+            # Load CDS annotation
+            insert_exons(conn, annot.cds.ranges)
+
         for t in exp.targeton_configs:
-            # TODO: apply pattern variants to R1 and R3 as well
-            for i, r in enumerate([None, t.region_2, None]):
-                if r is None:
-                    continue
-                targeton = targetons[t.ref.start]
-                print(f"targeton={targeton}")
-                mutators = t.mutators[i]
-                r_seq = targeton.subseq(t.region_2, rel=False)
-                print(f"r_seq={r_seq}")
-                if mutators:
-                    mc = MutatorCollection.from_configs(codon_table, mutators)
-                    r_vars = mc.get_variants(r_seq)
-                    pattern_variants.extend(r_vars)
-                    print(f"r_vars={r_vars}")
-                    insert_pattern_variants(conn, r_vars)
+            process_targeton_config(conn, codon_table, targetons, t)
 
         # Load background variants (targetons & exons)
         if config.bg_fp:
@@ -206,11 +245,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
         # Load custom variants (targetons)
         if config.vcf_fp:
-            load_custom_variants(conn, config.vcf_fp,
-                                 exp.contig, targeton_ranges)
-
-        if annot:
-            insert_exons(conn, annot.cds.ranges)
+            load_custom_variants(conn, config.vcf_fp, exp.contig, targeton_ranges)
 
         # TODO: remove (DEBUG only!)
         dump_all(conn)
