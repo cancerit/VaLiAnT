@@ -194,3 +194,22 @@ def insert_enum(conn: Connection, t: DbTableName, cls) -> None:
 
 def insert_mutator_types(conn: Connection) -> None:
     insert_enum(conn, DbTableName.MUTATOR_TYPES, MutatorType)
+
+
+sql_select_exons_in_range = """
+select exon_index
+from exons
+where
+    (start >= ? and start <= ?) or
+    (end >= ? and end <= ?)
+"""
+
+
+def select_exons_in_range(conn: Connection, start: int, end: int) -> list[int]:
+    with cursor(conn) as cur:
+        return [
+            r[0]
+            for r in cur.execute(
+                sql_select_exons_in_range,
+                (start, end, start, end)).fetchall()
+        ]
