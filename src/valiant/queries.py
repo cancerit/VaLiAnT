@@ -27,6 +27,14 @@ from .utils import get_enum_values
 from .pattern_variant import PatternVariant
 
 
+class NoRowId(Exception):
+    pass
+
+
+class SqlInsertFailed(Exception):
+    pass
+
+
 def get_sql_insert_names(t: DbTableName) -> str:
     return get_sql_insert_values(t, [DbFieldName.NAME])
 
@@ -112,17 +120,31 @@ def insert_background_variants(conn: Connection, vars: list[CustomVariant]) -> N
         ])
 
 
+def _insert_returning_row_id(cur: Cursor, query: str, params: tuple) -> int:
+    assert query.lower().startswith('insert into ')
+    cur.execute(query, params)
+    row_id = cur.lastrowid
+    if row_id is None:
+        raise NoRowId
+    return row_id
+
+
 def insert_pam_protection_edits(conn: Connection, vars: list[PamVariant]) -> None:
     def get_sgrna_id(c: Cursor, name: str) -> int:
 
         # Insert sgRNA ID
-        c.execute(sql_insert_sgrna_id, (name,))
-        return c.lastrowid
+        try:
+            row_id = _insert_returning_row_id(c, sql_insert_sgrna_id, (name,))
+        except NoRowId:
+            raise SqlInsertFailed("Failed to insert PPE!")
+        return row_id
 
     sgrna_ids = {v.sgrna_id for v in vars}
     with cursor(conn) as cur:
 
         # Insert all sgRNA ID's
+        # Assumption: this is run only once
+        #  (otherwise, duplicates would need handling)
         sgrna_name_ids: dict[str, int] = {
             name: get_sgrna_id(cur, name)
             for name in sorted(sgrna_ids)
@@ -168,10 +190,8 @@ sql_insert_pattern_variants = get_sql_insert_values(
         DbFieldName.POS_A,
         DbFieldName.REF_A,
         DbFieldName.ALT_A,
-        DbFieldName.MUTATOR_TYPE_ID
-    ], fks={
-        DbFieldName.MUTATOR_TYPE_ID: DbTableName.MUTATOR_TYPES
-    })
+        DbFieldName.MUTATOR
+    ])
 
 
 sql_select_mutator_type_id = get_sql_select_name(DbTableName.MUTATOR_TYPES)
@@ -180,7 +200,7 @@ sql_select_mutator_type_id = get_sql_select_name(DbTableName.MUTATOR_TYPES)
 def insert_pattern_variants(conn: Connection, vars: list[PatternVariant]) -> None:
     with cursor(conn) as cur:
         cur.executemany(sql_insert_pattern_variants, [
-            (v.pos, v.ref, v.alt, v.mutator_type.value)
+            (v.pos, v.ref, v.alt, v.mutator)
             for v in vars
         ])
 

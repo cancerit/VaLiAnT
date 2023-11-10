@@ -120,7 +120,7 @@ class MutatorCollection:
 
     def get_variants(self, seq: Seq) -> list[PatternVariant]:
         variants = [
-            PatternVariant.from_variant(m.TYPE, v)
+            PatternVariant.from_variant(m.as_str(), v)
             for m in self.mutators
             for v in m.get_variants(seq)
         ]

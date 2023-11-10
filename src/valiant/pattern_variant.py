@@ -26,8 +26,8 @@ from .variant import Variant
 
 @dataclass
 class PatternVariant(Variant):
-    mutator_type: MutatorType
+    mutator: str
 
     @classmethod
-    def from_variant(cls, t: MutatorType, v: Variant) -> PatternVariant:
-        return cls(pos=v.pos, ref=v.ref, alt=v.alt, mutator_type=t)
+    def from_variant(cls, mutator: str, v: Variant) -> PatternVariant:
+        return cls(pos=v.pos, ref=v.ref, alt=v.alt, mutator=mutator)

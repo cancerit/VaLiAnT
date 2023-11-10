@@ -30,6 +30,13 @@ from ..variant import Variant
 class DeletionMutator(BaseMutator):
     TYPE = MutatorType.DEL
 
+    def as_str(self) -> str:
+        # For backwards compatibility
+        return (
+            '1del' if self.pt.span == 1 else
+            f"{self.pt.span}{self.TYPE.value}{self.pt.offset}"
+        )
+
     def get_variants(self, seq: Seq) -> list[Variant]:
         refs = self.get_refs(seq)
         return [

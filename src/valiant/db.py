@@ -59,7 +59,8 @@ class DbFieldName(str, Enum):
     POS_A = 'pos_a'
     REF_A = 'ref_a'
     ALT_A = 'alt_a'
-    MUTATOR_TYPE_ID = 'mutator_type_id'
+    MUTATOR = 'mutator'
+    # MUTATOR_TYPE_ID = 'mutator_type_id'
 
 
 @contextmanager

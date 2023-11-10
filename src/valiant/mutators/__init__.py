@@ -34,6 +34,9 @@ class BaseMutator(ABC):
 
     pt: IntPatternBuilder
 
+    def as_str(self) -> str:
+        return self.TYPE.value
+
     def get_refs(self, seq: Seq) -> list[Seq]:
         """Get the mutation start relative positions and reference sequences"""
 

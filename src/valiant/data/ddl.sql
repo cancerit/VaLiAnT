@@ -107,7 +107,8 @@ create table mutator_types (
 
 create table pattern_variants (
     id integer primary key,
-    mutator_type_id integer not null references mutator_types (id),
+    -- mutator_type_id integer not null references mutator_types (id),
+    mutator text not null,
     -- Original reference
     pos_r integer,
     ref_r text,
@@ -117,4 +118,4 @@ create table pattern_variants (
     ref_a text not null,
     alt_a text not null
 );
-create index pattern_variants_mutator_type_id_idx on pattern_variants (mutator_type_id);
+-- create index pattern_variants_mutator_type_id_idx on pattern_variants (mutator_type_id);
