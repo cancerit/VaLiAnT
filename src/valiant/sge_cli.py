@@ -169,6 +169,21 @@ def process_targeton_config(conn: Connection, codon_table: CodonTable, targetons
     return pattern_variants
 
 
+def get_background_context_range(targeton_ranges, annot: Annotation | None) -> UIntRange:
+    """Get the minimum range in which to apply background variants"""
+
+    # Identify minimal context required
+    # TODO: extend to support multiple contigs
+    # Assumption: single ContigFilter
+    t_min = min(t.start for t in targeton_ranges)
+    t_max = max(t.end for t in targeton_ranges)
+    if annot:
+        bg_ctx = UIntRange(min(t_min, annot.cds_start), max(t_max, annot.cds_end))
+    else:
+        bg_ctx = UIntRange(t_min, t_max)
+    return bg_ctx
+
+
 def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
     # Load options
@@ -220,16 +235,8 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
         # Load background variants (targetons & exons)
         if config.bg_fp:
-
-            # Identify minimal context required
             # TODO: extend to support multiple contigs
-            # Assumption: single ContigFilter
-            t_min = min(t.start for t in targeton_ranges)
-            t_max = max(t.end for t in targeton_ranges)
-            if annot:
-                bg_ctx = UIntRange(min(t_min, annot.cds_start), max(t_max, annot.cds_end))
-            else:
-                bg_ctx = UIntRange(t_min, t_max)
+            bg_ctx = get_background_context_range(targeton_ranges, annot)
 
             load_background_variants(conn, config.bg_fp, exp.contig, [bg_ctx])
             insert_gene_offsets(conn, bg_ctx.start, bg_ctx.end)
