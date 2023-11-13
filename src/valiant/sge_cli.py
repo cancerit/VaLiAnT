@@ -124,8 +124,6 @@ def init_database(conn: Connection) -> None:
 
 def get_targeton_region_exon_id(conn: Connection, targeton: Seq) -> int | None:
     exon_ids = select_exons_in_range(conn, targeton.start, targeton.end)
-    print(exon_ids)
-
     en: int = len(exon_ids)
     match en:
         case 0:
@@ -211,7 +209,6 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     }
     with get_db_conn() as conn:
         init_database(conn)
-        insert_mutator_types(conn)
 
         if annot:
 
