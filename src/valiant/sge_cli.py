@@ -225,15 +225,12 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         if config.bg_fp:
 
             # Identify minimal context required
+            # TODO: extend to support multiple contigs
+            # Assumption: single ContigFilter
             t_min = min(t.start for t in targeton_ranges)
             t_max = max(t.end for t in targeton_ranges)
             if annot:
-                # Assumption: CDS ranges are sorted by position
-                c_min = annot.cds.ranges[0].start
-                c_max = annot.cds.ranges[-1].end
-                assert c_min < c_max
-
-                bg_ctx = UIntRange(min(t_min, c_min), max(t_max, c_max))
+                bg_ctx = UIntRange(min(t_min, annot.cds_start), max(t_max, annot.cds_end))
             else:
                 bg_ctx = UIntRange(t_min, t_max)
 

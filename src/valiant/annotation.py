@@ -43,3 +43,16 @@ class Annotation:
     # Features
     utr: UIntRangeSortedList[UIntRange]
     cds: UIntRangeSortedList[Exon]
+
+    @property
+    def cds_start(self) -> int:
+        # Assumption: CDS ranges are sorted by position
+        return self.cds.ranges[0].start
+
+    @property
+    def cds_end(self) -> int:
+        # Assumption: CDS ranges are sorted by position
+        return self.cds.ranges[-1].end
+
+    def __post_init__(self) -> None:
+        assert self.cds_start < self.cds_end
