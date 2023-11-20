@@ -100,14 +100,8 @@ create table custom_variants (
 
 -- Pattern variants
 
-create table mutator_types (
-    id integer primary key,
-    name text not null
-);
-
 create table pattern_variants (
     id integer primary key,
-    -- mutator_type_id integer not null references mutator_types (id),
     mutator text not null,
     -- Original reference
     pos_r integer,
@@ -116,6 +110,13 @@ create table pattern_variants (
     -- Altered reference
     pos_a integer not null,
     ref_a text not null,
-    alt_a text not null
+    alt_a text not null,
+
+    -- CDS-specific annotation
+    -- Possibly partial codon including the PPE, if any
+    codon_ref_a text,
+    codon_alt_a text,
+    -- Amino acid change
+    aa_ref text,
+    aa_alt text
 );
--- create index pattern_variants_mutator_type_id_idx on pattern_variants (mutator_type_id);
