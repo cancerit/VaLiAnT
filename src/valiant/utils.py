@@ -76,3 +76,24 @@ def get_not_none(it):
 
 def is_adaptor_valid(adaptor: str | None) -> bool:
     return adaptor is None or is_dna(adaptor)
+
+
+def get_codon_offset_complement(offset: int) -> int:
+    match offset:
+        case 0:
+            return 0
+        case 1:
+            return 2
+        case 2:
+            return 1
+        case _:
+            raise ValueError("Invalid codon offset!")
+
+
+def get_cds_ext_3_length(frame: int, length: int) -> int:
+    """
+    Calculate how many nucleotides are missing from the last codon
+    given the reading frame and the length of the sequence
+    """
+
+    return (3 - (length + frame) % 3) % 3

@@ -59,3 +59,22 @@ class Seq(Sized):
 
     def get_offset(self, pos: int) -> int:
         return pos - self.start
+
+    def tail(self, n: int) -> DnaStr:
+        match n:
+            case 0:
+                return DnaStr.empty()
+            case 1:
+                return DnaStr(self.s[-1])
+            case _:
+                l: int = len(self)
+                return self.s.substr(UIntRange(l - n + 1, l))
+
+    def head(self, n: int) -> DnaStr:
+        match n:
+            case 0:
+                return DnaStr.empty()
+            case 1:
+                return DnaStr(self.s[0])
+            case _:
+                return self.substr(UIntRange(0, n - 1))

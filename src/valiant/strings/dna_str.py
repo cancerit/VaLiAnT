@@ -37,6 +37,9 @@ class DnaStr(str):
     def empty(cls):
         return cls('')
 
+    def __add__(self, other) -> DnaStr:
+        return DnaStr(self + other)
+
     def as_nullable(self) -> str | None:
         return str(self) if self else None
 
