@@ -22,18 +22,18 @@ from dataclasses import dataclass
 import logging
 from typing import ClassVar
 
+from .cds_seq import CdsSeq
+from .codon_table import CodonTable
 from .loaders.errors import InvalidMutator
 from .loaders.mutator_config import MutatorConfig
-from .codon_table import CodonTable
 from .mutator_type import DEPENDENT_MUTATOR_TYPES, PARAMETRIC_MUTATOR_TYPES, MutatorType
 from .mutators import BaseMutator
 from .mutators.codon import AlaMutator, StopMutator, AminoAcidMutator, InFrameDeletionMutator, CodonMutator
 from .mutators.deletion import DeletionMutator
 from .mutators.snv import SnvMutator
 from .mutators.snv_re import SnvReMutator
-from .pattern_variant import PatternVariant
+from .pattern_variant import CdsPatternVariant, PatternVariant
 from .seq import Seq
-from .strings.dna_str import DnaStr
 
 
 class MutatorBuilder:
@@ -135,15 +135,21 @@ class MutatorCollection:
 
         return variants
 
-    def get_cds_variants(self, start: int, frame: int, ext_seq: DnaStr) -> list[PatternVariant]:
+    def get_cds_variants(self, seq: CdsSeq) -> list[PatternVariant]:
+        print([m.TYPE for m in self.cds_mutators])
         # TODO: validate the start offset, depending on the frame convention
+        # TODO: consider this may break for cDNA (more likely negative start coordinate)
         variants = [
-            PatternVariant.from_variant(m.as_str(), v)
-            for m in self.non_cds_mutators
-            for v in m.get_variants(Seq(start - frame, ext_seq))
+            CdsPatternVariant.from_variant(m.as_str(), v)
+            for m in self.cds_mutators
+            for v in m.get_variants(Seq(seq.start, seq.ext))
         ]
 
         return [
-            v.ltrim(frame) if v.pos < start else v
+            (
+                v.ltrim(seq.cds_prefix_length) if v.pos < seq.start else
+                v.rtrim(seq.cds_suffix_length) if v.pos > seq.end else
+                v
+            )
             for v in variants
         ]

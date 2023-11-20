@@ -78,3 +78,8 @@ class DnaStr(str):
         delta = len(self) - n
         assert delta >= 0
         return self.tail(delta)
+
+    def rtrim(self, n: int) -> DnaStr:
+        delta = len(self) - n
+        assert delta >= 0
+        return self.head(delta)

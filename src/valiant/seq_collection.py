@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .cds_seq import CdsSeq
 from .seq import Seq
 from .strings.dna_str import DnaStr
 from .uint_range import UIntRange
@@ -41,6 +42,7 @@ class SeqCollection:
 
             seq: Seq = self.seqs[i]
             ds = r.start - seq.start
+            # TODO: handle local/distal split
             if before <= ds:
                 # Local extension
                 s += seq.substr(UIntRange(r.start - before, r.start - 1), rel=True)
@@ -62,6 +64,7 @@ class SeqCollection:
 
             seq: Seq = self.seqs[i]
             ds = seq.end - r.end
+            # TODO: handle local/distal split
             if after <= ds:
                 # Local extension
                 s += seq.substr(UIntRange(r.end + 1, r.end + after), rel=True)
@@ -73,15 +76,21 @@ class SeqCollection:
         return s
 
     def get_at(self, i: int, r: UIntRange) -> DnaStr:
-        return self.seqs[i].substr(r)
+        seq: Seq = self.seqs[i]
+        assert r.start >= seq.start and r.end <= seq.end
+        return self.seqs[i].substr(r, rel=False)
+
+    def _split_substr(self, i: int, r: UIntRange, before: int = 0, after: int = 0) -> tuple[DnaStr, DnaStr, DnaStr]:
+        return (
+            self.get_before(i, r, before),
+            self.get_at(i, r),
+            self.get_after(i, r, after)
+        )
 
     def substr(self, i: int, r: UIntRange, before: int = 0, after: int = 0) -> DnaStr:
-        seq: Seq = self.seqs[i]
-
-        assert r.start >= seq.start and r.end <= seq.end
-
-        a = self.get_before(i, r, before)
-        b = self.get_at(i, r)
-        c = self.get_after(i, r, after)
-
+        a, b, c = self._split_substr(i, r, before=before, after=after)
         return DnaStr(f"{a}{b}{c}")
+
+    def get_as_cds_seq(self, i: int, r: UIntRange, before: int = 0, after: int = 0) -> CdsSeq:
+        a, b, c = self._split_substr(i, r, before=before, after=after)
+        return CdsSeq(r.start, b, a, c)

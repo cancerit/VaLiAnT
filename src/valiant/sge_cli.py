@@ -148,9 +148,8 @@ def get_pattern_variants_from_region(conn: Connection, transcript: TranscriptSeq
 
     if is_cds:
         assert transcript is not None
-        ext_seq = transcript.get_ext(exon_id, region)
-        frame = transcript.exons[exon_id].frame
-        cds_vars = mc.get_cds_variants(region.start, frame, ext_seq)
+        ext_seq = transcript.get_cds_seq(exon_id, region)
+        cds_vars = mc.get_cds_variants(ext_seq)
         r_vars.extend(cds_vars)
 
     insert_pattern_variants(conn, r_vars)

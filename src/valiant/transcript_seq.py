@@ -18,14 +18,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
+from .cds_seq import CdsSeq
 from .exon import Exon
-from .seq_collection import SeqCollection
-from .strings.dna_str import DnaStr
-from .uint_range import UIntRange
 from .seq import Seq
+from .seq_collection import SeqCollection
 from .strings.strand import Strand
+from .uint_range import UIntRange
 
 
 @dataclass(slots=True)
@@ -53,11 +53,13 @@ class TranscriptSeq(SeqCollection):
     def get_codon_offset(self, exon_index: int, pos: int) -> int:
         return self.get_exon(exon_index).get_codon_offset(self.strand, pos)
 
-    def get_ext(self, exon_index: int, r: UIntRange) -> DnaStr:
+    def get_cds_seq(self, exon_index: int, r: UIntRange) -> CdsSeq:
         exon = self.get_exon(exon_index)
         ds = r.start - exon.start
         assert ds >= 0
 
+        # TODO: remember to check whether the frame is in the GTF vs the Valiant convention
+        #  (probably GTF since the loader was rewritten)
         before, after = exon.get_5p_3p_extensions(self.strand)
-        return self.substr(
+        return self.get_as_cds_seq(
             self.get_exon_seq_index(exon_index), r, before=before, after=after)

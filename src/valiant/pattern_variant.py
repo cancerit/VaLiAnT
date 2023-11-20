@@ -28,8 +28,21 @@ class PatternVariant(Variant):
     mutator: str
 
     @classmethod
-    def from_variant(cls, mutator: str, v: Variant) -> PatternVariant:
+    def from_variant(cls, mutator: str, v: Variant):
         return cls(pos=v.pos, ref=v.ref, alt=v.alt, mutator=mutator)
+
+
+@dataclass
+class CdsPatternVariant(PatternVariant):
+
+    @classmethod
+    def from_pattern_variant(cls, v: PatternVariant) -> CdsPatternVariant:
+        return cls(pos=v.pos, ref=v.ref, alt=v.alt, mutator=v.mutator)
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        assert self.ref_len == 3
+        assert self.alt_len == 3 or self.alt_len == 0
 
     def ltrim(self, n: int) -> PatternVariant:
         """
@@ -39,8 +52,21 @@ class PatternVariant(Variant):
         Only valid for codon replacements.
         """
 
-        return replace(
-            self,
+        return PatternVariant(
+            mutator=self.mutator,
             pos=self.pos + n,
             ref=self.ref.ltrim(n),
-            alt=self.alt.ltrim(n))
+            alt=self.alt.ltrim(n) if self.alt_len > 0 else self.alt)
+
+    def rtrim(self, n: int) -> PatternVariant:
+        """
+        Trim the last n nucleotides from both REF and ALT
+
+        Only valid for codon replacements.
+        """
+
+        return PatternVariant(
+            mutator=self.mutator,
+            pos=self.pos,
+            ref=self.ref.rtrim(n),
+            alt=self.alt.rtrim(n) if self.alt_len > 0 else self.alt)
