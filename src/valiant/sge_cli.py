@@ -39,7 +39,7 @@ from .mutator import MutatorCollection
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
 from .queries import insert_custom_variant_collection, insert_exons, insert_background_variants, \
-    insert_pam_protection_edits, insert_gene_offsets, insert_mutator_types, insert_pattern_variants, select_exons_in_range
+    insert_pam_protection_edits, insert_gene_offsets, insert_pattern_variants, select_exons_in_range
 from .seq import Seq
 from .sge_config import SGEConfig
 from .strings.dna_str import DnaStr
