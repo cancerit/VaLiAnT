@@ -47,7 +47,7 @@ class CodonMutator(BaseMutator, ABC):
         object.__setattr__(self, 'codon_table', codon_table)
 
     def get_top_codon(self, aa: TranslationSymbol) -> Codon:
-        return Codon(self.codon_table.get_top_codon(aa))
+        return self.codon_table.get_top_codon(aa)
 
     def _get_codon_replacements(self, seq: Seq, value: Codon | None) -> list[Variant]:
         alt = DnaStr(value or '')
