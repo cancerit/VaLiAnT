@@ -32,16 +32,14 @@ class SeqCollection:
     def __post_init__(self) -> None:
         self.seqs.sort(key=lambda s: s.start)
 
-    def substr(self, i: int, r: UIntRange, before: int = 0, after: int = 0) -> DnaStr:
-        seq: Seq = self.seqs[i]
-
-        assert before >= 0 and after >= 0
-        assert r.start >= seq.start and r.end <= seq.end
+    def get_before(self, i: int, r: UIntRange, before: int) -> DnaStr:
+        assert before >= 0
 
         s: DnaStr = DnaStr.empty()
 
-        # First section
         if before > 0:
+
+            seq: Seq = self.seqs[i]
             ds = r.start - seq.start
             if before <= ds:
                 # Local extension
@@ -53,11 +51,16 @@ class SeqCollection:
                     s += seq.head(ds)
                 s += self.seqs[i - 1].tail(before - ds)
 
-        # Middle section
-        s += self.seqs[i].substr(r)
+        return s
 
-        # Last section
+    def get_after(self, i: int, r: UIntRange, after: int) -> DnaStr:
+        assert after >= 0
+
+        s: DnaStr = DnaStr.empty()
+
         if after > 0:
+
+            seq: Seq = self.seqs[i]
             ds = seq.end - r.end
             if after <= ds:
                 # Local extension
@@ -68,3 +71,17 @@ class SeqCollection:
                 s += self.seqs[i + 1].head(after)
 
         return s
+
+    def get_at(self, i: int, r: UIntRange) -> DnaStr:
+        return self.seqs[i].substr(r)
+
+    def substr(self, i: int, r: UIntRange, before: int = 0, after: int = 0) -> DnaStr:
+        seq: Seq = self.seqs[i]
+
+        assert r.start >= seq.start and r.end <= seq.end
+
+        a = self.get_before(i, r, before)
+        b = self.get_at(i, r)
+        c = self.get_after(i, r, after)
+
+        return DnaStr(f"{a}{b}{c}")
