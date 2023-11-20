@@ -33,6 +33,10 @@ from ..variant import Variant
 
 pt_codon = IntPatternBuilder(0, 3)
 
+# Translation symbols
+ala = TranslationSymbol('A')
+stop = TranslationSymbol(STOP)
+
 
 def get_variant_from_ref(ref: Seq, alt: DnaStr) -> Variant:
     return Variant(ref.start, ref.s, alt)
@@ -94,7 +98,7 @@ class AlaMutator(BaseReplaceCodonMutator):
     @property
     def alt(self) -> Codon | None:
         # TODO: verify!
-        return self.get_top_codon(TranslationSymbol('A'))
+        return self.get_top_codon(ala)
 
 
 @dataclass(frozen=True, slots=False, init=False)
@@ -104,7 +108,7 @@ class StopMutator(BaseReplaceCodonMutator):
     @property
     def alt(self) -> Codon | None:
         # TODO: verify!
-        return self.get_top_codon(TranslationSymbol(STOP))
+        return self.get_top_codon(stop)
 
 
 @dataclass(frozen=True, slots=False, init=False)
