@@ -38,7 +38,7 @@ class DnaStr(str):
         return cls('')
 
     def __add__(self, other) -> DnaStr:
-        return DnaStr(self + other)
+        return DnaStr(str(self) + str(other))
 
     def as_nullable(self) -> str | None:
         return str(self) if self else None
@@ -54,6 +54,7 @@ class DnaStr(str):
         return DnaStr(f"{self[:r.start]}{alt}{self[r.end + 1:]}")
 
     def tail(self, n: int) -> DnaStr:
+        assert n >= 0
         match n:
             case 0:
                 return DnaStr.empty()
@@ -64,6 +65,7 @@ class DnaStr(str):
                 return self.substr(UIntRange(l - n + 1, l))
 
     def head(self, n: int) -> DnaStr:
+        assert n >= 0
         match n:
             case 0:
                 return DnaStr.empty()
@@ -73,4 +75,6 @@ class DnaStr(str):
                 return self.substr(UIntRange(0, n - 1))
 
     def ltrim(self, n: int) -> DnaStr:
-        return self.tail(len(self) - n)
+        delta = len(self) - n
+        assert delta >= 0
+        return self.tail(delta)
