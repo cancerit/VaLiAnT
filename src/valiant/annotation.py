@@ -20,39 +20,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .exon import Exon
 from .uint_range import UIntRange, UIntRangeSortedList
-from .utils import get_cds_ext_3_length, get_codon_offset_complement
-
-
-@dataclass(slots=True, frozen=True)
-class Exon(UIntRange):
-    index: int
-    frame: int
-
-    @property
-    def cds_prefix_length(self) -> int:
-        return self.compl_frame
-
-    @property
-    def cds_suffix_length(self) -> int:
-        return get_cds_ext_3_length(self.cds_prefix_length, len(self))
-
-    @property
-    def compl_frame(self) -> int:
-        return get_codon_offset_complement(self.frame)
-
-    def get_codon_offset(self, strand: str, pos: int) -> int:
-        # TODO: verify frame convention
-        return pos - self.start + (
-            self.cds_prefix_length if strand == '+' else
-            self.cds_suffix_length
-        )
-
-    def get_5p_3p_extensions(self, strand: str) -> tuple[int, int]:
-        return (
-            (self.cds_prefix_length, self.cds_suffix_length) if strand == '+' else
-            (self.cds_suffix_length, self.cds_prefix_length)
-        )
 
 
 @dataclass(slots=True)

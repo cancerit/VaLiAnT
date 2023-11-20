@@ -16,15 +16,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from .mutator_type import MutatorType
 from sqlite3 import Connection, Cursor
 
-from .annotation import Exon
 from .custom_variant import CustomVariant
 from .db import cursor, get_sql_insert, get_sql_insert_values, DbTableName, DbFieldName, get_sql_select_name
+from .exon import Exon
+from .mutator_type import MutatorType
 from .pam_variant import PamVariant
-from .utils import get_enum_values
 from .pattern_variant import PatternVariant
+from .utils import get_enum_values
 
 
 class NoRowId(Exception):

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .annotation import Exon
+from .exon import Exon
 from .seq_collection import SeqCollection
 from .strings.dna_str import DnaStr
 from .uint_range import UIntRange

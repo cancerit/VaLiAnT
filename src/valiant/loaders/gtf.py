@@ -23,7 +23,8 @@ from enum import IntEnum, Enum
 from itertools import chain
 
 from .csv import load_csv
-from ..annotation import Annotation, Exon
+from ..annotation import Annotation
+from ..exon import Exon
 from ..uint_range import UIntRange, UIntRangeSortedList
 
 
