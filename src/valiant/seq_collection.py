@@ -30,7 +30,7 @@ class SeqCollection:
     seqs: list[Seq]
 
     def __post_init__(self) -> None:
-        self.seqs = sorted(self.seqs, key=lambda s: s.start)
+        self.seqs.sort(key=lambda s: s.start)
 
     def substr(self, i: int, r: UIntRange, before: int = 0, after: int = 0) -> DnaStr:
         seq: Seq = self.seqs[i]
