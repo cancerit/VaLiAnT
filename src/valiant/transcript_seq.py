@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .exon import Exon
 from .seq_collection import SeqCollection
@@ -28,10 +28,14 @@ from .seq import Seq
 from .strings.strand import Strand
 
 
-@dataclass
+@dataclass(slots=True)
 class TranscriptSeq(SeqCollection):
     strand: Strand
     exons: dict[int, Exon]
+
+    @property
+    def exon_count(self) -> int:
+        return len(self.exons)
 
     @classmethod
     def from_exons(cls, strand: str, seqs: list[Seq], exons: list[Exon]) -> TranscriptSeq:
@@ -43,6 +47,9 @@ class TranscriptSeq(SeqCollection):
     def get_exon(self, exon_index: int) -> Exon:
         return self.exons[exon_index]
 
+    def get_exon_seq_index(self, exon_index: int) -> int:
+        return exon_index if self.strand.is_plus else (self.exon_count - exon_index - 1)
+
     def get_codon_offset(self, exon_index: int, pos: int) -> int:
         return self.get_exon(exon_index).get_codon_offset(self.strand, pos)
 
@@ -52,4 +59,5 @@ class TranscriptSeq(SeqCollection):
         assert ds >= 0
 
         before, after = exon.get_5p_3p_extensions(self.strand)
-        return self.substr(exon_index, r, before=before, after=after)
+        return self.substr(
+            self.get_exon_seq_index(exon_index), r, before=before, after=after)
