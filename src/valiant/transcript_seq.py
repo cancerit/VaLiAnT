@@ -16,6 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 from .annotation import Exon
@@ -23,21 +25,39 @@ from .utils import get_cds_ext_3_length, get_codon_offset_complement
 from .seq_collection import SeqCollection
 from .strings.dna_str import DnaStr
 from .uint_range import UIntRange
+from .seq import Seq
+from .strings.strand import Strand
 
 
 @dataclass
 class TranscriptSeq(SeqCollection):
-    exons: list[Exon]
+    strand: Strand
+    exons: dict[int, Exon]
+
+    @classmethod
+    def from_exons(cls, strand: str, seqs: list[Seq], exons: list[Exon]) -> TranscriptSeq:
+        return cls(seqs, Strand(strand), {
+            e.index: e
+            for e in exons
+        })
+
+    def get_exon(self, exon_index: int) -> Exon:
+        return self.exons[exon_index]
 
     def get_codon_offset(self, exon_index: int, pos: int) -> int:
-        exon = self.exons[exon_index]
+        exon = self.get_exon(exon_index)
         return pos - exon.start + exon.frame
 
     def get_ext(self, exon_index: int, r: UIntRange) -> DnaStr:
-        exon = self.exons[exon_index]
+        exon = self.get_exon(exon_index)
         ds = r.start - exon.start
         assert ds >= 0
 
         cds_prefix_len = get_codon_offset_complement(exon.frame)
         cds_suffix_len = get_cds_ext_3_length(cds_prefix_len, len(exon))
-        return self.substr(exon_index, r, before=cds_prefix_len, after=cds_suffix_len)
+
+        before, after = (
+            (cds_prefix_len, cds_suffix_len) if self.strand.is_plus else
+            (cds_suffix_len, cds_prefix_len)
+        )
+        return self.substr(exon_index, r, before=before, after=after)

@@ -42,6 +42,7 @@ from .queries import insert_custom_variant_collection, insert_exons, insert_back
     insert_pam_protection_edits, insert_gene_offsets, insert_pattern_variants, select_exons_in_range
 from .seq import Seq
 from .sge_config import SGEConfig
+from .transcript_seq import TranscriptSeq
 from .strings.dna_str import DnaStr
 from .uint_range import UIntRange
 from .utils import get_default_codon_table_path, get_ddl_path
@@ -122,8 +123,8 @@ def init_database(conn: Connection) -> None:
             cur.executescript(fh.read())
 
 
-def get_targeton_region_exon_id(conn: Connection, targeton: Seq) -> int | None:
-    exon_ids = select_exons_in_range(conn, targeton.start, targeton.end)
+def get_targeton_region_exon_id(conn: Connection, r: UIntRange) -> int | None:
+    exon_ids = select_exons_in_range(conn, r.start, r.end)
     en: int = len(exon_ids)
     match en:
         case 0:
@@ -134,26 +135,30 @@ def get_targeton_region_exon_id(conn: Connection, targeton: Seq) -> int | None:
             raise ValueError("Invalid targeton region: overlaps multiple exons!")
 
 
-def get_pattern_variants_from_region(conn: Connection, targeton: Seq, region: UIntRange, mc: MutatorCollection) -> list[PatternVariant]:
-    print(f"targeton={targeton}")
+def get_pattern_variants_from_region(conn: Connection, transcript: TranscriptSeq | None, targeton: Seq, region: UIntRange, mc: MutatorCollection) -> list[PatternVariant]:
+    # print(f"targeton={targeton}")
 
     # Get overlapping exon ID's
-    exon_id = get_targeton_region_exon_id(conn, targeton)
+    exon_id = get_targeton_region_exon_id(conn, region)
 
     is_cds = exon_id is not None
 
     r_seq = targeton.subseq(region, rel=False)
-    print(f"r_seq={r_seq}")
-
-    # TODO: CDS variants on the extended sequence only!
     r_vars = mc.get_variants(r_seq)
-    print(f"r_vars={r_vars}")
+
+    if is_cds:
+        assert transcript is not None
+        ext_seq = transcript.get_ext(exon_id, region)
+        frame = transcript.exons[exon_id].frame
+        cds_vars = mc.get_cds_variants(region.start, frame, ext_seq)
+        r_vars.extend(cds_vars)
+
     insert_pattern_variants(conn, r_vars)
 
     return r_vars
 
 
-def process_targeton_config(conn: Connection, codon_table: CodonTable, targetons: dict[int, Seq], t: TargetonConfig) -> list[PatternVariant]:
+def process_targeton_config(conn: Connection, codon_table: CodonTable, transcript: TranscriptSeq | None, targetons: dict[int, Seq], t: TargetonConfig) -> list[PatternVariant]:
     pattern_variants: list[PatternVariant] = []
 
     # TODO: apply pattern variants to R1 and R3 as well
@@ -164,7 +169,7 @@ def process_targeton_config(conn: Connection, codon_table: CodonTable, targetons
                 targeton = targetons[t.ref.start]
                 mc = MutatorCollection.from_configs(codon_table, mutators)
                 pattern_variants.extend(
-                    get_pattern_variants_from_region(conn, targeton, r, mc))
+                    get_pattern_variants_from_region(conn, transcript, targeton, r, mc))
 
     return pattern_variants
 
@@ -210,12 +215,15 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         for x in annot.cds.ranges
     ] if annot else []
 
+    transcript: TranscriptSeq | None = None
+
     # Get FASTA file
     with open_fasta(config.ref_fasta_fp) as fa:
         # TODO: load all sequences at once
         targeton_ref_seqs = load_sequences(fa, exp.contig, targeton_ranges)
         if annot:
             cds_ref_seqs = load_sequences(fa, exp.contig, annot.cds.ranges)
+            transcript = TranscriptSeq.from_exons(exp.strand, cds_ref_seqs, annot.cds.ranges)
 
     # TODO: correct targeton region bounds based on background
     targetons = {
@@ -231,7 +239,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             insert_exons(conn, annot.cds.ranges)
 
         for t in exp.targeton_configs:
-            process_targeton_config(conn, codon_table, targetons, t)
+            process_targeton_config(conn, codon_table, transcript, targetons, t)
 
         # Load background variants (targetons & exons)
         if config.bg_fp:

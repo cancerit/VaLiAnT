@@ -33,6 +33,7 @@ from .mutators.snv import SnvMutator
 from .mutators.snv_re import SnvReMutator
 from .pattern_variant import PatternVariant
 from .seq import Seq
+from .strings.dna_str import DnaStr
 
 
 class MutatorBuilder:
@@ -53,7 +54,6 @@ class MutatorBuilder:
     @classmethod
     def _from_config_cds(cls, codon_table: CodonTable, config: MutatorConfig) -> CodonMutator:
         mutator_cls: type[CodonMutator] = cls.CDS_MUTATOR_CLASSES[config.type]
-        print(mutator_cls)
         return mutator_cls(codon_table)
 
     @classmethod
@@ -92,6 +92,14 @@ class MutatorCollection:
     mutator_types: set[MutatorType]
     mutators: list[BaseMutator]
 
+    @property
+    def non_cds_mutators(self) -> list[BaseMutator]:
+        return [m for m in self.mutators if m.TYPE not in MutatorBuilder.CDS_MUTATOR_CLASSES]
+
+    @property
+    def cds_mutators(self) -> list[BaseMutator]:
+        return [m for m in self.mutators if m.TYPE in MutatorBuilder.CDS_MUTATOR_CLASSES]
+
     @classmethod
     def from_configs(cls, codon_table: CodonTable, configs: list[MutatorConfig]) -> MutatorCollection:
         types: set[MutatorType] = set()
@@ -121,8 +129,21 @@ class MutatorCollection:
     def get_variants(self, seq: Seq) -> list[PatternVariant]:
         variants = [
             PatternVariant.from_variant(m.as_str(), v)
-            for m in self.mutators
+            for m in self.non_cds_mutators
             for v in m.get_variants(seq)
         ]
 
         return variants
+
+    def get_cds_variants(self, start: int, frame: int, ext_seq: DnaStr) -> list[PatternVariant]:
+        # TODO: validate the start offset, depending on the frame convention
+        variants = [
+            PatternVariant.from_variant(m.as_str(), v)
+            for m in self.non_cds_mutators
+            for v in m.get_variants(Seq(start - frame, ext_seq))
+        ]
+
+        return [
+            v.ltrim(frame) if v.pos < start else v
+            for v in variants
+        ]

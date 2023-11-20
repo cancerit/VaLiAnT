@@ -61,20 +61,7 @@ class Seq(Sized):
         return pos - self.start
 
     def tail(self, n: int) -> DnaStr:
-        match n:
-            case 0:
-                return DnaStr.empty()
-            case 1:
-                return DnaStr(self.s[-1])
-            case _:
-                l: int = len(self)
-                return self.s.substr(UIntRange(l - n + 1, l))
+        return self.s.tail(n)
 
     def head(self, n: int) -> DnaStr:
-        match n:
-            case 0:
-                return DnaStr.empty()
-            case 1:
-                return DnaStr(self.s[0])
-            case _:
-                return self.substr(UIntRange(0, n - 1))
+        return self.s.head(n)

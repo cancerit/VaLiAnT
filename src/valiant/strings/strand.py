@@ -16,31 +16,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from __future__ import annotations
-
-from dataclasses import dataclass, replace
-
-from .variant import Variant
+STRAND = {'+', '-'}
 
 
-@dataclass
-class PatternVariant(Variant):
-    mutator: str
+class Strand(str):
+    def __init__(self, s: str) -> None:
+        if s not in STRAND:
+            raise ValueError(f"Invalid strand: {s}!")
+        super().__init__()
 
-    @classmethod
-    def from_variant(cls, mutator: str, v: Variant) -> PatternVariant:
-        return cls(pos=v.pos, ref=v.ref, alt=v.alt, mutator=mutator)
+    @property
+    def is_plus(self) -> bool:
+        return self == '+'
 
-    def ltrim(self, n: int) -> PatternVariant:
-        """
-        Trim the first n nucleotides from both REF and ALT and offset
-        the start position by the same amount
-
-        Only valid for codon replacements.
-        """
-
-        return replace(
-            self,
-            pos=self.pos + n,
-            ref=self.ref.ltrim(n),
-            alt=self.alt.ltrim(n))
+    @property
+    def is_minus(self) -> bool:
+        return self == '-'

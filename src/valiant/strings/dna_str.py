@@ -52,3 +52,25 @@ class DnaStr(str):
     def replace_substr(self, r: UIntRange, alt: str) -> DnaStr:
         # TODO: test for bounds!
         return DnaStr(f"{self[:r.start]}{alt}{self[r.end + 1:]}")
+
+    def tail(self, n: int) -> DnaStr:
+        match n:
+            case 0:
+                return DnaStr.empty()
+            case 1:
+                return DnaStr(self[-1])
+            case _:
+                l: int = len(self)
+                return self.substr(UIntRange(l - n + 1, l))
+
+    def head(self, n: int) -> DnaStr:
+        match n:
+            case 0:
+                return DnaStr.empty()
+            case 1:
+                return DnaStr(self[0])
+            case _:
+                return self.substr(UIntRange(0, n - 1))
+
+    def ltrim(self, n: int) -> DnaStr:
+        return self.tail(len(self) - n)
