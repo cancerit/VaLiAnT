@@ -28,8 +28,8 @@ class PatternVariant(Variant):
     mutator: str
 
     @classmethod
-    def from_variant(cls, mutator: str, v: Variant):
-        return cls(pos=v.pos, ref=v.ref, alt=v.alt, mutator=mutator)
+    def from_variant(cls, mutator: str, v: Variant, offset: int = 0):
+        return cls(pos=v.pos + offset, ref=v.ref, alt=v.alt, mutator=mutator)
 
 
 @dataclass

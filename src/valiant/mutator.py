@@ -136,8 +136,9 @@ class MutatorCollection:
         return variants
 
     def get_cds_variants(self, seq: CdsSeq) -> list[PatternVariant]:
+        # Verify strand implications
         return [
-            PatternVariant.from_variant(m.as_str(), v)
+            PatternVariant.from_variant(m.as_str(), v, offset=-seq.cds_prefix_length)
             for m in self.cds_mutators
             for v in m.get_variants(Seq(seq.start, seq.ext))
             if v.pos >= seq.start and v.ref_end <= seq.end
