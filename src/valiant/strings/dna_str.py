@@ -54,7 +54,7 @@ class DnaStr(str):
         return DnaStr(f"{self[:r.start]}{alt}{self[r.end + 1:]}")
 
     def tail(self, n: int) -> DnaStr:
-        assert n >= 0
+        assert n >= 0 and n <= len(self)
         match n:
             case 0:
                 return DnaStr.empty()
@@ -65,7 +65,7 @@ class DnaStr(str):
                 return self.substr(UIntRange(l - n + 1, l))
 
     def head(self, n: int) -> DnaStr:
-        assert n >= 0
+        assert n >= 0 and n <= len(self)
         match n:
             case 0:
                 return DnaStr.empty()
