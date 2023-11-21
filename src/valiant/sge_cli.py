@@ -136,7 +136,6 @@ def get_targeton_region_exon_id(conn: Connection, r: UIntRange) -> int | None:
 
 
 def get_pattern_variants_from_region(conn: Connection, transcript: TranscriptSeq | None, targeton: Seq, region: UIntRange, mc: MutatorCollection) -> list[PatternVariant]:
-    # print(f"targeton={targeton}")
 
     # Get overlapping exon ID's
     exon_id = get_targeton_region_exon_id(conn, region)
