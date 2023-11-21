@@ -29,7 +29,7 @@ class UIntRange(Sized, Container):
     end: int
 
     def __post_init__(self) -> None:
-        if self.end < self.start:
+        if self.start < 0 or self.end < self.start:
             raise ValueError("Invalid range!")
 
     def __len__(self) -> int:
