@@ -86,7 +86,6 @@ sql_insert_ppe_sgrna_ids = get_sql_insert_values(
     ])
 
 sql_insert_sgrna_id = get_sql_insert_names(DbTableName.SGRNA_IDS)
-sql_insert_mutator_types = get_sql_insert_names(DbTableName.MUTATOR_TYPES)
 
 
 def insert_custom_variant_collection(conn: Connection, name: str, vars: list[CustomVariant]) -> None:
@@ -194,9 +193,6 @@ sql_insert_pattern_variants = get_sql_insert_values(
     ])
 
 
-sql_select_mutator_type_id = get_sql_select_name(DbTableName.MUTATOR_TYPES)
-
-
 def insert_pattern_variants(conn: Connection, vars: list[PatternVariant]) -> None:
     with cursor(conn) as cur:
         cur.executemany(sql_insert_pattern_variants, [
@@ -210,10 +206,6 @@ def insert_enum(conn: Connection, t: DbTableName, cls) -> None:
         cur.executemany(get_sql_insert_names(t), [
             (name,) for name in get_enum_values(cls)
         ])
-
-
-def insert_mutator_types(conn: Connection) -> None:
-    insert_enum(conn, DbTableName.MUTATOR_TYPES, MutatorType)
 
 
 sql_select_exons_in_range = """
