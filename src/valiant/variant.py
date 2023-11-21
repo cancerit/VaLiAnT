@@ -54,6 +54,10 @@ class Variant:
     def alt_ref_delta(self) -> int:
         return self.alt_len - self.ref_len
 
+    @property
+    def ref_end(self) -> int:
+        return self.pos + min(0, self.ref_len - 1)
+
     @classmethod
     def from_row(cls, pos: int, ref: str | None, alt: str | None):
         return cls(pos, DnaStr.parse(ref), DnaStr.parse(alt))

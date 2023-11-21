@@ -136,20 +136,9 @@ class MutatorCollection:
         return variants
 
     def get_cds_variants(self, seq: CdsSeq) -> list[PatternVariant]:
-        print([m.TYPE for m in self.cds_mutators])
-        # TODO: validate the start offset, depending on the frame convention
-        # TODO: consider this may break for cDNA (more likely negative start coordinate)
-        variants = [
-            CdsPatternVariant.from_variant(m.as_str(), v)
+        return [
+            PatternVariant.from_variant(m.as_str(), v)
             for m in self.cds_mutators
             for v in m.get_variants(Seq(seq.start, seq.ext))
-        ]
-
-        return [
-            (
-                v.ltrim(seq.cds_prefix_length) if v.pos < seq.start else
-                v.rtrim(seq.cds_suffix_length) if v.pos > seq.end else
-                v
-            )
-            for v in variants
+            if v.pos >= seq.start and v.ref_end <= seq.end
         ]
