@@ -63,3 +63,7 @@ class TranscriptSeq(SeqCollection):
         before, after = exon.get_5p_3p_extensions(self.strand)
         return self.get_as_cds_seq(
             self.get_exon_seq_index(exon_index), r, before=before, after=after)
+
+    def get_as_cds_seq(self, i: int, r: UIntRange, before: int = 0, after: int = 0) -> CdsSeq:
+        a, b, c = self.split_substr(i, r, before=before, after=after)
+        return CdsSeq(r.start, b, a, c)
