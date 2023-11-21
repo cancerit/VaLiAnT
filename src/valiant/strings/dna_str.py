@@ -62,7 +62,7 @@ class DnaStr(str):
                 return DnaStr(self[-1])
             case _:
                 l: int = len(self)
-                return self.substr(UIntRange(l - n + 1, l))
+                return self.substr(UIntRange(l - n - 1 + 1, l))
 
     def head(self, n: int) -> DnaStr:
         assert n >= 0 and n <= len(self)
