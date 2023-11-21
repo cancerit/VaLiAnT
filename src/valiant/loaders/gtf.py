@@ -83,9 +83,17 @@ UtrFeature = GtfFeature
 class CdsFeature(GtfFeature):
     frame: int
 
+    def __post_init__(self) -> None:
+        if not (0 <= self.frame <= 2):
+            raise ValueError("Invalid frame in GTF/GFF2 file: out of range!")
+
     @classmethod
     def from_gtf(cls, r: list[str]) -> CdsFeature:
-        frame = int(r[GtfField.FRAME])
+        try:
+            frame = int(r[GtfField.FRAME])
+        except ValueError:
+            raise ValueError("Invalid frame in GTF/GFF2 file: not an integer!")
+
         # TODO: consider using exon_number as well? Is it guaranteed to be available?
         f = GtfFeature.from_gtf(r)
         return cls(f.start, f.end, f.gene_id, f.transcript_id, frame)
