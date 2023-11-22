@@ -43,3 +43,14 @@ class DeletionMutator(BaseMutator):
             Variant.get_del(ref.start, ref.s)
             for ref in refs
         ]
+
+
+@dataclass(frozen=True, slots=False, init=False)
+class InFrameDeletionMutator(BaseMutator):
+    TYPE = MutatorType.IN_FRAME
+
+    def get_variants(self, seq: Seq) -> list[Variant]:
+        return [
+            Variant(ref.start, ref.s, DnaStr.empty())
+            for ref in seq.subseq_triplets()
+        ]

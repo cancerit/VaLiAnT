@@ -19,12 +19,14 @@
 from dataclasses import dataclass
 from itertools import chain
 
-from .int_pattern_builder import IntPatternBuilder
-from . import BaseMutator
+from ..cds_seq import CdsSeq
+from ..codon_table import CodonTable
 from ..mutator_type import MutatorType
 from ..seq import Seq
 from ..strings.nucleotide import Nucleotide
 from ..variant import Variant
+from ..int_pattern_builder import IntPatternBuilder
+from . import BaseCdsMutator
 
 pt_nt = IntPatternBuilder(0, 1)
 
@@ -32,7 +34,7 @@ pt_nt = IntPatternBuilder(0, 1)
 # TODO: add slots back when CPython fixes 90562
 #  https://github.com/python/cpython/issues/90562
 @dataclass(frozen=True, slots=False, init=False)
-class SnvMutator(BaseMutator):
+class SnvMutator(BaseCdsMutator):
     TYPE = MutatorType.SNV
 
     def __init__(self) -> None:
@@ -41,7 +43,11 @@ class SnvMutator(BaseMutator):
 
     def get_variants(self, seq: Seq) -> list[Variant]:
         refs = self.get_refs(seq)
+        print(refs)
         return list(chain.from_iterable(
             Variant.get_snvs(ref.start, Nucleotide(ref.s))
             for ref in refs
         ))
+
+    def _get_variants(self, codon_table: CodonTable, seq: CdsSeq) -> list[Variant]:
+        return self.get_variants(seq)

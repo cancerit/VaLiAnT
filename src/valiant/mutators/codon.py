@@ -19,113 +19,80 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from . import BaseMutator
-from .int_pattern_builder import IntPatternBuilder
+from ..int_pattern_builder import pt_codon
+from ..cds_seq import CdsSeq
 from ..codon_table import CodonTable
 from ..constants import STOP
 from ..mutator_type import MutatorType
-from ..seq import Seq
 from ..strings.codon import Codon
 from ..strings.dna_str import DnaStr
 from ..strings.translation_symbol import TranslationSymbol
 from ..variant import Variant
+from . import BaseCdsMutator
+from .utils import get_variant_from_ref
 
-
-pt_codon = IntPatternBuilder(0, 3)
 
 # Translation symbols
 ala = TranslationSymbol('A')
 stop = TranslationSymbol(STOP)
 
 
-def get_variant_from_ref(ref: Seq, alt: DnaStr) -> Variant:
-    return Variant(ref.start, ref.s, alt)
-
-
 @dataclass(frozen=True)
-class CodonMutator(BaseMutator, ABC):
-    codon_table: CodonTable
+class CodonMutator(BaseCdsMutator, ABC):
 
-    def __init__(self, codon_table: CodonTable) -> None:
+    def __init__(self) -> None:
         super().__init__(pt_codon)
-        object.__setattr__(self, 'codon_table', codon_table)
 
-    def get_top_codon(self, aa: TranslationSymbol) -> Codon:
-        return self.codon_table.get_top_codon(aa)
-
-    def _get_codon_replacements(self, seq: Seq, value: Codon | None) -> list[Variant]:
+    def _get_codon_replacements(self, seq: CdsSeq, value: Codon | None) -> list[Variant]:
         alt = DnaStr(value or '')
         return [
             get_variant_from_ref(ref, alt)
-            for ref in self.get_refs(seq)
+            for ref in self.get_refs(seq, r=seq.get_inner_cds_range())
         ]
-
-    @abstractmethod
-    def _get_variants(self, seq: Seq) -> list[Variant]:
-        pass
-
-    def get_variants(self, seq: Seq) -> list[Variant]:
-        if not seq.is_length_multiple_of_three:
-            raise ValueError("Invalid CDS sequence: length not a multiple of three!")
-        return self._get_variants(seq)
 
 
 @dataclass(frozen=True, slots=False, init=False)
 class BaseReplaceCodonMutator(CodonMutator, ABC):
 
-    @property
     @abstractmethod
-    def alt(self) -> Codon | None:
+    def get_alt(self, codon_table: CodonTable) -> Codon | None:
         pass
 
-    def _get_variants(self, seq: Seq) -> list[Variant]:
-        return super()._get_codon_replacements(seq, self.alt)
-
-
-@dataclass(frozen=True, slots=False, init=False)
-class InFrameDeletionMutator(BaseReplaceCodonMutator):
-    TYPE = MutatorType.IN_FRAME
-
-    @property
-    def alt(self) -> Codon | None:
-        return None
+    def _get_variants(self, codon_table: CodonTable, seq: CdsSeq) -> list[Variant]:
+        return super()._get_codon_replacements(seq, self.get_alt(codon_table))
 
 
 @dataclass(frozen=True, slots=False, init=False)
 class AlaMutator(BaseReplaceCodonMutator):
     TYPE = MutatorType.ALA
 
-    @property
-    def alt(self) -> Codon | None:
-        # TODO: verify!
-        return self.get_top_codon(ala)
+    def get_alt(self, codon_table: CodonTable) -> Codon | None:
+        return codon_table.get_top_codon(ala)
 
 
 @dataclass(frozen=True, slots=False, init=False)
 class StopMutator(BaseReplaceCodonMutator):
     TYPE = MutatorType.STOP
 
-    @property
-    def alt(self) -> Codon | None:
-        # TODO: verify!
-        return self.get_top_codon(stop)
+    def get_alt(self, codon_table: CodonTable) -> Codon | None:
+        return codon_table.get_top_codon(stop)
 
 
 @dataclass(frozen=True, slots=False, init=False)
 class AminoAcidMutator(CodonMutator):
     TYPE = MutatorType.AA
 
-    def get_alt_aa_codons(self, codon: Codon) -> list[str]:
+    def get_alt_aa_codons(self, codon_table: CodonTable, codon: Codon) -> list[str]:
         return [
             alt_codon
-            for alt_codon in self.codon_table.get_codons(
-                self.codon_table.translate(codon))
+            for alt_codon in codon_table.get_codons(
+                codon_table.translate(codon))
             if alt_codon != codon
         ]
 
-    def _get_variants(self, seq: Seq) -> list[Variant]:
+    def _get_variants(self, codon_table: CodonTable, seq: CdsSeq) -> list[Variant]:
         return [
             get_variant_from_ref(ref, DnaStr(alt_codon))
             for ref in self.get_refs(seq)
-            for alt_codon in self.get_alt_aa_codons(Codon(ref.s))
+            for alt_codon in self.get_alt_aa_codons(codon_table, Codon(ref.s))
         ]

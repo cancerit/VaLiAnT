@@ -19,8 +19,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 from .seq import Seq
 from .strings.dna_str import DnaStr
+from .uint_range import UIntRange
+from .utils import get_codon_offset_complement
 
 
 @dataclass(slots=True)
@@ -29,12 +32,7 @@ class CdsSeq(Seq):
     cds_suffix: DnaStr
 
     def __post_init__(self) -> None:
-        print(self)
-        assert (
-            self.cds_prefix_length +
-            self.cds_suffix_length +
-            len(self)
-        ) % 3 == 0
+        assert self.ext_length % 3 == 0
 
     @property
     def cds_prefix_length(self) -> int:
@@ -43,6 +41,27 @@ class CdsSeq(Seq):
     @property
     def cds_suffix_length(self) -> int:
         return len(self.cds_suffix)
+
+    def get_inner_cds_range(self) -> UIntRange:
+        a = get_codon_offset_complement(self.cds_prefix_length)
+        b = get_codon_offset_complement(self.cds_suffix_length)
+        r = UIntRange(self.start + a, self.end - b)
+        assert len(r) % 3 == 0
+        return r
+
+    def get_inner_cds_seq(self) -> Seq:
+        return self.subseq(self.get_inner_cds_range(), rel=False)
+
+    def get_codons(self) -> list[Seq]:
+        return self.get_inner_cds_seq().subseq_triplets()
+
+    @property
+    def ext_length(self) -> int:
+        return (
+            self.cds_prefix_length +
+            self.cds_suffix_length +
+            len(self)
+        )
 
     @classmethod
     def from_seq(cls, seq: Seq, cds_prefix: DnaStr, cds_suffix: DnaStr) -> CdsSeq:
@@ -55,3 +74,6 @@ class CdsSeq(Seq):
     @property
     def ext(self) -> DnaStr:
         return DnaStr(f"{self.cds_prefix}{self.s}{self.cds_suffix}")
+
+    def ext_substr(self, r: UIntRange, rel: bool = True) -> DnaStr:
+        return self._substr(self.ext, r, rel=rel)

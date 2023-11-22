@@ -18,7 +18,7 @@
 
 from dataclasses import dataclass
 
-from ..uint_range import UIntRange
+from .uint_range import UIntRange
 
 
 @dataclass(slots=True, frozen=True)
@@ -36,3 +36,6 @@ class IntPatternBuilder:
 
     def get_range(self, start: int) -> UIntRange:
         return UIntRange.from_length(start, self.span)
+
+
+pt_codon = IntPatternBuilder(0, 3)

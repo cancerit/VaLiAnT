@@ -16,22 +16,22 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from valiant.mutators.snv_re import SnvReMutator
+from valiant.cds_seq import CdsSeq
 from valiant.codon_table import CodonTable
 from valiant.codon_table_loader import load_codon_table_rows
-from valiant.utils import get_default_codon_table_path
-from valiant.seq import Seq
+from valiant.mutators.snv_re import SnvReMutator
 from valiant.strings.dna_str import DnaStr
+from valiant.utils import get_default_codon_table_path
 
 codon_table = CodonTable.from_list(
     load_codon_table_rows(get_default_codon_table_path()))
 
-seq = Seq(10, DnaStr('AAAAAA'))
+seq = CdsSeq(10, DnaStr('AAAAAA'), DnaStr.empty(), DnaStr.empty())
 
 
 def test_snv_re_mutator():
-    mutator = SnvReMutator(codon_table)
-    vars = mutator.get_variants(seq)
+    mutator = SnvReMutator()
+    vars = mutator.get_annot_variants(codon_table, seq)
     for v in vars:
         assert v.ref_len == 3
         assert v.alt_len == 3

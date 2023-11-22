@@ -19,11 +19,11 @@
 from dataclasses import dataclass
 
 from ..annot_variant import AnnotVariant
+from ..cds_seq import CdsSeq
 from ..codon_table import CodonTable
 from ..constants import STOP
 from ..enums import MutationType
 from ..mutator_type import MutatorType
-from ..seq import Seq
 from ..strings.dna_str import DnaStr
 from ..strings.translation_symbol import TranslationSymbol
 from ..variant import Variant
@@ -51,14 +51,13 @@ def snv_to_snvres(codon_table: CodonTable, snv: AnnotVariant) -> list[Variant]:
 class SnvReMutator(CodonMutator):
     TYPE = MutatorType.SNV_RE
 
-    def _get_variants(self, seq: Seq) -> list[Variant]:
+    def _get_variants(self, codon_table: CodonTable, seq: CdsSeq) -> list[Variant]:
+        # TODO: pass a MutatorType -> Variants dictionary?
         # TODO: avoid recomputing the SNV's
-        snvs = [
-            AnnotVariant.annotate(self.codon_table, seq, snv, frame=0)
-            for snv in SnvMutator().get_variants(seq)
-        ]
+        snvs = SnvMutator().get_annot_variants(codon_table, seq)
+        print(snvs)
         return [
             snvre
             for snv in snvs
-            for snvre in snv_to_snvres(self.codon_table, snv)
+            for snvre in snv_to_snvres(codon_table, snv)
         ]

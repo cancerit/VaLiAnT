@@ -22,17 +22,18 @@ from dataclasses import dataclass
 import logging
 from typing import ClassVar
 
+from .annot_variant import AnnotVariant
 from .cds_seq import CdsSeq
 from .codon_table import CodonTable
 from .loaders.errors import InvalidMutator
 from .loaders.mutator_config import MutatorConfig
-from .mutator_type import DEPENDENT_MUTATOR_TYPES, PARAMETRIC_MUTATOR_TYPES, MutatorType
-from .mutators import BaseMutator
+from .mutator_type import ANNOTABLE_MUTATOR_TYPES, DEPENDENT_MUTATOR_TYPES, PARAMETRIC_MUTATOR_TYPES, MutatorType
+from .mutators import BaseCdsMutator, BaseMutator
 from .mutators.codon import AlaMutator, StopMutator, AminoAcidMutator, InFrameDeletionMutator, CodonMutator
 from .mutators.deletion import DeletionMutator
 from .mutators.snv import SnvMutator
 from .mutators.snv_re import SnvReMutator
-from .pattern_variant import CdsPatternVariant, PatternVariant
+from .pattern_variant import PatternVariant
 from .seq import Seq
 
 
@@ -52,9 +53,8 @@ class MutatorBuilder:
     }
 
     @classmethod
-    def _from_config_cds(cls, codon_table: CodonTable, config: MutatorConfig) -> CodonMutator:
-        mutator_cls: type[CodonMutator] = cls.CDS_MUTATOR_CLASSES[config.type]
-        return mutator_cls(codon_table)
+    def _from_config_cds(cls, config: MutatorConfig) -> CodonMutator:
+        return cls.CDS_MUTATOR_CLASSES[config.type]()
 
     @classmethod
     def _from_config_noncds(cls, config: MutatorConfig) -> BaseMutator:
@@ -74,14 +74,14 @@ class MutatorBuilder:
         return cls.MUTATOR_CLASSES[t]()  # type: ignore
 
     @classmethod
-    def from_config(cls, codon_table: CodonTable, config: MutatorConfig) -> BaseMutator:
+    def from_config(cls, config: MutatorConfig) -> BaseMutator:
         t: MutatorType = config.type
 
         if t in cls.MUTATOR_CLASSES:
             return cls._from_config_noncds(config)
 
         elif t in cls.CDS_MUTATOR_CLASSES:
-            return cls._from_config_cds(codon_table, config)
+            return cls._from_config_cds(config)
 
         else:
             raise NotImplementedError(f"Mutator type '{t.value}' not supported!")
@@ -92,16 +92,28 @@ class MutatorCollection:
     mutator_types: set[MutatorType]
     mutators: list[BaseMutator]
 
-    @property
-    def non_cds_mutators(self) -> list[BaseMutator]:
-        return [m for m in self.mutators if m.TYPE not in MutatorBuilder.CDS_MUTATOR_CLASSES]
+    def get_non_cds_mutators(self, exclude_annotable: bool = False) -> list[BaseMutator]:
+        return [
+            m for m in self.mutators
+            if m.TYPE not in MutatorBuilder.CDS_MUTATOR_CLASSES and (
+                m.TYPE not in ANNOTABLE_MUTATOR_TYPES if exclude_annotable else
+                True
+            )
+        ]
 
     @property
     def cds_mutators(self) -> list[BaseMutator]:
         return [m for m in self.mutators if m.TYPE in MutatorBuilder.CDS_MUTATOR_CLASSES]
 
+    @property
+    def annotable_mutators(self) -> list[BaseCdsMutator]:
+        return [
+            m for m in self.mutators
+            if m.TYPE in ANNOTABLE_MUTATOR_TYPES and isinstance(m, BaseCdsMutator)
+        ]
+
     @classmethod
-    def from_configs(cls, codon_table: CodonTable, configs: list[MutatorConfig]) -> MutatorCollection:
+    def from_configs(cls, configs: list[MutatorConfig]) -> MutatorCollection:
         types: set[MutatorType] = set()
         mutators: list[BaseMutator] = []
 
@@ -109,7 +121,7 @@ class MutatorCollection:
         for config in configs:
             t = config.type
             types.add(t)
-            mutators.append(MutatorBuilder.from_config(codon_table, config))
+            mutators.append(MutatorBuilder.from_config(config))
 
         return cls(types, mutators)
 
@@ -126,14 +138,12 @@ class MutatorCollection:
                         # Assumption: no dependencies on parametric or CDS mutators
                         self.mutators.append(MutatorBuilder.from_type(dt))
 
-    def get_variants(self, seq: Seq) -> list[PatternVariant]:
-        variants = [
+    def _get_variants(self, seq: Seq, mutators: list[BaseMutator]) -> list[PatternVariant]:
+        return [
             PatternVariant.from_variant(m.as_str(), v)
-            for m in self.non_cds_mutators
+            for m in mutators
             for v in m.get_variants(seq)
         ]
-
-        return variants
 
     def get_cds_variants(self, seq: CdsSeq) -> list[PatternVariant]:
         # Verify strand implications
@@ -143,3 +153,23 @@ class MutatorCollection:
             for v in m.get_variants(Seq(seq.start, seq.ext))
             if v.pos >= seq.start and v.ref_end <= seq.end
         ]
+
+    def has_mutator_type(self, t: MutatorType) -> bool:
+        return t in self.mutator_types
+
+    def _get_annotated_variants(self, codon_table: CodonTable, seq: CdsSeq) -> list[AnnotVariant]:
+        return [
+            v
+            for m in self.annotable_mutators
+            for v in m.get_annot_variants(codon_table, seq)
+        ]
+
+    def get_variants(self, codon_table: CodonTable, seq: Seq) -> tuple[list[PatternVariant], list[AnnotVariant]]:
+        if isinstance(seq, CdsSeq):
+            nam = self.get_non_cds_mutators(exclude_annotable=True)
+            av = self._get_annotated_variants(codon_table, seq)
+        else:
+            nam = self.get_non_cds_mutators(exclude_annotable=False)
+            av = []
+
+        return self._get_variants(seq, nam), av

@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
+# Copyright (C) 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,38 +16,10 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from enum import Enum
+from ..seq import Seq
+from ..strings.dna_str import DnaStr
+from ..variant import Variant
 
 
-class MutatorType(str, Enum):
-    # Parametric span
-    DEL = 'del'
-    # Single-nucleotide span
-    SNV = 'snv'
-    # Codon span
-    SNV_RE = 'snvre'
-    IN_FRAME = 'inframe'
-    ALA = 'ala'
-    STOP = 'stop'
-    AA = 'aa'
-
-
-PARAMETRIC_MUTATOR_TYPES: set[MutatorType] = {
-    MutatorType.DEL
-}
-
-
-ANNOTABLE_MUTATOR_TYPES: set[MutatorType] = {
-    MutatorType.SNV,
-    MutatorType.SNV_RE,
-    MutatorType.IN_FRAME,
-    MutatorType.ALA,
-    MutatorType.STOP,
-    MutatorType.AA
-}
-
-
-# Mutator types based on the output of other mutators
-DEPENDENT_MUTATOR_TYPES: dict[MutatorType, set[MutatorType]] = {
-    MutatorType.SNV_RE: {MutatorType.SNV}
-}
+def get_variant_from_ref(ref: Seq, alt: DnaStr) -> Variant:
+    return Variant(ref.start, ref.s, alt)

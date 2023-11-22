@@ -21,6 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sized
 
+from .int_pattern_builder import IntPatternBuilder
 from .strings.dna_str import DnaStr
 from .uint_range import UIntRange
 
@@ -48,14 +49,30 @@ class Seq(Sized):
     def from_str(cls, start: int, s: str) -> Seq:
         return cls(start, DnaStr.parse(s))
 
+    def _get_rel_range(self, r: UIntRange) -> UIntRange:
+        return r.offset(-self.start)
+
+    def _substr(self, s: DnaStr, r: UIntRange, rel: bool = True) -> DnaStr:
+        return s.substr(r if rel else self._get_rel_range(r))
+
     def substr(self, r: UIntRange, rel: bool = True) -> DnaStr:
-        return self.s.substr(
-            r if rel else
-            r.offset(-self.start)
-        )
+        # Assumption: if the range is absolute, it is one-based
+        # Assumption: if the range is relative, it is zero-based
+        return self._substr(self.s, r, rel=rel)
 
     def subseq(self, r: UIntRange, rel: bool = True) -> Seq:
         return Seq(r.start, self.substr(r, rel=rel))
+
+    def subseq_window(self, pt: IntPatternBuilder, start: int = 0, length: int | None = None) -> list[Seq]:
+        starts = pt.build(start, (length if length is not None else len(self)) - 1)
+        return [
+            self.subseq(pt.get_range(start), rel=False)
+            for start in starts
+        ]
+
+    def subseq_triplets(self) -> list[Seq]:
+        pt = IntPatternBuilder(0, 3)
+        return self.subseq_window(pt, start=0, length=len(self))
 
     def get_offset(self, pos: int) -> int:
         return pos - self.start

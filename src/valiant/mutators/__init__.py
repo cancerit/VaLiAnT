@@ -22,10 +22,14 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar
 
+from ..annot_variant import AnnotVariant
+from ..cds_seq import CdsSeq
+from ..codon_table import CodonTable
 from ..mutator_type import MutatorType
 from ..seq import Seq
+from ..uint_range import UIntRange
 from ..variant import Variant
-from .int_pattern_builder import IntPatternBuilder
+from ..int_pattern_builder import IntPatternBuilder
 
 
 @dataclass(frozen=True)
@@ -37,15 +41,33 @@ class BaseMutator(ABC):
     def as_str(self) -> str:
         return self.TYPE.value
 
-    def get_refs(self, seq: Seq) -> list[Seq]:
+    def get_refs(self, seq: Seq, r: UIntRange | None = None) -> list[Seq]:
         """Get the mutation start relative positions and reference sequences"""
 
-        starts = self.pt.build(seq.start, len(seq) - 1)
-        return [
-            seq.subseq(self.pt.get_range(start), rel=False)
-            for start in starts
-        ]
+        if r:
+            if r not in seq.get_range():
+                raise ValueError("Subrange out of bounds!")
+            start = r.start
+            length = len(r)
+        else:
+            start = seq.start
+            length = len(seq)
+
+        return seq.subseq_window(self.pt, start=start, length=length)
+
+    def get_variants(self, seq: Seq) -> list[Variant]:
+        raise NotImplementedError
+
+
+@dataclass(frozen=True)
+class BaseCdsMutator(BaseMutator, ABC):
 
     @abstractmethod
-    def get_variants(self, seq: Seq) -> list[Variant]:
+    def _get_variants(self, codon_table: CodonTable, seq: CdsSeq) -> list[Variant]:
         pass
+
+    def get_annot_variants(self, codon_table: CodonTable, seq: CdsSeq) -> list[AnnotVariant]:
+        return [
+            AnnotVariant.annotate(codon_table, seq, v)
+            for v in self._get_variants(codon_table, seq)
+        ]

@@ -21,9 +21,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 
+from .cds_seq import CdsSeq
 from .codon_table import CodonTable
 from .enums import MutationType
-from .seq import Seq
 from .strings.codon import Codon
 from .strings.translation_symbol import TranslationSymbol
 from .uint_range import UIntRange
@@ -40,6 +40,7 @@ def get_codon_range_offset(pos: int, frame: int = 0) -> tuple[UIntRange, int]:
 
 @dataclass
 class AnnotVariant(Variant):
+    # TODO: add source (mutator or custom)?
     codon_offset: int
     codon_ref: Codon
     codon_alt: Codon
@@ -68,15 +69,30 @@ class AnnotVariant(Variant):
         return self.aa_ref.get_aa_change(self.aa_alt)
 
     @classmethod
-    def annotate(cls, codon_table: CodonTable, seq: Seq, v: Variant, frame: int = 0) -> AnnotVariant:
+    def annotate(cls, codon_table: CodonTable, seq: CdsSeq, v: Variant) -> AnnotVariant:
         var_offset = seq.get_offset(v.pos)
         # TODO: handle
         assert 0 <= var_offset < len(seq)
-        codon_range, codon_offset = get_codon_range_offset(
-            v.pos - seq.start, frame=frame)
-        # TODO: verify it is not a partial codon (expect seq to be a complete CDS?)
-        codon_ref = Codon(seq.substr(codon_range, rel=True))
-        codon_alt = Codon(
-            codon_ref.replace_substr(UIntRange.from_pos(codon_offset), v.alt))
 
-        return AnnotVariant.from_codons(codon_table, v, codon_offset, codon_ref, codon_alt)
+        match v.ref_len:
+            case 1:
+                # SNV
+                # TODO: check the frame convention
+                codon_range, codon_offset = get_codon_range_offset(
+                    v.pos - seq.start, frame=seq.cds_prefix_length)
+                codon_ref = seq.ext_substr(codon_range, rel=True)
+                codon_alt = codon_ref.replace_substr(UIntRange.from_pos(codon_offset), v.alt)
+            case 3:
+                # Codon replacement
+                codon_offset = 0
+                codon_ref = v.ref
+                codon_alt = v.alt
+            case _:
+                raise ValueError("Unsupported REF length for annotation!")
+
+        return AnnotVariant.from_codons(
+            codon_table,
+            v,
+            codon_offset,
+            Codon(codon_ref),
+            Codon(codon_alt))

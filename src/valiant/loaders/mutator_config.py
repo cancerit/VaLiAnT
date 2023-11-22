@@ -23,7 +23,7 @@ import re
 
 from .errors import InvalidMutator
 from ..mutator_type import MutatorType
-from ..mutators.int_pattern_builder import IntPatternBuilder
+from ..int_pattern_builder import IntPatternBuilder
 from ..utils import parse_opt_int_group
 
 
