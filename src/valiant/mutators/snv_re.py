@@ -52,10 +52,8 @@ class SnvReMutator(CodonMutator):
     TYPE = MutatorType.SNV_RE
 
     def _get_variants(self, codon_table: CodonTable, seq: CdsSeq) -> list[Variant]:
-        # TODO: pass a MutatorType -> Variants dictionary?
         # TODO: avoid recomputing the SNV's
         snvs = SnvMutator().get_annot_variants(codon_table, seq)
-        print(snvs)
         return [
             snvre
             for snv in snvs

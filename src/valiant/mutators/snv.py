@@ -43,7 +43,6 @@ class SnvMutator(BaseCdsMutator):
 
     def get_variants(self, seq: Seq) -> list[Variant]:
         refs = self.get_refs(seq)
-        print(refs)
         return list(chain.from_iterable(
             Variant.get_snvs(ref.start, Nucleotide(ref.s))
             for ref in refs
