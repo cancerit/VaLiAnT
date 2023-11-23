@@ -27,10 +27,10 @@ from .cds_seq import CdsSeq
 from .codon_table import CodonTable
 from .loaders.errors import InvalidMutator
 from .loaders.mutator_config import MutatorConfig
-from .mutator_type import ANNOTABLE_MUTATOR_TYPES, DEPENDENT_MUTATOR_TYPES, PARAMETRIC_MUTATOR_TYPES, MutatorType
+from .mutator_type import ANNOTABLE_MUTATOR_TYPES, CDS_MUTATOR_TYPES, DEPENDENT_MUTATOR_TYPES, PARAMETRIC_MUTATOR_TYPES, MutatorType
 from .mutators import BaseCdsMutator, BaseMutator
-from .mutators.codon import AlaMutator, StopMutator, AminoAcidMutator, InFrameDeletionMutator, CodonMutator
-from .mutators.deletion import DeletionMutator
+from .mutators.codon import AlaMutator, StopMutator, AminoAcidMutator
+from .mutators.deletion import DeletionMutator, InFrameDeletionMutator
 from .mutators.snv import SnvMutator
 from .mutators.snv_re import SnvReMutator
 from .pattern_variant import PatternVariant
@@ -41,33 +41,13 @@ class MutatorBuilder:
 
     MUTATOR_CLASSES: ClassVar[dict[MutatorType, type[BaseMutator]]] = {
         MutatorType.DEL: DeletionMutator,
-        MutatorType.SNV: SnvMutator
-    }
-
-    CDS_MUTATOR_CLASSES: ClassVar[dict[MutatorType, type[CodonMutator]]] = {
+        MutatorType.SNV: SnvMutator,
         MutatorType.SNV_RE: SnvReMutator,
         MutatorType.ALA: AlaMutator,
         MutatorType.STOP: StopMutator,
         MutatorType.AA: AminoAcidMutator,
         MutatorType.IN_FRAME: InFrameDeletionMutator
     }
-
-    @classmethod
-    def _from_config_cds(cls, config: MutatorConfig) -> CodonMutator:
-        return cls.CDS_MUTATOR_CLASSES[config.type]()
-
-    @classmethod
-    def _from_config_noncds(cls, config: MutatorConfig) -> BaseMutator:
-        mutator_cls: type[BaseMutator] = cls.MUTATOR_CLASSES[config.type]
-
-        if config.type in PARAMETRIC_MUTATOR_TYPES:
-            if not config.pt:
-                raise InvalidMutator("Parametric mutator missing parameters!")
-            return mutator_cls(config.pt)
-
-        # Assumption: all nonparametric mutator classes have zero-argument constructors
-        # TODO: add abstract subclass with zero-argument constructor
-        return mutator_cls()  # type: ignore
 
     @classmethod
     def from_type(cls, t: MutatorType) -> BaseMutator:
@@ -78,10 +58,16 @@ class MutatorBuilder:
         t: MutatorType = config.type
 
         if t in cls.MUTATOR_CLASSES:
-            return cls._from_config_noncds(config)
+            mutator_cls: type[BaseMutator] = cls.MUTATOR_CLASSES[config.type]
 
-        elif t in cls.CDS_MUTATOR_CLASSES:
-            return cls._from_config_cds(config)
+            if config.type in PARAMETRIC_MUTATOR_TYPES:
+                if not config.pt:
+                    raise InvalidMutator("Parametric mutator missing parameters!")
+                return mutator_cls(config.pt)
+
+            # Assumption: all nonparametric mutator classes have zero-argument constructors
+            # TODO: add abstract subclass with zero-argument constructor
+            return mutator_cls()  # type: ignore
 
         else:
             raise NotImplementedError(f"Mutator type '{t.value}' not supported!")
@@ -95,7 +81,7 @@ class MutatorCollection:
     def get_non_cds_mutators(self, exclude_annotable: bool = False) -> list[BaseMutator]:
         return [
             m for m in self.mutators
-            if m.TYPE not in MutatorBuilder.CDS_MUTATOR_CLASSES and (
+            if m.TYPE not in CDS_MUTATOR_TYPES and (
                 m.TYPE not in ANNOTABLE_MUTATOR_TYPES if exclude_annotable else
                 True
             )
@@ -103,7 +89,7 @@ class MutatorCollection:
 
     @property
     def cds_mutators(self) -> list[BaseMutator]:
-        return [m for m in self.mutators if m.TYPE in MutatorBuilder.CDS_MUTATOR_CLASSES]
+        return [m for m in self.mutators if m.TYPE in CDS_MUTATOR_TYPES]
 
     @property
     def annotable_mutators(self) -> list[BaseCdsMutator]:
@@ -143,15 +129,6 @@ class MutatorCollection:
             PatternVariant.from_variant(m.as_str(), v)
             for m in mutators
             for v in m.get_variants(seq)
-        ]
-
-    def get_cds_variants(self, seq: CdsSeq) -> list[PatternVariant]:
-        # Verify strand implications
-        return [
-            PatternVariant.from_variant(m.as_str(), v, offset=-seq.cds_prefix_length)
-            for m in self.cds_mutators
-            for v in m.get_variants(Seq(seq.start, seq.ext))
-            if v.pos >= seq.start and v.ref_end <= seq.end
         ]
 
     def has_mutator_type(self, t: MutatorType) -> bool:

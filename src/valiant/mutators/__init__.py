@@ -68,6 +68,6 @@ class BaseCdsMutator(BaseMutator, ABC):
 
     def get_annot_variants(self, codon_table: CodonTable, seq: CdsSeq) -> list[AnnotVariant]:
         return [
-            AnnotVariant.annotate(codon_table, seq, v)
+            AnnotVariant.annotate(codon_table, seq, v, src=self.TYPE.value)
             for v in self._get_variants(codon_table, seq)
         ]

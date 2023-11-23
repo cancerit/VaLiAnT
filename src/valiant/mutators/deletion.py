@@ -19,8 +19,10 @@
 from dataclasses import dataclass
 
 from . import BaseMutator
+from ..int_pattern_builder import pt_codon
 from ..mutator_type import MutatorType
 from ..seq import Seq
+from ..strings.dna_str import DnaStr
 from ..variant import Variant
 
 
@@ -48,6 +50,9 @@ class DeletionMutator(BaseMutator):
 @dataclass(frozen=True, slots=False, init=False)
 class InFrameDeletionMutator(BaseMutator):
     TYPE = MutatorType.IN_FRAME
+
+    def __init__(self) -> None:
+        super().__init__(pt_codon)
 
     def get_variants(self, seq: Seq) -> list[Variant]:
         return [

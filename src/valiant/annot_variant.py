@@ -31,8 +31,9 @@ from .variant import Variant
 
 
 @lru_cache(maxsize=256)
-def get_codon_range_offset(pos: int, frame: int = 0) -> tuple[UIntRange, int]:
-    codon_offset = (pos + frame) % 3
+def get_codon_range_offset(pos: int) -> tuple[UIntRange, int]:
+    # Assumption: the position is relative to the start of an in-frame CDS sequence
+    codon_offset = pos % 3
     codon_start = pos - codon_offset
     codon_end = pos + (3 - codon_offset) - 1
     return UIntRange(codon_start, codon_end), codon_offset
@@ -40,7 +41,7 @@ def get_codon_range_offset(pos: int, frame: int = 0) -> tuple[UIntRange, int]:
 
 @dataclass
 class AnnotVariant(Variant):
-    # TODO: add source (mutator or custom)?
+    src: str
     codon_offset: int
     codon_ref: Codon
     codon_alt: Codon
@@ -54,10 +55,10 @@ class AnnotVariant(Variant):
             raise ValueError("Invalid codon offset!")
 
     @classmethod
-    def from_codons(cls, codon_table: CodonTable, v: Variant, offset: int, ref: Codon, alt: Codon) -> AnnotVariant:
+    def from_codons(cls, codon_table: CodonTable, v: Variant, offset: int, ref: Codon, alt: Codon, src: str = '') -> AnnotVariant:
         return cls(
             v.pos, v.ref, v.alt,
-            offset, ref, alt,
+            src, offset, ref, alt,
             codon_table.translate(ref),
             codon_table.translate(alt))
 
@@ -69,17 +70,16 @@ class AnnotVariant(Variant):
         return self.aa_ref.get_aa_change(self.aa_alt)
 
     @classmethod
-    def annotate(cls, codon_table: CodonTable, seq: CdsSeq, v: Variant) -> AnnotVariant:
-        var_offset = seq.get_offset(v.pos)
+    def annotate(cls, codon_table: CodonTable, seq: CdsSeq, v: Variant, src: str = '') -> AnnotVariant:
+        var_offset = seq.get_ext_offset(v.pos)
         # TODO: handle
-        assert 0 <= var_offset < len(seq)
+        assert 0 <= var_offset < seq.ext_length
 
         match v.ref_len:
             case 1:
                 # SNV
                 # TODO: check the frame convention
-                codon_range, codon_offset = get_codon_range_offset(
-                    v.pos - seq.start, frame=seq.cds_prefix_length)
+                codon_range, codon_offset = get_codon_range_offset(var_offset)
                 codon_ref = seq.ext_substr(codon_range, rel=True)
                 codon_alt = codon_ref.replace_substr(UIntRange.from_pos(codon_offset), v.alt)
             case 3:
@@ -95,4 +95,5 @@ class AnnotVariant(Variant):
             v,
             codon_offset,
             Codon(codon_ref),
-            Codon(codon_alt))
+            Codon(codon_alt),
+            src=src)

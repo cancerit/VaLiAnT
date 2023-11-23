@@ -45,7 +45,11 @@ class UIntRange(Sized, Container):
         return f"[{self.start}, {self.end}]"
 
     def __contains__(self, x) -> bool:
-        return self.start <= x <= self.end
+        if isinstance(x, int):
+            return self.start <= x <= self.end
+        elif isinstance(x, UIntRange):
+            return x.start in self and x.end in self
+        raise TypeError("Operand type not supported!")
 
     @classmethod
     def from_length(cls, start: int, length: int) -> UIntRange:

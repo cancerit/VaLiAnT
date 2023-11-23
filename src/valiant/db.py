@@ -59,6 +59,10 @@ class DbFieldName(str, Enum):
     REF_A = 'ref_a'
     ALT_A = 'alt_a'
     MUTATOR = 'mutator'
+    CODON_REF_A = 'codon_ref_a'
+    CODON_ALT_A = 'codon_alt_a'
+    AA_REF = 'aa_ref'
+    AA_ALT = 'aa_alt'
     # MUTATOR_TYPE_ID = 'mutator_type_id'
 
 

@@ -18,10 +18,10 @@
 
 from sqlite3 import Connection, Cursor
 
+from .annot_variant import AnnotVariant
 from .custom_variant import CustomVariant
 from .db import cursor, get_sql_insert, get_sql_insert_values, DbTableName, DbFieldName, get_sql_select_name
 from .exon import Exon
-from .mutator_type import MutatorType
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
 from .utils import get_enum_values
@@ -184,19 +184,44 @@ def insert_gene_offsets(conn: Connection, start: int, end: int) -> None:
         cur.execute(sql_insert_offsets, (start, end))
 
 
+insert_pattern_variant_fields = [
+    DbFieldName.POS_A,
+    DbFieldName.REF_A,
+    DbFieldName.ALT_A,
+    DbFieldName.MUTATOR
+]
+
+
 sql_insert_pattern_variants = get_sql_insert_values(
-    DbTableName.PATTERN_VARIANTS, [
-        DbFieldName.POS_A,
-        DbFieldName.REF_A,
-        DbFieldName.ALT_A,
-        DbFieldName.MUTATOR
-    ])
+    DbTableName.PATTERN_VARIANTS, insert_pattern_variant_fields)
 
 
 def insert_pattern_variants(conn: Connection, vars: list[PatternVariant]) -> None:
     with cursor(conn) as cur:
         cur.executemany(sql_insert_pattern_variants, [
             (v.pos, v.ref, v.alt, v.mutator)
+            for v in vars
+        ])
+
+
+sql_insert_annot_pattern_variants = get_sql_insert_values(
+    DbTableName.PATTERN_VARIANTS, [
+        *insert_pattern_variant_fields,
+        DbFieldName.CODON_REF_A,
+        DbFieldName.CODON_ALT_A,
+        DbFieldName.AA_REF,
+        DbFieldName.AA_ALT
+    ])
+
+
+def insert_annot_pattern_variants(conn: Connection, vars: list[AnnotVariant]) -> None:
+    with cursor(conn) as cur:
+        cur.executemany(sql_insert_annot_pattern_variants, [
+            (
+                v.pos, v.ref, v.alt, v.src,
+                v.codon_ref, v.codon_alt,
+                v.aa_ref, v.aa_alt
+            )
             for v in vars
         ])
 

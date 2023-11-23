@@ -23,6 +23,7 @@ from sqlite3 import Connection
 import click
 from pysam.libcfaidx import FastaFile
 
+from .annot_variant import AnnotVariant
 from .annotation import Annotation
 from .codon_table import CodonTable
 from .codon_table_loader import load_codon_table_rows
@@ -38,7 +39,7 @@ from .loaders.vcf_manifest import VcfManifest
 from .mutator import MutatorCollection
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
-from .queries import insert_custom_variant_collection, insert_exons, insert_background_variants, \
+from .queries import insert_annot_pattern_variants, insert_custom_variant_collection, insert_exons, insert_background_variants, \
     insert_pam_protection_edits, insert_gene_offsets, insert_pattern_variants, select_exons_in_range
 from .seq import Seq
 from .sge_config import SGEConfig
@@ -135,29 +136,41 @@ def get_targeton_region_exon_id(conn: Connection, r: UIntRange) -> int | None:
             raise ValueError("Invalid targeton region: overlaps multiple exons!")
 
 
-def get_pattern_variants_from_region(conn: Connection, transcript: TranscriptSeq | None, targeton: Seq, region: UIntRange, mc: MutatorCollection) -> list[PatternVariant]:
+def get_pattern_variants_from_region(
+    conn: Connection,
+    codon_table: CodonTable,
+    transcript: TranscriptSeq | None,
+    targeton: Seq,
+    region: UIntRange,
+    mc: MutatorCollection
+) -> tuple[list[PatternVariant], list[AnnotVariant]]:
 
     # Get overlapping exon ID's
     exon_id = get_targeton_region_exon_id(conn, region)
-
     is_cds = exon_id is not None
-
-    r_seq = targeton.subseq(region, rel=False)
-    r_vars = mc.get_variants(r_seq)
 
     if is_cds:
         assert transcript is not None
-        ext_seq = transcript.get_cds_seq(exon_id, region)
-        cds_vars = mc.get_cds_variants(ext_seq)
-        r_vars.extend(cds_vars)
+        r_seq = transcript.get_cds_seq(exon_id, region)
+    else:
+        r_seq = targeton.subseq(region, rel=False)
 
-    insert_pattern_variants(conn, r_vars)
+    vars, annot_vars = mc.get_variants(codon_table, r_seq)
+    insert_pattern_variants(conn, vars)
+    insert_annot_pattern_variants(conn, annot_vars)
 
-    return r_vars
+    return vars, annot_vars
 
 
-def process_targeton_config(conn: Connection, codon_table: CodonTable, transcript: TranscriptSeq | None, targetons: dict[int, Seq], t: TargetonConfig) -> list[PatternVariant]:
+def process_targeton_config(
+    conn: Connection,
+    codon_table: CodonTable,
+    transcript: TranscriptSeq | None,
+    targetons: dict[int, Seq],
+    t: TargetonConfig
+) -> tuple[list[PatternVariant], list[AnnotVariant]]:
     pattern_variants: list[PatternVariant] = []
+    annot_variants: list[AnnotVariant] = []
 
     # TODO: apply pattern variants to R1 and R3 as well
     for i, r in enumerate([None, t.region_2, None]):
@@ -165,11 +178,13 @@ def process_targeton_config(conn: Connection, codon_table: CodonTable, transcrip
             mutators = t.mutators[i]
             if mutators:
                 targeton = targetons[t.ref.start]
-                mc = MutatorCollection.from_configs(codon_table, mutators)
-                pattern_variants.extend(
-                    get_pattern_variants_from_region(conn, transcript, targeton, r, mc))
+                mc = MutatorCollection.from_configs(mutators)
+                vars, annot_vars = get_pattern_variants_from_region(
+                    conn, codon_table, transcript, targeton, r, mc)
+                pattern_variants.extend(vars)
+                annot_variants.extend(annot_vars)
 
-    return pattern_variants
+    return pattern_variants, annot_variants
 
 
 def get_background_context_range(targeton_ranges, annot: Annotation | None) -> UIntRange:

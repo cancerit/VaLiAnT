@@ -37,10 +37,18 @@ PARAMETRIC_MUTATOR_TYPES: set[MutatorType] = {
 }
 
 
+CDS_MUTATOR_TYPES: set[MutatorType] = {
+    MutatorType.SNV_RE,
+    MutatorType.ALA,
+    MutatorType.STOP,
+    MutatorType.AA,
+    MutatorType.IN_FRAME
+}
+
+
 ANNOTABLE_MUTATOR_TYPES: set[MutatorType] = {
     MutatorType.SNV,
     MutatorType.SNV_RE,
-    MutatorType.IN_FRAME,
     MutatorType.ALA,
     MutatorType.STOP,
     MutatorType.AA
