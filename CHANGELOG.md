@@ -4,7 +4,8 @@
 
 ### Added
 
-- Background variant support
+- Support for background variant
+- Support for out-of-frame CDS targeton regions whose 5' and 3' extensions span both adjacent and distal bases
 
 ### Fixed
 
