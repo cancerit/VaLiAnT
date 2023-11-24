@@ -31,6 +31,17 @@ create table exons (
 );
 create unique index exons_exon_index_idx on exons (exon_index);
 
+-- Compute the CDS prefix lengths
+create view if not exists v_exon_ext as
+select
+    id,
+    start,
+    end, (
+        lead((end - start + 1) % 3, -1, 0)
+        over (order by exon_index)
+    ) as cds_prefix_length
+from exons;
+
 -- Background edits
 
 create table background_variants (
@@ -79,6 +90,15 @@ create table pam_protection_edit_sgrna_ids (
     var_ppe_id integer not null primary key references pam_protection_edits (id),
     sgrna_id integer not null references sgrna_ids (id)
 ) without rowid;
+
+create table exon_codon_ppes (
+    exon_id integer not null references exons (id),
+    codon_index integer not null,
+    -- Assumption: at most one PPE per codon
+    ppe_id integer not null references pam_protection_edits (id),
+
+    primary key (exon_id, codon_index)
+);
 
 -- Custom variants
 

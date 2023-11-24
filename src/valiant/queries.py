@@ -128,6 +128,24 @@ def _insert_returning_row_id(cur: Cursor, query: str, params: tuple) -> int:
     return row_id
 
 
+sql_insert_exon_codon_ppes = """
+insert into exon_codon_ppes (
+    ppe_id,
+    exon_id,
+    codon_index
+)
+select
+    p.id,
+    e.id, (
+        (p.start - e.start - e.cds_prefix_length) / 3
+    ) as codon_index
+from pam_protection_edits p
+left join v_exon_ext e on
+    p.start >= e.start and
+    p.start <= e.end;
+"""
+
+
 def insert_pam_protection_edits(conn: Connection, vars: list[PamVariant]) -> None:
     def get_sgrna_id(c: Cursor, name: str) -> int:
 
@@ -159,6 +177,9 @@ def insert_pam_protection_edits(conn: Connection, vars: list[PamVariant]) -> Non
             # Match variant and sgRNA ID
             cur.execute(sql_insert_ppe_sgrna_ids,
                         (var_id, sgrna_name_ids[v.sgrna_id]))
+
+        # Assign exon ID's and codon indices to the PPE's
+        cur.execute(sql_insert_exon_codon_ppes)
 
 
 # TODO: consider start positions get offset as they go...
