@@ -51,6 +51,13 @@ class UIntRange(Sized, Container):
             return x.start in self and x.end in self
         raise TypeError("Operand type not supported!")
 
+    def intersect(self, r: UIntRange) -> UIntRange | None:
+        if r not in self:
+            return None
+        start = max(self.start, r.start)
+        end = min(self.end, r.end)
+        return UIntRange(start, end)
+
     @classmethod
     def from_length(cls, start: int, length: int) -> UIntRange:
         return cls(start, start + length - 1)

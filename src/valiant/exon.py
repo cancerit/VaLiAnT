@@ -39,6 +39,26 @@ class Exon(UIntRange):
     def compl_frame(self) -> int:
         return get_codon_offset_complement(self.frame)
 
+    def get_codon_index_at(self, pos: int) -> int | None:
+        return (
+            ((pos - self.compl_frame) // 3) if pos in self else
+            None
+        )
+
+    def get_codon_indices(self, r: UIntRange) -> list[int]:
+        t = self.intersect(r)
+        if t is None:
+            return []
+
+        first = self.get_codon_index_at(t.start)
+        last = self.get_codon_index_at(t.end)
+        assert first is not None and last is not None
+
+        return (
+            list(range(first, last + 1)) if last != first else
+            [first]
+        )
+
     def get_codon_offset(self, strand: str, pos: int) -> int:
         # TODO: verify frame convention
         return pos - self.start + (
