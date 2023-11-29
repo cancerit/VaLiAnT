@@ -140,3 +140,63 @@ create table pattern_variants (
     aa_ref text,
     aa_alt text
 );
+
+-- Final
+
+create view if not exists v_meta as
+select
+    s.ref_start,
+    s.ref,
+    s.alt,
+    s.ref_aa,
+    s.alt_aa,
+    s.vcf_var_id,
+    s.vcf_alias,
+    s.mutator,
+    -- TODO: handle multiple guides
+    si.name as sgrna_ids
+from (
+    select
+        w.*,
+        e.id as exon_id,
+        ((w.ref_start - e.start - e.cds_prefix_length) / 3) as codon_index
+    from (
+        select
+            v.*,
+            v.ref_start + min(0, length(v.ref) - 1) as ref_end
+        from (
+            select
+                pos_a as ref_start,  -- pos_r?
+                ref_a as ref,
+                alt_a as alt,
+                aa_ref as ref_aa,
+                aa_alt as alt_aa,
+                null as vcf_var_id,
+                null as vcf_alias,
+                mutator
+            from pattern_variants pv
+            union all
+            select
+                start as ref_start,
+                ref,
+                alt,
+                null as ref_aa,
+                null as alt_aa,
+                var_id as vcf_var_id,
+                cvc.name as vcf_alias,
+                'custom' as mutator
+            from custom_variants cv
+            left join custom_variant_collections cvc on cvc.id = cv.collection_id
+        ) v
+    ) w
+    left join v_exon_ext e on (
+        (w.ref_start >= e.start and w.ref_start <= e.end) or
+        (w.ref_end >= e.start and w.ref_end <= e.end)
+    )
+) s
+left join exon_codon_ppes ecp on
+    ecp.exon_id = s.exon_id and
+    ecp.codon_index = s.codon_index
+left join pam_protection_edit_sgrna_ids ppesi on
+    ppesi.var_ppe_id = ecp.ppe_id
+left join sgrna_ids si on si.id = ppesi.sgrna_id;
