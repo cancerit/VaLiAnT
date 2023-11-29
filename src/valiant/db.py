@@ -76,13 +76,8 @@ class DbFieldName(str, Enum):
 
 @contextmanager
 def get_db_conn() -> Generator[sqlite3.Connection, None, None]:
-    with sqlite3.connect('valiant.db' or ':memory:') as conn:
-        try:
-            cur = conn.cursor()
-            yield conn
-        finally:
-            pass
-            # conn.close()
+    with sqlite3.connect(':memory:') as conn:
+        yield conn
 
 
 def get_insert(table_name: DbTable, fields: list[str], values: list[str]) -> str:
