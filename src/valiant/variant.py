@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from .constants import NT_SNVS
 from .strings.dna_str import DnaStr
 from .strings.nucleotide import Nucleotide
+from .uint_range import UIntRange
 
 
 @dataclass(slots=True)
@@ -57,6 +58,10 @@ class Variant:
     @property
     def ref_end(self) -> int:
         return self.pos + min(0, self.ref_len - 1)
+
+    @property
+    def ref_range(self) -> UIntRange:
+        return UIntRange(self.pos, self.ref_end)
 
     @classmethod
     def from_row(cls, pos: int, ref: str | None, alt: str | None):

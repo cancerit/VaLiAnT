@@ -50,7 +50,7 @@ class DnaStr(str):
         return self.slice(r.to_slice())
 
     def replace_substr(self, r: UIntRange, alt: str) -> DnaStr:
-        # TODO: test for bounds!
+        assert r.start < len(self) and r.end < len(self)
         return DnaStr(f"{self[:r.start]}{alt}{self[r.end + 1:]}")
 
     def tail(self, n: int) -> DnaStr:

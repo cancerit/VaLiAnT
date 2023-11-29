@@ -60,6 +60,9 @@ class Seq(Sized):
         # Assumption: if the range is relative, it is zero-based
         return self._substr(self.s, r, rel=rel)
 
+    def replace_substr(self, r: UIntRange, alt: str) -> DnaStr:
+        return self.s.replace_substr(self._get_rel_range(r), alt)
+
     def subseq(self, r: UIntRange, rel: bool = True) -> Seq:
         return Seq(r.start, self.substr(r, rel=rel))
 
