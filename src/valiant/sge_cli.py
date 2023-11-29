@@ -23,7 +23,6 @@ from sqlite3 import Connection
 import click
 from pysam.libcfaidx import FastaFile
 
-from .annot_variant import AnnotVariant
 from .annotation import Annotation
 from .codon_table import CodonTable
 from .codon_table_loader import load_codon_table_rows
@@ -33,19 +32,17 @@ from .contig_filter import ContigFilter
 from .custom_variant import CustomVariant
 from .db import get_db_conn, cursor, dump_all
 from .experiment_meta import ExperimentMeta
-from .loaders.experiment import ExperimentConfig, TargetonConfig
+from .loaders.experiment import ExperimentConfig
 from .loaders.fasta import open_fasta
 from .loaders.gtf import GtfLoader
 from .loaders.vcf_manifest import VcfManifest
-from .mutator import MutatorCollection
 from .pam_variant import PamVariant
-from .pattern_variant import PatternVariant
-from .queries import dump_metadata, insert_annot_pattern_variants, insert_custom_variant_collection, insert_exons, insert_background_variants, \
-    insert_pam_protection_edits, insert_gene_offsets, insert_pattern_variants, select_exons_in_range
+from .queries import dump_metadata, insert_custom_variant_collection, insert_exons, insert_background_variants, insert_pam_protection_edits, insert_gene_offsets
 from .seq import Seq
 from .sge_config import SGEConfig
-from .transcript_seq import TranscriptSeq
 from .strings.dna_str import DnaStr
+from .targeton import Targeton
+from .transcript_seq import TranscriptSeq
 from .uint_range import UIntRange
 from .utils import get_default_codon_table_path, get_ddl_path
 
@@ -125,69 +122,6 @@ def init_database(conn: Connection) -> None:
             cur.executescript(fh.read())
 
 
-def get_targeton_region_exon_id(conn: Connection, r: UIntRange) -> int | None:
-    exon_ids = select_exons_in_range(conn, r.start, r.end)
-    en: int = len(exon_ids)
-    match en:
-        case 0:
-            return None
-        case 1:
-            return exon_ids[0]
-        case _:
-            raise ValueError("Invalid targeton region: overlaps multiple exons!")
-
-
-def get_pattern_variants_from_region(
-    conn: Connection,
-    codon_table: CodonTable,
-    transcript: TranscriptSeq | None,
-    targeton: Seq,
-    region: UIntRange,
-    mc: MutatorCollection
-) -> tuple[list[PatternVariant], list[AnnotVariant]]:
-
-    # Get overlapping exon ID's
-    exon_id = get_targeton_region_exon_id(conn, region)
-    is_cds = exon_id is not None
-
-    if is_cds:
-        assert transcript is not None
-        r_seq = transcript.get_cds_seq(exon_id, region)
-    else:
-        r_seq = targeton.subseq(region, rel=False)
-
-    vars, annot_vars = mc.get_variants(codon_table, r_seq)
-    insert_pattern_variants(conn, vars)
-    insert_annot_pattern_variants(conn, annot_vars)
-
-    return vars, annot_vars
-
-
-def process_targeton_config(
-    conn: Connection,
-    codon_table: CodonTable,
-    transcript: TranscriptSeq | None,
-    targetons: dict[int, Seq],
-    t: TargetonConfig
-) -> tuple[list[PatternVariant], list[AnnotVariant]]:
-    pattern_variants: list[PatternVariant] = []
-    annot_variants: list[AnnotVariant] = []
-
-    # TODO: apply pattern variants to R1 and R3 as well
-    for i, r in enumerate([None, t.region_2, None]):
-        if r is not None:
-            mutators = t.mutators[i]
-            if mutators:
-                targeton = targetons[t.ref.start]
-                mc = MutatorCollection.from_configs(mutators)
-                vars, annot_vars = get_pattern_variants_from_region(
-                    conn, codon_table, transcript, targeton, r, mc)
-                pattern_variants.extend(vars)
-                annot_variants.extend(annot_vars)
-
-    return pattern_variants, annot_variants
-
-
 def get_background_context_range(targeton_ranges, annot: Annotation | None) -> UIntRange:
     """Get the minimum range in which to apply background variants"""
 
@@ -259,7 +193,8 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             insert_exons(conn, annot.cds.ranges)
 
         for t in exp.targeton_configs:
-            process_targeton_config(conn, codon_table, transcript, targetons, t)
+            targeton = Targeton(targetons[t.ref.start], t)
+            targeton.process(conn, codon_table, transcript)
 
         # Load background variants (targetons & exons)
         if config.bg_fp:
