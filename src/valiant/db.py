@@ -20,7 +20,7 @@ import sqlite3
 from contextlib import contextmanager
 from enum import Enum
 from sqlite3 import Connection, Cursor
-from typing import Generator
+from typing import Any, Generator
 
 from .enums import DbTable
 
@@ -35,6 +35,7 @@ class DbTableName(str, Enum):
     SGRNA_IDS = 'sgrna_ids'
     BACKGROUND_OFFSETS = 'background_offsets'
     PATTERN_VARIANTS = 'pattern_variants'
+    V_META = 'v_meta'
 
 
 class DbFieldName(str, Enum):
@@ -63,7 +64,14 @@ class DbFieldName(str, Enum):
     CODON_ALT_A = 'codon_alt_a'
     AA_REF = 'aa_ref'
     AA_ALT = 'aa_alt'
-    # MUTATOR_TYPE_ID = 'mutator_type_id'
+    REF_START = 'ref_start'
+    REF_AA = 'ref_aa'
+    ALT_AA = 'alt_aa'
+    VCF_VAR_ID = 'vcf_var_id'
+    VCF_ALIAS = 'vcf_alias'
+    SGRNA_IDS = 'sgrna_ids'
+    SPECIES = 'species'
+    ASSEMBLY = 'assembly'
 
 
 @contextmanager
@@ -115,6 +123,18 @@ def get_sql_insert(t: DbTableName, fields: list[DbFieldName], values: str) -> st
     return f"insert into {t.value}({','.join(f.value for f in fields)}){values}"
 
 
+def get_sql_select(t: DbTableName, fields: list[DbFieldName], const: dict[DbFieldName, str] | None = None) -> str:
+    tokens = [
+        f.value
+        for f in fields
+    ] if not const else [
+        f.value if f not in const else f"'{const[f]}' as {f.value}"
+        for f in fields
+    ]
+
+    return f"select {','.join(tokens)} from {t.value}"
+
+
 def get_sql_select_name(t: DbTableName) -> str:
     return f"select id from {t.value} where name = ? limit 1"
 
@@ -144,3 +164,51 @@ def dump_all(conn: Connection) -> None:
     for t in DbTableName:
         with open(f"{t.value}_dump.tsv", 'w') as fh:
             dump_table(conn, t, fh)
+
+
+def get_csv_header(fields: list[DbFieldName]) -> str:
+    return ','.join([f.value for f in fields])
+
+
+def sql_to_str(x: Any) -> str:
+    """Serialise Python types expected from a SQL query"""
+
+    if x is None:
+        return ''
+    if isinstance(x, str):
+        return x
+    if isinstance(x, int):
+        return str(x)
+    raise TypeError("Unsupported type!")
+
+
+def select_to_csv(conn: Connection, query: str, field_count: int, header: str, fp: str, sep: str = ',') -> None:
+    """
+    Stream the results from a SQL query to a CSV file
+
+    Assumptions:
+    - the header does not end with a new line character
+    """
+
+    n = field_count - 1
+
+    with open(fp, 'w') as fh:
+
+        # Write header
+        fh.write(header)
+        fh.write('\n')
+
+        with cursor(conn) as cur:
+            it = cur.execute(query)
+
+            # Fetch row
+            while r := it.fetchone():
+                for i in range(n):
+
+                    # Write field
+                    fh.write(sql_to_str(r[i]))
+                    fh.write(sep)
+
+                # Write last field
+                fh.write(sql_to_str(r[n]))
+                fh.write('\n')

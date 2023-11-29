@@ -32,6 +32,7 @@ from .constants import OUTPUT_CONFIG_FILE_NAME
 from .contig_filter import ContigFilter
 from .custom_variant import CustomVariant
 from .db import get_db_conn, cursor, dump_all
+from .experiment_meta import ExperimentMeta
 from .loaders.experiment import ExperimentConfig, TargetonConfig
 from .loaders.fasta import open_fasta
 from .loaders.gtf import GtfLoader
@@ -39,7 +40,7 @@ from .loaders.vcf_manifest import VcfManifest
 from .mutator import MutatorCollection
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
-from .queries import insert_annot_pattern_variants, insert_custom_variant_collection, insert_exons, insert_background_variants, \
+from .queries import dump_metadata, insert_annot_pattern_variants, insert_custom_variant_collection, insert_exons, insert_background_variants, \
     insert_pam_protection_edits, insert_gene_offsets, insert_pattern_variants, select_exons_in_range
 from .seq import Seq
 from .sge_config import SGEConfig
@@ -207,6 +208,12 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     # Load options
     options = config.get_options()
 
+    exp_config = ExperimentMeta(
+        config.species,
+        config.assembly,
+        config.min_length,
+        config.max_length)
+
     # Load codon table
     if not config.codon_table_fp:
         logging.info(
@@ -271,6 +278,9 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
         # TODO: remove (DEBUG only!)
         dump_all(conn)
+
+        # TODO: split by targeton
+        dump_metadata(conn, exp_config, "meta.csv")
 
     # Write JSON configuration to file
     config.write(os.path.join(config.output_dir, OUTPUT_CONFIG_FILE_NAME))

@@ -20,7 +20,8 @@ from sqlite3 import Connection, Cursor
 
 from .annot_variant import AnnotVariant
 from .custom_variant import CustomVariant
-from .db import cursor, get_sql_insert, get_sql_insert_values, DbTableName, DbFieldName, get_sql_select_name
+from .db import cursor, get_sql_insert, get_sql_insert_values, DbTableName, DbFieldName, get_sql_select, get_csv_header, select_to_csv
+from .experiment_meta import ExperimentMeta
 from .exon import Exon
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
@@ -271,3 +272,36 @@ def select_exons_in_range(conn: Connection, start: int, end: int) -> list[int]:
                 sql_select_exons_in_range,
                 (start, end, start, end)).fetchall()
         ]
+
+
+select_meta_fields = [
+    DbFieldName.SPECIES,
+    DbFieldName.ASSEMBLY,
+    DbFieldName.REF_START,
+    DbFieldName.REF,
+    DbFieldName.ALT,
+    DbFieldName.REF_AA,
+    DbFieldName.ALT_AA,
+    DbFieldName.VCF_VAR_ID,
+    DbFieldName.VCF_ALIAS,
+    DbFieldName.MUTATOR,
+    DbFieldName.SGRNA_IDS
+]
+select_meta_header = get_csv_header(select_meta_fields)
+
+
+def dump_metadata(conn: Connection, exp: ExperimentMeta, fp: str) -> None:
+    sql_select_meta = get_sql_select(
+        DbTableName.V_META,
+        select_meta_fields,
+        const={
+            DbFieldName.SPECIES: exp.species,
+            DbFieldName.ASSEMBLY: exp.assembly
+        })
+
+    select_to_csv(
+        conn,
+        sql_select_meta,
+        len(select_meta_fields),
+        select_meta_header,
+        fp)
