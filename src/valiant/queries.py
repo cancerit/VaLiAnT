@@ -20,11 +20,12 @@ from sqlite3 import Connection, Cursor
 
 from .annot_variant import AnnotVariant
 from .custom_variant import CustomVariant
-from .db import cursor, get_sql_insert, get_sql_insert_values, DbTableName, DbFieldName, get_sql_select, get_csv_header, select_to_csv
+from .db import PER_TARGETON_TABLES, cursor, DbTableName, DbFieldName, get_csv_header, select_to_csv
 from .experiment_meta import ExperimentMeta
 from .exon import Exon
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
+from .sql_gen import SqlQuery, SqlScript
 from .utils import get_enum_values
 
 
@@ -36,14 +37,10 @@ class SqlInsertFailed(Exception):
     pass
 
 
-def get_sql_insert_names(t: DbTableName) -> str:
-    return get_sql_insert_values(t, [DbFieldName.NAME])
-
-
-sql_insert_custom_variant_collection = get_sql_insert_names(
+sql_insert_custom_variant_collection = SqlQuery.get_insert_names(
     DbTableName.CUSTOM_VARIANT_COLLECTIONS)
 
-sql_insert_custom_variant: str = get_sql_insert_values(
+sql_insert_custom_variant: str = SqlQuery.get_insert_values(
     DbTableName.CUSTOM_VARIANTS,
     [
         DbFieldName.COLLECTION_ID,
@@ -54,7 +51,7 @@ sql_insert_custom_variant: str = get_sql_insert_values(
         DbFieldName.VCF_NT
     ])
 
-sql_insert_exon = get_sql_insert_values(
+sql_insert_exon = SqlQuery.get_insert_values(
     DbTableName.EXONS,
     [
         DbFieldName.START,
@@ -62,7 +59,7 @@ sql_insert_exon = get_sql_insert_values(
         DbFieldName.EXON_INDEX
     ])
 
-sql_insert_background_variant = get_sql_insert_values(
+sql_insert_background_variant = SqlQuery.get_insert_values(
     DbTableName.BACKGROUND_VARIANTS,
     [
         DbFieldName.VAR_ID,
@@ -71,7 +68,7 @@ sql_insert_background_variant = get_sql_insert_values(
         DbFieldName.ALT
     ])
 
-sql_insert_ppe = get_sql_insert_values(
+sql_insert_ppe = SqlQuery.get_insert_values(
     DbTableName.PAM_PROTECTION_EDITS,
     [
         DbFieldName.START,
@@ -79,14 +76,14 @@ sql_insert_ppe = get_sql_insert_values(
         DbFieldName.ALT
     ])
 
-sql_insert_ppe_sgrna_ids = get_sql_insert_values(
+sql_insert_ppe_sgrna_ids = SqlQuery.get_insert_values(
     DbTableName.PAM_PROTECTION_EDIT_SGRNA_IDS,
     [
         DbFieldName.VAR_PPE_ID,
         DbFieldName.SGRNA_ID
     ])
 
-sql_insert_sgrna_id = get_sql_insert_names(DbTableName.SGRNA_IDS)
+sql_insert_sgrna_id = SqlQuery.get_insert_names(DbTableName.SGRNA_IDS)
 
 
 def insert_custom_variant_collection(conn: Connection, name: str, vars: list[CustomVariant]) -> None:
@@ -195,7 +192,7 @@ from background_variants_v b
 where start >= ? and start <= ? and alt_ref_delta != 0
 """
 
-sql_insert_offsets = get_sql_insert(
+sql_insert_offsets = SqlQuery.get_insert(
     DbTableName.BACKGROUND_OFFSETS,
     [DbFieldName.REF_POS, DbFieldName.OFFSET],
     sql_select_offsets)
@@ -214,11 +211,14 @@ insert_pattern_variant_fields = [
 ]
 
 
-sql_insert_pattern_variants = get_sql_insert_values(
+sql_insert_pattern_variants = SqlQuery.get_insert_values(
     DbTableName.PATTERN_VARIANTS, insert_pattern_variant_fields)
 
 
-def insert_pattern_variants(conn: Connection, vars: list[PatternVariant]) -> None:
+def insert_pattern_variants(
+    conn: Connection,
+    vars: list[PatternVariant]
+) -> None:
     with cursor(conn) as cur:
         cur.executemany(sql_insert_pattern_variants, [
             (v.pos, v.ref, v.alt, v.mutator)
@@ -226,7 +226,7 @@ def insert_pattern_variants(conn: Connection, vars: list[PatternVariant]) -> Non
         ])
 
 
-sql_insert_annot_pattern_variants = get_sql_insert_values(
+sql_insert_annot_pattern_variants = SqlQuery.get_insert_values(
     DbTableName.PATTERN_VARIANTS, [
         *insert_pattern_variant_fields,
         DbFieldName.CODON_REF_A,
@@ -250,7 +250,7 @@ def insert_annot_pattern_variants(conn: Connection, vars: list[AnnotVariant]) ->
 
 def insert_enum(conn: Connection, t: DbTableName, cls) -> None:
     with cursor(conn) as cur:
-        cur.executemany(get_sql_insert_names(t), [
+        cur.executemany(SqlQuery.get_insert_names(t), [
             (name,) for name in get_enum_values(cls)
         ])
 
@@ -291,7 +291,7 @@ select_meta_header = get_csv_header(select_meta_fields)
 
 
 def dump_metadata(conn: Connection, exp: ExperimentMeta, fp: str) -> None:
-    sql_select_meta = get_sql_select(
+    sql_select_meta = SqlQuery.get_select(
         DbTableName.V_META,
         select_meta_fields,
         const={
@@ -305,3 +305,7 @@ def dump_metadata(conn: Connection, exp: ExperimentMeta, fp: str) -> None:
         len(select_meta_fields),
         select_meta_header,
         fp)
+
+
+clear_per_targeton_tables = SqlScript.from_queries(
+    map(SqlQuery.get_delete, PER_TARGETON_TABLES))

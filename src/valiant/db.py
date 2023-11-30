@@ -22,8 +22,6 @@ from enum import Enum
 from sqlite3 import Connection, Cursor
 from typing import Any, Generator
 
-from .enums import DbTable
-
 
 class DbTableName(str, Enum):
     PAM_PROTECTION_EDITS = 'pam_protection_edits'
@@ -36,6 +34,12 @@ class DbTableName(str, Enum):
     BACKGROUND_OFFSETS = 'background_offsets'
     PATTERN_VARIANTS = 'pattern_variants'
     V_META = 'v_meta'
+    MUTATIONS = 'mutations'
+
+
+PER_TARGETON_TABLES: set[DbTableName] = {
+    DbTableName.MUTATIONS
+}
 
 
 class DbFieldName(str, Enum):
@@ -72,37 +76,14 @@ class DbFieldName(str, Enum):
     SGRNA_IDS = 'sgrna_ids'
     SPECIES = 'species'
     ASSEMBLY = 'assembly'
+    MSEQ = 'mseq'
+    MSEQ_NO_ADAPT = 'mseq_no_adapt'
 
 
 @contextmanager
 def get_db_conn() -> Generator[sqlite3.Connection, None, None]:
     with sqlite3.connect(':memory:') as conn:
         yield conn
-
-
-def get_insert(table_name: DbTable, fields: list[str], values: list[str]) -> str:
-    fields_s = ','.join(fields)
-    values_s = ','.join(f"({v})" for v in values)
-    return f"insert into {table_name.value}({fields_s})values{values_s}"
-
-
-def get_create_view(name: str, fields: list[str], select: str) -> str:
-    fields_s = ','.join(fields)
-    return f"create view {name}({fields_s}) as {select}"
-
-
-def create_range_index(table: DbTable) -> str:
-    table_name = table.name
-    start = DbFieldName.START.value
-    end = DbFieldName.END.value
-    index_name: str = f"{table_name}_{start}_{end}_idx"
-    return f"create index {index_name} on {table_name}({start}, {end})"
-
-
-def get_insert_ranges(table_name: DbTable, ranges: list[tuple[int, int]]) -> str:
-    start = DbFieldName.START.value
-    end = DbFieldName.END.value
-    return get_insert(table_name, [start, end], [f"{x},{y}" for x, y in ranges])
 
 
 @contextmanager
@@ -112,41 +93,6 @@ def cursor(conn: Connection) -> Generator[Cursor, None, None]:
         yield cur
     finally:
         cur.close()
-
-
-def get_sql_insert(t: DbTableName, fields: list[DbFieldName], values: str) -> str:
-    return f"insert into {t.value}({','.join(f.value for f in fields)}){values}"
-
-
-def get_sql_select(t: DbTableName, fields: list[DbFieldName], const: dict[DbFieldName, str] | None = None) -> str:
-    tokens = [
-        f.value
-        for f in fields
-    ] if not const else [
-        f.value if f not in const else f"'{const[f]}' as {f.value}"
-        for f in fields
-    ]
-
-    return f"select {','.join(tokens)} from {t.value}"
-
-
-def get_sql_select_name(t: DbTableName) -> str:
-    return f"select id from {t.value} where name = ? limit 1"
-
-
-def get_sql_insert_values(t: DbTableName, fields: list[DbFieldName], fks: dict[DbFieldName, DbTableName] | None = None) -> str:
-    """
-    Generate a SQL insert statement
-
-    E.g.: insert into t (x, y) values (?, ?)
-    """
-
-    values = [
-        f"({get_sql_select_name(fks[f])})" if f in fks else '?'
-        for f in fields
-    ] if fks else '?' * len(fields)
-
-    return get_sql_insert(t, fields, f"values({','.join(values)})")
 
 
 def dump_table(conn: Connection, t: DbTableName, fh) -> None:
