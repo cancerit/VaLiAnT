@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Sized
 
 from .int_pattern_builder import IntPatternBuilder
@@ -49,11 +49,11 @@ class Seq(Sized):
     def from_str(cls, start: int, s: str) -> Seq:
         return cls(start, DnaStr.parse(s))
 
-    def _get_rel_range(self, r: UIntRange) -> UIntRange:
+    def get_rel_range(self, r: UIntRange) -> UIntRange:
         return r.offset(-self.start)
 
     def _substr(self, s: DnaStr, r: UIntRange, rel: bool = True) -> DnaStr:
-        return s.substr(r if rel else self._get_rel_range(r))
+        return s.substr(r if rel else self.get_rel_range(r))
 
     def substr(self, r: UIntRange, rel: bool = True) -> DnaStr:
         # Assumption: if the range is absolute, it is one-based
@@ -61,7 +61,13 @@ class Seq(Sized):
         return self._substr(self.s, r, rel=rel)
 
     def replace_substr(self, r: UIntRange, alt: str) -> DnaStr:
-        return self.s.replace_substr(self._get_rel_range(r), alt)
+        return self.s.replace_substr(self.get_rel_range(r), alt)
+
+    def alter(self, r: UIntRange, alt: str) -> Seq:
+        return replace(self, s=self.replace_substr(r, alt))
+
+    def clone(self) -> Seq:
+        return replace(self)
 
     def subseq(self, r: UIntRange, rel: bool = True) -> Seq:
         return Seq(r.start, self.substr(r, rel=rel))

@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .constants import NT_SNVS
 from .strings.dna_str import DnaStr
@@ -90,3 +90,6 @@ class Variant:
         """Create an insertion"""
 
         return cls(start, DnaStr.empty(), alt)
+
+    def offset(self, offset: int) -> Variant:
+        return replace(self, pos=self.pos + offset)
