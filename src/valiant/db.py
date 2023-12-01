@@ -79,6 +79,22 @@ class DbFieldName(str, Enum):
     MSEQ = 'mseq'
     MSEQ_NO_ADAPT = 'mseq_no_adapt'
 
+    def _sql_op(self, op: str) -> str:
+        return f"{self.value} {op} ?"
+
+    def ge(self) -> str:
+        return self._sql_op('>=')
+
+    def le(self) -> str:
+        return self._sql_op('<=')
+
+
+VARIANT_FIELDS = [
+    DbFieldName.START,
+    DbFieldName.REF,
+    DbFieldName.ALT
+]
+
 
 @contextmanager
 def get_db_conn() -> Generator[sqlite3.Connection, None, None]:

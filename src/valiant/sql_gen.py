@@ -24,6 +24,10 @@ from typing import Iterable
 from .db import DbFieldName, DbTableName, cursor
 
 
+def sql_and(*args) -> str:
+    return ' and '.join(args)
+
+
 class SqlQuery(str):
 
     @classmethod
@@ -54,7 +58,7 @@ class SqlQuery(str):
         return cls.get_insert_values(t, [DbFieldName.NAME])
 
     @classmethod
-    def get_select(cls, t: DbTableName, fields: list[DbFieldName], const: dict[DbFieldName, str] | None = None) -> SqlQuery:
+    def get_select(cls, t: DbTableName, fields: list[DbFieldName], const: dict[DbFieldName, str] | None = None, where: str | None = None) -> SqlQuery:
         tokens = [
             f.value
             for f in fields
@@ -63,7 +67,25 @@ class SqlQuery(str):
             for f in fields
         ]
 
-        return cls(f"select {','.join(tokens)} from {t.value}")
+        query = f"select {','.join(tokens)} from {t.value}"
+
+        if where:
+            query += f" where {where}"
+
+        return cls(query)
+
+    @classmethod
+    def get_select_in_range(cls, t: DbTableName, fields: list[DbFieldName]) -> SqlQuery:
+        """
+        Select the fields provided where start and end are within a range
+
+        Assumption: the target table has the start and end fields.
+
+        E.g.: select start, ref, alt from variants where start >= ? and end <= ?
+        """
+
+        where = sql_and(DbFieldName.START.ge(), DbFieldName.END.le())
+        return cls.get_select(t, fields, where=where)
 
     @classmethod
     def get_select_name(cls, t: DbTableName) -> SqlQuery:
