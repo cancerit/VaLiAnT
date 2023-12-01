@@ -192,15 +192,8 @@ from background_variants_v b
 where start >= ? and start <= ? and alt_ref_delta != 0
 """
 
-sql_insert_offsets = SqlQuery.get_insert(
-    DbTableName.BACKGROUND_OFFSETS,
-    [DbFieldName.REF_POS, DbFieldName.OFFSET],
-    sql_select_offsets)
 
 
-def insert_gene_offsets(conn: Connection, start: int, end: int) -> None:
-    with cursor(conn) as cur:
-        cur.execute(sql_insert_offsets, (start, end))
 
 
 insert_pattern_variant_fields = [

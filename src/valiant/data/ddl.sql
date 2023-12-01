@@ -14,13 +14,6 @@ create table targetons (
     )
 );
 
--- Gene offsetting (just transient?)
-
-create table background_offsets (
-    ref_pos integer not null primary key,
-    offset integer not null
-);
-
 -- Transcript exons
 
 create table exons (

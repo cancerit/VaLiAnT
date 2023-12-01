@@ -31,7 +31,6 @@ class DbTableName(str, Enum):
     CUSTOM_VARIANTS = 'custom_variants'
     CUSTOM_VARIANT_COLLECTIONS = 'custom_variant_collections'
     SGRNA_IDS = 'sgrna_ids'
-    BACKGROUND_OFFSETS = 'background_offsets'
     PATTERN_VARIANTS = 'pattern_variants'
     V_META = 'v_meta'
     MUTATIONS = 'mutations'
