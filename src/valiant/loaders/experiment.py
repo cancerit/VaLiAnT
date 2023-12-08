@@ -152,7 +152,7 @@ class ExperimentConfig:
 
     @property
     def sgrna_ids(self) -> frozenset[str]:
-        return frozenset().union(t.sgrna_ids for t in self.targeton_configs)
+        return frozenset().union(*[t.sgrna_ids for t in self.targeton_configs])
 
     def __post_init__(self) -> None:
         if any(
