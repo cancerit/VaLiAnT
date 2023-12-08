@@ -18,6 +18,7 @@
 
 import abc
 import logging
+import os
 from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
@@ -94,3 +95,6 @@ class BaseConfig(BaseModel, abc.ABC):
                 success = False
 
         return success
+
+    def get_output_file_path(self, fp: str) -> str:
+        return os.path.join(self.output_dir, fp)

@@ -175,8 +175,9 @@ def insert_pam_protection_edits(conn: Connection, vars: list[PamVariant]) -> Non
             assert var_id is not None
 
             # Match variant and sgRNA ID
-            cur.execute(sql_insert_ppe_sgrna_ids,
-                        (var_id, sgrna_name_ids[v.sgrna_id]))
+            cur.execute(
+                sql_insert_ppe_sgrna_ids,
+                (var_id, sgrna_name_ids[v.sgrna_id]))
 
         # Assign exon ID's and codon indices to the PPE's
         cur.execute(sql_insert_exon_codon_ppes)
@@ -193,7 +194,6 @@ select
 from v_background_variants b
 where start >= ? and start <= ? and alt_ref_delta != 0
 """
-
 
 
 
@@ -327,3 +327,13 @@ def insert_targeton_ppes(conn: Connection, variants: list[RegisteredVariant]) ->
             (v.id, v.pos)
             for v in variants
         ])
+
+
+def is_table_empty(conn: Connection, t: DbTableName) -> bool:
+    query = f"select exists (select 1 from {t.value} limit 1)"
+    with cursor(conn) as cur:
+        return cur.execute(query).fetchone() == 0
+
+
+def is_meta_table_empty(conn: Connection) -> bool:
+    return is_table_empty(conn, DbTableName.MUTATIONS)

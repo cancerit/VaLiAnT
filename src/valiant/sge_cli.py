@@ -17,7 +17,6 @@
 #############################
 
 import logging
-import os
 from sqlite3 import Connection
 
 import click
@@ -30,14 +29,14 @@ from .common_cli import common_params, existing_file
 from .constants import OUTPUT_CONFIG_FILE_NAME
 from .contig_filter import ContigFilter
 from .custom_variant import CustomVariant
-from .db import get_db_conn, cursor, dump_all
+from .db import get_db_conn, cursor
 from .experiment_meta import ExperimentMeta
 from .loaders.experiment import ExperimentConfig
 from .loaders.fasta import open_fasta
 from .loaders.gtf import GtfLoader
 from .loaders.vcf_manifest import VcfManifest
 from .pam_variant import PamVariant
-from .queries import dump_metadata, insert_custom_variant_collection, insert_exons, insert_background_variants, insert_pam_protection_edits
+from .queries import insert_custom_variant_collection, insert_exons, insert_background_variants, insert_pam_protection_edits
 from .seq import Seq
 from .sge_config import SGEConfig
 from .strings.dna_str import DnaStr
@@ -179,7 +178,6 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             cds_ref_seqs = load_sequences(fa, exp.contig, annot.cds.ranges)
             transcript = TranscriptSeq.from_exons(exp.strand, cds_ref_seqs, annot.cds.ranges)
 
-    # TODO: correct targeton region bounds based on background
     targetons = {
         s.start: s
         for s in targeton_ref_seqs
@@ -210,14 +208,11 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             targeton = Targeton(targetons[t.ref.start], t)
             targeton.process(conn, codon_table, transcript)
 
-        # TODO: remove (DEBUG only!)
-        dump_all(conn)
-
-        # TODO: split by targeton
-        dump_metadata(conn, exp_config, "meta.csv")
+            # Write metadata files
+            targeton.write_results(conn, config, exp_config)
 
     # Write JSON configuration to file
-    config.write(os.path.join(config.output_dir, OUTPUT_CONFIG_FILE_NAME))
+    config.write(config.get_output_file_path(OUTPUT_CONFIG_FILE_NAME))
 
 
 @click.command()

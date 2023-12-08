@@ -16,12 +16,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-STRAND = {'+', '-'}
+STRANDS = {
+    '+': 'plus',
+    '-': 'minus'
+}
 
 
 class Strand(str):
     def __init__(self, s: str) -> None:
-        if s not in STRAND:
+        if s not in STRANDS:
             raise ValueError(f"Invalid strand: {s}!")
         super().__init__()
 
@@ -32,3 +35,7 @@ class Strand(str):
     @property
     def is_minus(self) -> bool:
         return self == '-'
+
+    @property
+    def label(self) -> str:
+        return STRANDS[self]

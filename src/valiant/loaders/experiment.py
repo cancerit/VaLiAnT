@@ -21,6 +21,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from valiant.strings.strand import Strand
+
 from .csv import load_csv
 from .mutator_config import MutatorConfig
 from .utils import parse_list, get_int_enum
@@ -68,40 +70,55 @@ def parse_mutator_tuples(s: str) -> list[list[MutatorConfig]]:
 @dataclass(slots=True)
 class TargetonConfig:
     contig: str
-    strand: str
+    strand: Strand
     ref: UIntRange
     region_2: UIntRange
     target_region_2_extension: tuple[int, int]
     mutators: tuple[list[MutatorConfig], list[MutatorConfig], list[MutatorConfig]]
     sgrna_ids: frozenset[str]
 
+    @property
+    def name(self) -> str:
+        a: list[str] = [
+            self.contig,
+            str(self.ref.start),
+            str(self.ref.end),
+            self.strand.label
+        ]
+        if self.sgrna_ids:
+            a.extend(sorted(self.sgrna_ids))
+        return '_'.join(a)
+
     @classmethod
     def from_list(cls, a: list[str]) -> TargetonConfig:
         # Parse extension vector
         try:
+            ext_vector = a[TargetonConfigField.EXT_VECTOR]  # type: ignore
             ext_a, ext_b = [
                 int(t)
-                for t in parse_list(a[TargetonConfigField.EXT_VECTOR], n=2)
+                for t in parse_list(ext_vector, n=2)
             ]
         except ValueError:
             raise ValueError("Invalid extension vector: two integers expected!")
 
         # Parse mutator collections
-        ma, mb, mc = parse_mutator_tuples(a[TargetonConfigField.ACTION_VECTOR])
+        action_vector = a[TargetonConfigField.ACTION_VECTOR]  # type: ignore
+        ma, mb, mc = parse_mutator_tuples(action_vector)
 
         # Parse sgRNA ID's
-        sgrna_ids = frozenset(parse_list(a[TargetonConfigField.SGRNA_VECTOR]))
+        sgrna_vector = a[TargetonConfigField.SGRNA_VECTOR]  # type: ignore
+        sgrna_ids = frozenset(parse_list(sgrna_vector))
 
         return cls(
-            a[TargetonConfigField.REF_CHR],
-            a[TargetonConfigField.REF_STRAND],
+            a[TargetonConfigField.REF_CHR],  # type: ignore
+            Strand(a[TargetonConfigField.REF_STRAND]),  # type: ignore
             UIntRange(
-                int(a[TargetonConfigField.REF_START]),
-                int(a[TargetonConfigField.REF_END])
+                int(a[TargetonConfigField.REF_START]),  # type: ignore
+                int(a[TargetonConfigField.REF_END])  # type: ignore
             ),
             UIntRange(
-                int(a[TargetonConfigField.R2_START]),
-                int(a[TargetonConfigField.R2_END])
+                int(a[TargetonConfigField.R2_START]),  # type: ignore
+                int(a[TargetonConfigField.R2_END])  # type: ignore
             ),
             # TODO: improve validation
             (ext_a, ext_b),

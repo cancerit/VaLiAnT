@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+import logging
 from dataclasses import dataclass
 from functools import partial
 from sqlite3 import Connection
@@ -23,11 +24,13 @@ from typing import Callable
 
 from .annot_variant import AnnotVariant
 from .codon_table import CodonTable
+from .config import BaseConfig
+from .experiment_meta import ExperimentMeta
 from .loaders.experiment import TargetonConfig
 from .loaders.mutator_config import MutatorConfig
 from .mutator import MutatorCollection
 from .pattern_variant import PatternVariant
-from .queries import insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_ppes, select_exons_in_range, select_ppes_in_range, select_bgs_in_range, clear_per_targeton_tables
+from .queries import dump_metadata, insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_ppes, is_meta_table_empty, select_exons_in_range, select_ppes_in_range, select_bgs_in_range, clear_per_targeton_tables
 from .seq import Seq
 from .strings.dna_str import DnaStr
 from .transcript_seq import TranscriptSeq
@@ -184,3 +187,13 @@ class Targeton:
             annot_variants.extend(annot_vars)
 
         return pattern_variants, annot_variants
+
+    def write_results(self, conn: Connection, config: BaseConfig, exp: ExperimentMeta) -> None:
+        targeton_name = self.config.name
+        if not is_meta_table_empty(conn):
+            meta_fn = f"{targeton_name}_meta.csv"
+            meta_fp = config.get_output_file_path(meta_fn)
+            dump_metadata(conn, exp, meta_fp)
+        else:
+            logging.warning(
+                "No mutations for targeton '%s'!", targeton_name)
