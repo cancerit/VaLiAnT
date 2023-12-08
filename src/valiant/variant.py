@@ -93,3 +93,8 @@ class Variant:
 
     def offset(self, offset: int) -> Variant:
         return replace(self, pos=self.pos + offset)
+
+
+@dataclass(slots=True)
+class RegisteredVariant(Variant):
+    id: int

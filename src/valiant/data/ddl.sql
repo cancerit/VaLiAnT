@@ -46,7 +46,7 @@ create table background_variants (
     alt text
 );
 
-create view background_variants_v as
+create view v_background_variants as
 select *, alt_len - ref_len as alt_ref_delta
 from (
     select
@@ -100,7 +100,6 @@ create table custom_variant_collections (
     name text not null
 );
 
--- Include generated variants? How to express the source in either (mutator vs. collection)?
 create table custom_variants (
     id integer primary key,
     var_id text,
@@ -116,10 +115,7 @@ create table custom_variants (
 create table pattern_variants (
     id integer primary key,
     mutator text not null,
-    -- Original reference
-    pos_r integer,
-    ref_r text,
-    alt_r text,
+
     -- Altered reference
     pos_a integer not null,
     ref_a text not null,
@@ -134,7 +130,33 @@ create table pattern_variants (
     aa_alt text
 );
 
--- Final
+-- Map positions to reference
+create view if not exists v_pattern_variants as
+select
+    *
+from pattern_variants pv;
+
+create table targeton_pam_protection_edits (
+    id integer primary key references pam_protection_edits (id),
+    start integer not null
+);
+
+create table mutations (
+    id integer primary key,
+    -- Original reference
+    pos_r integer not null,
+    ref_r text not null,
+    alt_r text not null,
+    -- Altered reference
+    pos_a integer not null,
+    ref_a text not null,
+    alt_a text not null,
+    -- CDS-specific annotation
+    codon_ref text,
+    codon_alt text,
+    aa_ref text,
+    aa_alt text
+);
 
 create view if not exists v_meta as
 select

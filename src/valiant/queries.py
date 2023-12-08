@@ -27,6 +27,8 @@ from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
 from .sql_gen import SqlQuery, SqlScript
 from .utils import get_enum_values
+from .variant import RegisteredVariant
+from .variant_select import VariantSelectStart
 
 
 class NoRowId(Exception):
@@ -188,7 +190,7 @@ select
         order by start
         rows between unbounded preceding and current row
     ) as offset
-from background_variants_v b
+from v_background_variants b
 where start >= ? and start <= ? and alt_ref_delta != 0
 """
 
@@ -302,3 +304,26 @@ def dump_metadata(conn: Connection, exp: ExperimentMeta, fp: str) -> None:
 
 clear_per_targeton_tables = SqlScript.from_queries(
     map(SqlQuery.get_delete, PER_TARGETON_TABLES))
+
+
+select_ppes_in_range = VariantSelectStart.from_table(
+    DbTableName.PAM_PROTECTION_EDITS).select_in_range
+
+
+select_bgs_in_range = VariantSelectStart.from_table(
+    DbTableName.BACKGROUND_VARIANTS).select_in_range
+
+
+sql_insert_targeton_ppes = SqlQuery.get_insert_values(
+    DbTableName.TARGETON_PAM_PROTECTION_EDITS, [
+        DbFieldName.ID,
+        DbFieldName.START
+    ])
+
+
+def insert_targeton_ppes(conn: Connection, variants: list[RegisteredVariant]) -> None:
+    with cursor(conn) as cur:
+        cur.executemany(sql_insert_targeton_ppes, [
+            (v.id, v.pos)
+            for v in variants
+        ])

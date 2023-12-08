@@ -35,6 +35,21 @@ class SqlQuery(str):
         return cls(f"delete from {t.value}")
 
     @classmethod
+    def get_update(cls, t: DbTableName, values: list[DbFieldName], where: str) -> SqlQuery:
+        sets = ' '.join(k.sql_eq() for k in values)
+        return cls(f"update {t.value} {sets} where {where}")
+
+    @classmethod
+    def get_update_at_id(cls, t: DbTableName, values: list[DbFieldName]) -> SqlQuery:
+        """
+        Generate a SQL update statement filtering by ID
+
+        E.g.: update t set f = ? where id = ?
+        """
+
+        return cls.get_update(t, values, DbFieldName.ID.sql_eq())
+
+    @classmethod
     def get_insert(cls, t: DbTableName, fields: list[DbFieldName], values: str) -> SqlQuery:
         return cls(f"insert into {t.value}({','.join(f.value for f in fields)}){values}")
 
@@ -75,7 +90,7 @@ class SqlQuery(str):
         return cls(query)
 
     @classmethod
-    def get_select_in_range(cls, t: DbTableName, fields: list[DbFieldName]) -> SqlQuery:
+    def get_select_in_range(cls, t: DbTableName, fields: list[DbFieldName], start_only: bool = False) -> SqlQuery:
         """
         Select the fields provided where start and end are within a range
 
@@ -84,7 +99,10 @@ class SqlQuery(str):
         E.g.: select start, ref, alt from variants where start >= ? and end <= ?
         """
 
-        where = sql_and(DbFieldName.START.ge(), DbFieldName.END.le())
+        where = sql_and(
+            DbFieldName.START.ge(),
+            DbFieldName.END.le() if not start_only else DbFieldName.START.le()
+        )
         return cls.get_select(t, fields, where=where)
 
     @classmethod

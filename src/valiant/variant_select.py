@@ -17,29 +17,45 @@
 #############################
 
 from __future__ import annotations
+from abc import ABC
 
 from dataclasses import dataclass
 from sqlite3 import Connection
+from typing import ClassVar
 
 from .db import VARIANT_FIELDS, DbTableName, cursor
 from .sql_gen import SqlQuery
 from .strings.dna_str import DnaStr
 from .uint_range import UIntRange
-from .variant import Variant
+from .variant import RegisteredVariant
 
 
 @dataclass(slots=True)
-class VariantSelect:
+class VariantSelect(ABC):
+    _START_ONLY: ClassVar[bool]
+
     query: SqlQuery
 
     @classmethod
-    def from_table(cls, t: DbTableName) -> VariantSelect:
-        # TODO: consider partially overlapping variant filtering
-        return cls(SqlQuery.get_select_in_range(t, VARIANT_FIELDS))
+    def from_table(cls, t: DbTableName):
+        return cls(SqlQuery.get_select_in_range(
+            t, VARIANT_FIELDS, start_only=cls._START_ONLY))
 
-    def select_in_range(self, conn: Connection, r: UIntRange) -> list[Variant]:
+    def select_in_range(self, conn: Connection, r: UIntRange) -> list[RegisteredVariant]:
+        args = (r.start, r.end if not self._START_ONLY else r.start)
         with cursor(conn) as cur:
             return [
-                Variant(r[0], DnaStr(r[1]), DnaStr(r[2]))
-                for r in cur.execute(self.query, (r.start, r.end)).fetchall()
+                RegisteredVariant(r[0], DnaStr(r[1]), DnaStr(r[2]), r[3])
+                for r in cur.execute(self.query, args).fetchall()
             ]
+
+
+@dataclass(slots=True)
+class VariantSelectStart(VariantSelect):
+    _START_ONLY = True
+
+
+@dataclass(slots=True)
+class VariantSelectStartEnd(VariantSelect):
+    _START_ONLY = False
+    # TODO: consider partially overlapping variant filtering

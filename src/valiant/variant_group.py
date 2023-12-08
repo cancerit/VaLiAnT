@@ -23,7 +23,7 @@ from dataclasses import dataclass
 
 from .seq import Seq
 from .uint_range import UIntRange
-from .variant import Variant
+from .variant import RegisteredVariant, Variant
 
 
 class InvalidVariantRef(Exception):
@@ -46,10 +46,10 @@ def alter_seq(seq: Seq, variant: Variant) -> Seq:
 
 @dataclass(frozen=True, slots=True)
 class VariantGroup(Sized):
-    variants: list[Variant]
+    variants: list[RegisteredVariant]
 
     @classmethod
-    def from_variants(cls, variants: list[Variant]):
+    def from_variants(cls, variants: list[RegisteredVariant]):
         return cls(sorted(variants, key=lambda x: x.pos))
 
     def __len__(self) -> int:
@@ -59,11 +59,11 @@ class VariantGroup(Sized):
     def is_empty(self):
         return len(self) == 0
 
-    def apply(self, ref_seq: Seq, ref_check: bool = False) -> tuple[Seq, list[Variant]]:
+    def apply(self, ref_seq: Seq, ref_check: bool = False) -> tuple[Seq, list[RegisteredVariant]]:
         alt_seq: Seq = ref_seq.clone()
         alt_offset: int = 0
-        alt_vars: list[Variant] = []
-        offset_variant: Variant
+        alt_vars: list[RegisteredVariant] = []
+        offset_variant: RegisteredVariant
 
         for variant in self.variants:
 

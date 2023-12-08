@@ -97,3 +97,7 @@ def get_cds_ext_3_length(frame: int, length: int) -> int:
     """
 
     return (3 - (length + frame) % 3) % 3
+
+
+def has_duplicates(items: list[int]) -> bool:
+    return len(set(items)) != len(items)

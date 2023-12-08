@@ -37,7 +37,7 @@ from .loaders.fasta import open_fasta
 from .loaders.gtf import GtfLoader
 from .loaders.vcf_manifest import VcfManifest
 from .pam_variant import PamVariant
-from .queries import dump_metadata, insert_custom_variant_collection, insert_exons, insert_background_variants, insert_pam_protection_edits, insert_gene_offsets
+from .queries import dump_metadata, insert_custom_variant_collection, insert_exons, insert_background_variants, insert_pam_protection_edits
 from .seq import Seq
 from .sge_config import SGEConfig
 from .strings.dna_str import DnaStr
@@ -192,17 +192,12 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             # Load CDS annotation
             insert_exons(conn, annot.cds.ranges)
 
-        for t in exp.targeton_configs:
-            targeton = Targeton(targetons[t.ref.start], t)
-            targeton.process(conn, codon_table, transcript)
-
         # Load background variants (targetons & exons)
         if config.bg_fp:
             # TODO: extend to support multiple contigs
             bg_ctx = get_background_context_range(targeton_ranges, annot)
 
             load_background_variants(conn, config.bg_fp, exp.contig, [bg_ctx])
-            insert_gene_offsets(conn, bg_ctx.start, bg_ctx.end)
 
         if config.pam_fp:
             load_pam_variants(conn, config.pam_fp, exp.contig, targeton_ranges)
@@ -210,6 +205,10 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         # Load custom variants (targetons)
         if config.vcf_fp:
             load_custom_variants(conn, config.vcf_fp, exp.contig, targeton_ranges)
+
+        for t in exp.targeton_configs:
+            targeton = Targeton(targetons[t.ref.start], t)
+            targeton.process(conn, codon_table, transcript)
 
         # TODO: remove (DEBUG only!)
         dump_all(conn)

@@ -25,6 +25,7 @@ from typing import Any, Generator
 
 class DbTableName(str, Enum):
     PAM_PROTECTION_EDITS = 'pam_protection_edits'
+    TARGETON_PAM_PROTECTION_EDITS = 'targeton_pam_protection_edits'
     PAM_PROTECTION_EDIT_SGRNA_IDS = 'pam_protection_edit_sgrna_ids'
     BACKGROUND_VARIANTS = 'background_variants'
     EXONS = 'exons'
@@ -37,7 +38,9 @@ class DbTableName(str, Enum):
 
 
 PER_TARGETON_TABLES: set[DbTableName] = {
-    DbTableName.MUTATIONS
+    DbTableName.MUTATIONS,
+    DbTableName.PATTERN_VARIANTS,
+    DbTableName.TARGETON_PAM_PROTECTION_EDITS
 }
 
 
@@ -87,11 +90,15 @@ class DbFieldName(str, Enum):
     def le(self) -> str:
         return self._sql_op('<=')
 
+    def sql_eq(self, value: str | None = None) -> str:
+        return f"{self.value}={value or '?'}"
+
 
 VARIANT_FIELDS = [
     DbFieldName.START,
     DbFieldName.REF,
-    DbFieldName.ALT
+    DbFieldName.ALT,
+    DbFieldName.ID
 ]
 
 
