@@ -26,8 +26,8 @@ from .annot_variant import AnnotVariant
 from .codon_table import CodonTable
 from .config import BaseConfig
 from .experiment_meta import ExperimentMeta
-from .loaders.experiment import TargetonConfig
 from .loaders.mutator_config import MutatorConfig
+from .loaders.targeton_config import TargetonConfig
 from .mutator import MutatorCollection
 from .pattern_variant import PatternVariant
 from .queries import dump_metadata, insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_ppes, is_meta_table_empty, select_exons_in_range, select_ppes_in_range, select_bgs_in_range, clear_per_targeton_tables
