@@ -117,9 +117,9 @@ def cursor(conn: Connection) -> Generator[Cursor, None, None]:
         cur.close()
 
 
-def dump_table(conn: Connection, t: DbTableName, fh) -> None:
+def dump_table(conn: Connection, t: DbTableName, fh, sep='\t') -> None:
     for r in conn.execute(f"select * from {t.value}"):
-        fh.write('\t'.join(str(x) if x is not None else '.' for x in r))
+        fh.write(sep.join(str(x) if x is not None else '.' for x in r))
         fh.write('\n')
 
 
