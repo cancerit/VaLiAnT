@@ -21,12 +21,12 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from valiant.strings.strand import Strand
-
+from ..strings.strand import Strand
+from ..uint_range import UIntRange
 from .csv import load_csv
 from .mutator_config import MutatorConfig
 from .utils import parse_list, get_int_enum
-from ..uint_range import UIntRange
+
 
 CSV_HEADER = [
     'ref_chr',
