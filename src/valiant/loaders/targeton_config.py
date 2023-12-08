@@ -108,17 +108,18 @@ class TargetonConfig:
         sgrna_vector = a[TargetonConfigField.SGRNA_VECTOR]  # type: ignore
         sgrna_ids = frozenset(parse_list(sgrna_vector))
 
+        def parse_uint_range(start_field: int, end_field: int) -> UIntRange:
+            return UIntRange(int(a[start_field]), int(a[end_field]))
+
         return cls(
             a[TargetonConfigField.REF_CHR],  # type: ignore
             Strand(a[TargetonConfigField.REF_STRAND]),  # type: ignore
-            UIntRange(
-                int(a[TargetonConfigField.REF_START]),  # type: ignore
-                int(a[TargetonConfigField.REF_END])  # type: ignore
-            ),
-            UIntRange(
-                int(a[TargetonConfigField.R2_START]),  # type: ignore
-                int(a[TargetonConfigField.R2_END])  # type: ignore
-            ),
+            parse_uint_range(
+                TargetonConfigField.REF_START,  # type: ignore
+                TargetonConfigField.REF_END),  # type: ignore
+            parse_uint_range(
+                TargetonConfigField.R2_START,  # type: ignore
+                TargetonConfigField.R2_END),  # type: ignore
             # TODO: improve validation
             (ext_a, ext_b),
             (ma, mb, mc),
