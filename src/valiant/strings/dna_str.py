@@ -19,7 +19,7 @@
 from __future__ import annotations
 
 from ..uint_range import UIntRange
-from ..utils import is_dna
+from ..utils import is_dna, reverse_complement
 
 
 class DnaStr(str):
@@ -83,3 +83,7 @@ class DnaStr(str):
         delta = len(self) - n
         assert delta >= 0
         return self.head(delta)
+
+    @property
+    def revc(self) -> DnaStr:
+        return DnaStr(reverse_complement(self))

@@ -129,6 +129,9 @@ create table pattern_variants (
     ref_a text not null,
     alt_a text not null,
 
+    -- Oligonucleotide sequence
+    oligo text not null,
+
     -- CDS-specific annotation
     -- Possibly partial codon including the PPE, if any
     codon_ref_a text,

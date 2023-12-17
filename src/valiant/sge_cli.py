@@ -206,7 +206,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
         for t in exp.targeton_configs:
             targeton = Targeton(targetons[t.ref.start], t)
-            targeton.process(conn, codon_table, transcript)
+            targeton.process(conn, options, codon_table, transcript)
 
             # Write metadata files
             targeton.write_results(conn, config, exp_config)

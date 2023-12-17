@@ -21,6 +21,7 @@ from __future__ import annotations
 from collections.abc import Sized
 from dataclasses import dataclass
 
+from .oligo_seq import alter_seq
 from .seq import Seq
 from .uint_range import UIntRange
 from .variant import RegisteredVariant, Variant
@@ -38,10 +39,6 @@ def check_ref(ref_seq: Seq, variant: Variant) -> None:
         raise InvalidVariantRef(
             f"Invalid variant at {variant.pos}: "
             f"expected {variant.ref}, found {exp_ref}!")
-
-
-def alter_seq(seq: Seq, variant: Variant) -> Seq:
-    return seq.alter(variant.ref_range, variant.alt)
 
 
 @dataclass(frozen=True, slots=True)

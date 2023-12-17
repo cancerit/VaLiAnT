@@ -24,6 +24,7 @@ from .custom_variant import CustomVariant
 from .db import PER_TARGETON_TABLES, cursor, DbTableName, DbFieldName, get_csv_header, select_to_csv
 from .exon import Exon
 from .experiment_meta import ExperimentMeta
+from .oligo_seq import OligoSeq
 from .options import Options
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
@@ -205,7 +206,8 @@ insert_pattern_variant_fields = [
     DbFieldName.POS_A,
     DbFieldName.REF_A,
     DbFieldName.ALT_A,
-    DbFieldName.MUTATOR
+    DbFieldName.MUTATOR,
+    DbFieldName.OLIGO
 ]
 
 
@@ -215,12 +217,18 @@ sql_insert_pattern_variants = SqlQuery.get_insert_values(
 
 def insert_pattern_variants(
     conn: Connection,
-    vars: list[PatternVariant]
+    vars: list[OligoSeq[PatternVariant]]
 ) -> None:
     with cursor(conn) as cur:
         cur.executemany(sql_insert_pattern_variants, [
-            (v.pos, v.ref, v.alt, v.mutator)
-            for v in vars
+            (
+                oligo.variant.pos,
+                oligo.variant.ref,
+                oligo.variant.alt,
+                oligo.variant.mutator,
+                oligo.seq
+            )
+            for oligo in vars
         ])
 
 
@@ -234,15 +242,21 @@ sql_insert_annot_pattern_variants = SqlQuery.get_insert_values(
     ])
 
 
-def insert_annot_pattern_variants(conn: Connection, vars: list[AnnotVariant]) -> None:
+def insert_annot_pattern_variants(conn: Connection, vars: list[OligoSeq[AnnotVariant]]) -> None:
     with cursor(conn) as cur:
         cur.executemany(sql_insert_annot_pattern_variants, [
             (
-                v.pos, v.ref, v.alt, v.src,
-                v.codon_ref, v.codon_alt,
-                v.aa_ref, v.aa_alt
+                oligo.variant.pos,
+                oligo.variant.ref,
+                oligo.variant.alt,
+                oligo.variant.src,
+                oligo.seq,
+                oligo.variant.codon_ref,
+                oligo.variant.codon_alt,
+                oligo.variant.aa_ref,
+                oligo.variant.aa_alt
             )
-            for v in vars
+            for oligo in vars
         ])
 
 
