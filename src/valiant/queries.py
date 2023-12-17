@@ -21,14 +21,15 @@ from sqlite3 import Connection, Cursor
 
 from .annot_variant import AnnotVariant
 from .custom_variant import CustomVariant
-from .db import PER_TARGETON_TABLES, _dump_table_or_view, cursor, DbTableName, DbFieldName, dump_table, get_csv_header, select_to_csv
-from .experiment_meta import ExperimentMeta
+from .db import PER_TARGETON_TABLES, cursor, DbTableName, DbFieldName, get_csv_header, select_to_csv
 from .exon import Exon
+from .experiment_meta import ExperimentMeta
+from .options import Options
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
 from .sql_gen import SqlQuery, SqlScript, get_multi_range_check
 from .uint_range import UIntRange
-from .utils import get_enum_values
+from .utils import bool_to_int_str, get_enum_values
 from .variant import RegisteredVariant
 from .variant_select import VariantSelectStart
 
@@ -275,6 +276,7 @@ select_meta_fields = [
     DbFieldName.SPECIES,
     DbFieldName.ASSEMBLY,
     DbFieldName.REF_START,
+    DbFieldName.REVC,
     DbFieldName.REF,
     DbFieldName.ALT,
     DbFieldName.REF_AA,
@@ -282,20 +284,21 @@ select_meta_fields = [
     DbFieldName.VCF_VAR_ID,
     DbFieldName.VCF_ALIAS,
     DbFieldName.MUTATOR,
-    DbFieldName.IN_CONST,
-    DbFieldName.SGRNA_IDS
+    DbFieldName.SGRNA_IDS,
+    DbFieldName.IN_CONST
 ]
 select_meta_header = get_csv_header(select_meta_fields)
 
 
-def dump_metadata(conn: Connection, exp: ExperimentMeta, fp: str) -> None:
+def dump_metadata(conn: Connection, exp: ExperimentMeta, opt: Options, fp: str) -> None:
     # TODO: filter by length
     sql_select_meta = SqlQuery.get_select(
         DbTableName.V_META,
         select_meta_fields,
         const={
             DbFieldName.SPECIES: exp.species,
-            DbFieldName.ASSEMBLY: exp.assembly
+            DbFieldName.ASSEMBLY: exp.assembly,
+            DbFieldName.REVC: bool_to_int_str(opt.revcomp_minus_strand)
         })
 
     select_to_csv(
@@ -358,7 +361,6 @@ def insert_targeton_custom_variants(
 ) -> None:
     with cursor(conn) as cur:
         # Reference the custom variants in the targeton range
-        print(sql_insert_targeton_custom_variants)
         cur.executemany(sql_insert_targeton_custom_variants, [
             (v.id, v.pos)
             for v in variants

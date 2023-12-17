@@ -106,3 +106,7 @@ def has_duplicates(items: list[int]) -> bool:
 
 def is_in_opt_range(r: UIntRange | None, pos: int) -> bool:
     return pos in r if r is not None else False
+
+
+def bool_to_int_str(x: bool) -> str:
+    return '1' if x else '0'

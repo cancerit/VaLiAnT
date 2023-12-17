@@ -191,7 +191,8 @@ class Targeton:
         if not is_meta_table_empty(conn):
             meta_fn = f"{targeton_name}_meta.csv"
             meta_fp = config.get_output_file_path(meta_fn)
-            dump_metadata(conn, exp, meta_fp)
+            options = config.get_options()
+            dump_metadata(conn, exp, options, meta_fp)
         else:
             logging.warning(
                 "No mutations for targeton '%s'!", targeton_name)
