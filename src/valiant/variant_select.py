@@ -42,11 +42,10 @@ class VariantSelect(ABC):
             t, VARIANT_FIELDS, start_only=cls._START_ONLY))
 
     def select_in_range(self, conn: Connection, r: UIntRange) -> list[RegisteredVariant]:
-        args = (r.start, r.end if not self._START_ONLY else r.start)
         with cursor(conn) as cur:
             return [
                 RegisteredVariant(r[0], DnaStr(r[1]), DnaStr(r[2]), r[3])
-                for r in cur.execute(self.query, args).fetchall()
+                for r in cur.execute(self.query, r.to_tuple()).fetchall()
             ]
 
 
