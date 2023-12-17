@@ -26,7 +26,6 @@ from .annot_variant import AnnotVariant
 from .codon_table import CodonTable
 from .config import BaseConfig
 from .experiment_meta import ExperimentMeta
-from .loaders.mutator_config import MutatorConfig
 from .loaders.targeton_config import TargetonConfig
 from .mutator import MutatorCollection
 from .pattern_variant import PatternVariant
@@ -144,20 +143,11 @@ class Targeton:
 
         return pattern_variants, annot_variants
 
-    def get_region_mutators(self, i: int) -> list[MutatorConfig]:
-        return self.config.mutators[i]
-
-    @property
-    def regions(self) -> list[UIntRange | None]:
-        # TODO: add region 1 and 3
-        return [None, self.config.region_2, None]
-
     @property
     def mutable_regions(self) -> list[tuple[UIntRange, MutatorCollection]]:
         return [
-            (r, MutatorCollection.from_configs(self.get_region_mutators(i)))
-            for i, r in enumerate(self.regions)
-            if r is not None and self.get_region_mutators(i)
+            (r, MutatorCollection.from_configs(m))
+            for r, m in self.config.get_mutable_regions()
         ]
 
     def process(

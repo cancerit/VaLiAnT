@@ -23,6 +23,7 @@ from dataclasses import dataclass
 
 from ..strings.strand import Strand
 from ..uint_range import UIntRange
+from ..utils import is_in_opt_range
 from .mutator_config import MutatorConfig
 from .utils import parse_list, get_int_enum
 
@@ -66,15 +67,44 @@ def parse_mutator_tuples(s: str) -> list[list[MutatorConfig]]:
     ]
 
 
+def parse_ext_vector(s: str) -> tuple[int, int]:
+    try:
+        region_1_length, region_3_length = [
+            int(t)
+            for t in parse_list(s, n=2)
+        ]
+    except ValueError:
+        raise ValueError("Invalid extension vector: two integers expected!")
+
+    return region_1_length, region_3_length
+
+
 @dataclass(slots=True)
 class TargetonConfig:
     contig: str
     strand: Strand
     ref: UIntRange
     region_2: UIntRange
-    target_region_2_extension: tuple[int, int]
+    region_1_length: int
+    region_3_length: int
     mutators: tuple[list[MutatorConfig], list[MutatorConfig], list[MutatorConfig]]
     sgrna_ids: frozenset[str]
+
+    def __post_init__(self) -> None:
+        # Validate region 2
+        if (
+            (self.region_2.start < self.ref.start) or
+            (self.region_2.end > self.ref.end)
+        ):
+            raise ValueError("Invalid region 2: exceeding targeton range!")
+
+        # Validate region 1
+        if self.region_2.start - self.region_1_length < self.ref.start:
+            raise ValueError("Invalid region 1 length: exceeding targeton range!")
+
+        # Validate region 3
+        if self.region_2.end + self.region_3_length > self.ref.end:
+            raise ValueError("Invalid region 3 length: exceeding targeton range!")
 
     @property
     def name(self) -> str:
@@ -90,15 +120,6 @@ class TargetonConfig:
 
     @classmethod
     def from_list(cls, a: list[str]) -> TargetonConfig:
-        # Parse extension vector
-        try:
-            ext_vector = a[TargetonConfigField.EXT_VECTOR]  # type: ignore
-            ext_a, ext_b = [
-                int(t)
-                for t in parse_list(ext_vector, n=2)
-            ]
-        except ValueError:
-            raise ValueError("Invalid extension vector: two integers expected!")
 
         # Parse mutator collections
         action_vector = a[TargetonConfigField.ACTION_VECTOR]  # type: ignore
@@ -111,16 +132,71 @@ class TargetonConfig:
         def parse_uint_range(start_field: int, end_field: int) -> UIntRange:
             return UIntRange(int(a[start_field]), int(a[end_field]))
 
+        ref_range = parse_uint_range(
+            TargetonConfigField.REF_START,  # type: ignore
+            TargetonConfigField.REF_END)  # type: ignore
+        region_2 = parse_uint_range(
+            TargetonConfigField.R2_START,  # type: ignore
+            TargetonConfigField.R2_END)  # type: ignore
+
+        # Parse extension vector
+        ext_vector = a[TargetonConfigField.EXT_VECTOR]  # type: ignore
+        region_1_length, region_3_length = parse_ext_vector(ext_vector)
+
         return cls(
             a[TargetonConfigField.REF_CHR],  # type: ignore
             Strand(a[TargetonConfigField.REF_STRAND]),  # type: ignore
-            parse_uint_range(
-                TargetonConfigField.REF_START,  # type: ignore
-                TargetonConfigField.REF_END),  # type: ignore
-            parse_uint_range(
-                TargetonConfigField.R2_START,  # type: ignore
-                TargetonConfigField.R2_END),  # type: ignore
-            # TODO: improve validation
-            (ext_a, ext_b),
+            ref_range,
+            region_2,
+            region_1_length,
+            region_3_length,
             (ma, mb, mc),
             sgrna_ids)
+
+    def get_region_1(self) -> UIntRange | None:
+        if self.region_1_length == 0:
+            return None
+        return self.region_2.get_before(self.region_1_length)
+
+    def get_region_3(self) -> UIntRange | None:
+        if self.region_3_length == 0:
+            return None
+        return self.region_2.get_after(self.region_3_length)
+
+    def get_const_1(self) -> UIntRange | None:
+        r1 = self.get_region_1()
+        if not r1 or r1.start <= self.ref.start:
+            return None
+        return UIntRange(self.ref.start, r1.start - 1)
+
+    def get_const_2(self) -> UIntRange | None:
+        r3 = self.get_region_3()
+        if not r3 or r3.end >= self.ref.end:
+            return None
+        return UIntRange(r3.end + 1, self.ref.end)
+
+    def is_in_const_1(self, pos: int) -> bool:
+        return is_in_opt_range(self.get_const_1(), pos)
+
+    def is_in_const_2(self, pos: int) -> bool:
+        return is_in_opt_range(self.get_const_2(), pos)
+
+    def is_in_const_region(self, pos: int) -> bool:
+        return self.is_in_const_1(pos) or self.is_in_const_2(pos)
+
+    def get_region_mutators(self, i: int) -> list[MutatorConfig]:
+        return self.mutators[i]
+
+    def get_regions(self) -> list[UIntRange | None]:
+        return [
+            self.get_region_1(),
+            self.region_2,
+            self.get_region_3()
+        ]
+
+    def get_mutable_regions(self) -> list[tuple[UIntRange, list[MutatorConfig]]]:
+        return [
+            (r, self.get_region_mutators(i))
+            for i, r in enumerate(self.get_regions())
+            if r is not None and self.get_region_mutators(i)
+        ]

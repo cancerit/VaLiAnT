@@ -24,6 +24,7 @@ from itertools import groupby
 from typing import Callable, Iterable
 
 from .constants import DATA_PATH, CODON_TABLE_FN, DDL_FN
+from .uint_range import UIntRange
 
 dna_re = re.compile('^[ACGT]*$')
 dna_complement_tr_table = str.maketrans('ACGT', 'TGCA')
@@ -101,3 +102,7 @@ def get_cds_ext_3_length(frame: int, length: int) -> int:
 
 def has_duplicates(items: list[int]) -> bool:
     return len(set(items)) != len(items)
+
+
+def is_in_opt_range(r: UIntRange | None, pos: int) -> bool:
+    return pos in r if r is not None else False

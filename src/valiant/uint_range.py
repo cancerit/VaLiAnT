@@ -72,6 +72,14 @@ class UIntRange(Sized, Container):
     def offset(self, offset: int) -> UIntRange:
         return UIntRange(self.start + offset, self.end + offset)
 
+    def get_before(self, n: int) -> UIntRange:
+        assert n > 0
+        return UIntRange(self.start - n, self.start - 1)
+
+    def get_after(self, n: int) -> UIntRange:
+        assert n > 0
+        return UIntRange(self.end + 1, self.end + n)
+
 
 UIntRangeT = TypeVar('UIntRangeT', bound=UIntRange)
 
