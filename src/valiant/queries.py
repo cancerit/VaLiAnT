@@ -286,43 +286,6 @@ def select_exons_in_range(conn: Connection, start: int, end: int) -> list[int]:
         ]
 
 
-select_meta_fields = [
-    DbFieldName.SPECIES,
-    DbFieldName.ASSEMBLY,
-    DbFieldName.REF_START,
-    DbFieldName.REVC,
-    DbFieldName.REF,
-    DbFieldName.ALT,
-    DbFieldName.REF_AA,
-    DbFieldName.ALT_AA,
-    DbFieldName.VCF_VAR_ID,
-    DbFieldName.VCF_ALIAS,
-    DbFieldName.MUTATOR,
-    DbFieldName.SGRNA_IDS,
-    DbFieldName.IN_CONST
-]
-select_meta_header = get_csv_header(select_meta_fields)
-
-
-def dump_metadata(conn: Connection, exp: ExperimentMeta, opt: Options, fp: str) -> None:
-    # TODO: filter by length
-    sql_select_meta = SqlQuery.get_select(
-        DbTableName.V_META,
-        select_meta_fields,
-        const={
-            DbFieldName.SPECIES: exp.species,
-            DbFieldName.ASSEMBLY: exp.assembly,
-            DbFieldName.REVC: bool_to_int_str(opt.revcomp_minus_strand)
-        })
-
-    select_to_csv(
-        conn,
-        sql_select_meta,
-        len(select_meta_fields),
-        select_meta_header,
-        fp)
-
-
 clear_per_targeton_tables = SqlScript.from_queries(
     map(SqlQuery.get_delete, PER_TARGETON_TABLES))
 

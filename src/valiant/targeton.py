@@ -24,15 +24,17 @@ from typing import Callable
 
 from .annot_variant import AnnotVariant
 from .codon_table import CodonTable
-from .config import BaseConfig
 from .experiment_meta import ExperimentMeta
+from .loaders.experiment import ExperimentConfig
 from .loaders.targeton_config import TargetonConfig
+from .meta_table import MetaTable
 from .mutator import MutatorCollection
 from .oligo_seq import OligoSeq
 from .options import Options
 from .pattern_variant import PatternVariant
-from .queries import dump_metadata, insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, insert_targeton_ppes, is_meta_table_empty, select_exons_in_range, select_ppes_in_range, select_bgs_in_range, clear_per_targeton_tables, select_custom_variants_in_range
+from .queries import insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, insert_targeton_ppes, is_meta_table_empty, select_exons_in_range, select_ppes_in_range, select_bgs_in_range, clear_per_targeton_tables, select_custom_variants_in_range
 from .seq import Seq
+from .sge_config import SGEConfig
 from .strings.dna_str import DnaStr
 from .transcript_seq import TranscriptSeq
 from .uint_range import UIntRange
@@ -194,7 +196,7 @@ class Targeton:
         opt: Options,
         codon_table: CodonTable,
         transcript: TranscriptSeq | None
-    ) -> tuple[list[PatternVariant], list[AnnotVariant]]:
+    ) -> tuple[Seq, list[PatternVariant], list[AnnotVariant]]:
 
         # Truncate targeton-specific tables
         clear_per_targeton_tables.execute(conn)
@@ -211,15 +213,24 @@ class Targeton:
         pattern_variants, annot_variants = self._process_pattern_variants(
             conn, opt, codon_table, transcript, alt)
 
-        return pattern_variants, annot_variants
+        return alt, pattern_variants, annot_variants
 
-    def write_results(self, conn: Connection, config: BaseConfig, exp: ExperimentMeta) -> None:
-        targeton_name = self.config.name
-        if not is_meta_table_empty(conn):
-            meta_fn = f"{targeton_name}_meta.csv"
-            meta_fp = config.get_output_file_path(meta_fn)
-            options = config.get_options()
-            dump_metadata(conn, exp, options, meta_fp)
-        else:
-            logging.warning(
-                "No mutations for targeton '%s'!", targeton_name)
+
+def generate_metadata_table(
+    conn: Connection,
+    targeton: Targeton,
+    alt: Seq,
+    config: SGEConfig,
+    exp: ExperimentMeta,
+    exp_cfg: ExperimentConfig
+) -> None:
+    targeton_name = targeton.config.name
+    if not is_meta_table_empty(conn):
+        meta_fn = f"{targeton_name}_meta.csv"
+        meta_fp = config.get_output_file_path(meta_fn)
+        options = config.get_options()
+        mt = MetaTable(config, exp, options, exp_cfg, targeton.seq, alt)
+        mt.to_csv(conn, meta_fp)
+    else:
+        logging.warning(
+            "No mutations for targeton '%s'!", targeton_name)

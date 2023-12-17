@@ -40,7 +40,7 @@ from .queries import insert_custom_variant_collection, insert_exons, insert_back
 from .seq import Seq
 from .sge_config import SGEConfig
 from .strings.dna_str import DnaStr
-from .targeton import Targeton
+from .targeton import Targeton, generate_metadata_table
 from .transcript_seq import TranscriptSeq
 from .uint_range import UIntRange
 from .utils import get_default_codon_table_path, get_ddl_path
@@ -206,10 +206,10 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
         for t in exp.targeton_configs:
             targeton = Targeton(targetons[t.ref.start], t)
-            targeton.process(conn, options, codon_table, transcript)
+            alt, _, _ = targeton.process(conn, options, codon_table, transcript)
 
             # Write metadata files
-            targeton.write_results(conn, config, exp_config)
+            generate_metadata_table(conn, targeton, alt, config, exp_config, exp)
 
     # Write JSON configuration to file
     config.write(config.get_output_file_path(OUTPUT_CONFIG_FILE_NAME))

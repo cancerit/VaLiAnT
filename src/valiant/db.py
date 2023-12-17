@@ -83,6 +83,8 @@ class DbFieldName(str, Enum):
     MSEQ = 'mseq'
     MSEQ_NO_ADAPT = 'mseq_no_adapt'
     IN_CONST = 'in_const'
+    REVC = 'revc'
+    OLIGO = 'oligo'
 
     def _sql_op(self, op: str) -> str:
         return f"{self.value} {op} ?"

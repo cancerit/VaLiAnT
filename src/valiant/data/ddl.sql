@@ -155,6 +155,7 @@ create table targeton_pam_protection_edits (
 create table targeton_custom_variants (
     id integer primary key references custom_variants (id),
     start integer not null,
+    oligo text not null,
     in_const int not null default 0
 );
 
@@ -185,7 +186,8 @@ select
     cv.var_id as vcf_var_id,
     cvc.name as vcf_alias,
     'custom' as mutator,
-    tcv.in_const
+    tcv.in_const,
+    tcv.oligo
 from targeton_custom_variants tcv
 left join custom_variants cv on cv.id = tcv.id
 left join custom_variant_collections cvc on cvc.id = cv.collection_id;
@@ -201,6 +203,7 @@ select
     s.vcf_alias,
     s.mutator,
     s.in_const,
+    s.oligo,
     -- TODO: handle multiple guides
     si.name as sgrna_ids
 from (
@@ -222,7 +225,8 @@ from (
                 null as vcf_var_id,
                 null as vcf_alias,
                 mutator,
-                0 as in_const
+                0 as in_const,
+                oligo
             from pattern_variants pv
             union all
             select * from v_meta_custom
