@@ -155,14 +155,33 @@ class Targeton:
         insert_targeton_custom_variants(
             conn, custom_vars, self.config.get_const_regions())
 
+    def _process_pattern_variants(
+        self,
+        conn: Connection,
+        codon_table: CodonTable,
+        transcript: TranscriptSeq | None,
+        alt: Seq
+    ) -> tuple[list[PatternVariant], list[AnnotVariant]]:
+        pattern_variants: list[PatternVariant] = []
+        annot_variants: list[AnnotVariant] = []
+
+        process_region_f = partial(
+            self._process_region, conn, codon_table, transcript, alt)
+
+        for r, mc in self.mutable_regions:
+            vars, annot_vars = process_region_f(r, mc)
+
+            pattern_variants.extend(vars)
+            annot_variants.extend(annot_vars)
+
+        return pattern_variants, annot_variants
+
     def process(
         self,
         conn: Connection,
         codon_table: CodonTable,
         transcript: TranscriptSeq | None
     ) -> tuple[list[PatternVariant], list[AnnotVariant]]:
-        pattern_variants: list[PatternVariant] = []
-        annot_variants: list[AnnotVariant] = []
 
         # Truncate targeton-specific tables
         clear_per_targeton_tables.execute(conn)
@@ -175,14 +194,9 @@ class Targeton:
         # Process custom variants
         self._process_custom_variants(conn, alt)
 
-        process_region_f = partial(
-            self._process_region, conn, codon_table, transcript, alt)
-
-        for r, mc in self.mutable_regions:
-            vars, annot_vars = process_region_f(r, mc)
-
-            pattern_variants.extend(vars)
-            annot_variants.extend(annot_vars)
+        # Process pattern variants
+        pattern_variants, annot_variants = self._process_pattern_variants(
+            conn, codon_table, transcript, alt)
 
         return pattern_variants, annot_variants
 
