@@ -365,19 +365,23 @@ def is_meta_table_empty(conn: Connection) -> bool:
 
 
 sql_insert_targeton_custom_variants = SqlQuery.get_insert_values(
-    DbTableName.TARGETON_CUSTOM_VARIANTS, [DbFieldName.ID, DbFieldName.START])
+    DbTableName.TARGETON_CUSTOM_VARIANTS, [
+        DbFieldName.ID,
+        DbFieldName.START,
+        DbFieldName.OLIGO
+    ])
 
 
 def insert_targeton_custom_variants(
     conn: Connection,
-    variants: list[RegisteredVariant],
+    variants: list[OligoSeq[RegisteredVariant]],
     const_regions: list[UIntRange]
 ) -> None:
     with cursor(conn) as cur:
         # Reference the custom variants in the targeton range
         cur.executemany(sql_insert_targeton_custom_variants, [
-            (v.id, v.pos)
-            for v in variants
+            (oligo.variant.id, oligo.variant.pos, oligo.seq)
+            for oligo in variants
         ])
 
         if const_regions:

@@ -149,10 +149,16 @@ class Targeton:
             for r, m in self.config.get_mutable_regions()
         ]
 
-    def _process_custom_variants(self, conn: Connection, alt: Seq) -> None:
+    def _process_custom_variants(self, conn: Connection, opt: Options, alt: Seq) -> None:
         custom_vars = select_custom_variants_in_range(conn, self.seq.get_range())
+
+        def get_oligo(x: Variant) -> OligoSeq:
+            return OligoSeq.from_ref(alt, x, rc=opt.revcomp_minus_strand)
+
         insert_targeton_custom_variants(
-            conn, custom_vars, self.config.get_const_regions())
+            conn,
+            list(map(get_oligo, custom_vars)),
+            self.config.get_const_regions())
 
     def _process_pattern_variants(
         self,
@@ -199,7 +205,7 @@ class Targeton:
         conn.commit()
 
         # Process custom variants
-        self._process_custom_variants(conn, alt)
+        self._process_custom_variants(conn, opt, alt)
 
         # Process pattern variants
         pattern_variants, annot_variants = self._process_pattern_variants(
