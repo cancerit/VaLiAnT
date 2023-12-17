@@ -29,7 +29,7 @@ from .experiment_meta import ExperimentMeta
 from .loaders.targeton_config import TargetonConfig
 from .mutator import MutatorCollection
 from .pattern_variant import PatternVariant
-from .queries import dump_metadata, insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_ppes, is_meta_table_empty, select_exons_in_range, select_ppes_in_range, select_bgs_in_range, clear_per_targeton_tables
+from .queries import dump_metadata, insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, insert_targeton_ppes, is_meta_table_empty, select_exons_in_range, select_ppes_in_range, select_bgs_in_range, clear_per_targeton_tables, select_custom_variants_in_range
 from .seq import Seq
 from .strings.dna_str import DnaStr
 from .transcript_seq import TranscriptSeq
@@ -150,6 +150,11 @@ class Targeton:
             for r, m in self.config.get_mutable_regions()
         ]
 
+    def _process_custom_variants(self, conn: Connection, alt: Seq) -> None:
+        custom_vars = select_custom_variants_in_range(conn, self.seq.get_range())
+        insert_targeton_custom_variants(
+            conn, custom_vars, self.config.get_const_regions())
+
     def process(
         self,
         conn: Connection,
@@ -166,6 +171,9 @@ class Targeton:
         # Alter the sequence based on background variants and PPE's
         alt = self.alter(conn)
         conn.commit()
+
+        # Process custom variants
+        self._process_custom_variants(conn, alt)
 
         process_region_f = partial(
             self._process_region, conn, codon_table, transcript, alt)

@@ -1,3 +1,7 @@
+/*
+EXPERIMENT-wide
+*/
+
 -- Targetons
 
 create table targetons (
@@ -110,6 +114,10 @@ create table custom_variants (
     alt text not null
 );
 
+/*
+PER TARGETON
+*/
+
 -- Pattern variants
 
 create table pattern_variants (
@@ -141,6 +149,12 @@ create table targeton_pam_protection_edits (
     start integer not null
 );
 
+create table targeton_custom_variants (
+    id integer primary key references custom_variants (id),
+    start integer not null,
+    in_const int not null default 0
+);
+
 create table mutations (
     id integer primary key,
     -- Original reference
@@ -158,6 +172,21 @@ create table mutations (
     aa_alt text
 );
 
+create view if not exists v_meta_custom as
+select
+    cv.start as ref_start,
+    cv.ref,
+    cv.alt,
+    null as ref_aa,
+    null as alt_aa,
+    cv.var_id as vcf_var_id,
+    cvc.name as vcf_alias,
+    'custom' as mutator,
+    tcv.in_const
+from targeton_custom_variants tcv
+left join custom_variants cv on cv.id = tcv.id
+left join custom_variant_collections cvc on cvc.id = cv.collection_id;
+
 create view if not exists v_meta as
 select
     s.ref_start,
@@ -168,6 +197,7 @@ select
     s.vcf_var_id,
     s.vcf_alias,
     s.mutator,
+    s.in_const,
     -- TODO: handle multiple guides
     si.name as sgrna_ids
 from (
@@ -188,20 +218,11 @@ from (
                 aa_alt as alt_aa,
                 null as vcf_var_id,
                 null as vcf_alias,
-                mutator
+                mutator,
+                0 as in_const
             from pattern_variants pv
             union all
-            select
-                start as ref_start,
-                ref,
-                alt,
-                null as ref_aa,
-                null as alt_aa,
-                var_id as vcf_var_id,
-                cvc.name as vcf_alias,
-                'custom' as mutator
-            from custom_variants cv
-            left join custom_variant_collections cvc on cvc.id = cv.collection_id
+            select * from v_meta_custom
         ) v
     ) w
     left join v_exon_ext e on (

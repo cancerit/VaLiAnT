@@ -69,6 +69,9 @@ class UIntRange(Sized, Container):
     def to_slice(self, offset: int = 0) -> slice:
         return slice(self.start - offset, self.end - offset + 1)
 
+    def to_tuple(self) -> tuple[int, int]:
+        return self.start, self.end
+
     def offset(self, offset: int) -> UIntRange:
         return UIntRange(self.start + offset, self.end + offset)
 

@@ -23,7 +23,7 @@ from dataclasses import dataclass
 
 from ..strings.strand import Strand
 from ..uint_range import UIntRange
-from ..utils import is_in_opt_range
+from ..utils import get_not_none, is_in_opt_range
 from .mutator_config import MutatorConfig
 from .utils import parse_list, get_int_enum
 
@@ -180,6 +180,12 @@ class TargetonConfig:
 
     def is_in_const_2(self, pos: int) -> bool:
         return is_in_opt_range(self.get_const_2(), pos)
+
+    def get_const_regions(self) -> list[UIntRange]:
+        return get_not_none([
+            self.get_const_1(),
+            self.get_const_2()
+        ])
 
     def is_in_const_region(self, pos: int) -> bool:
         return self.is_in_const_1(pos) or self.is_in_const_2(pos)

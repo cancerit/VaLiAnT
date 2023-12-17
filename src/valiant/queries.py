@@ -16,16 +16,18 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from itertools import chain
 from sqlite3 import Connection, Cursor
 
 from .annot_variant import AnnotVariant
 from .custom_variant import CustomVariant
-from .db import PER_TARGETON_TABLES, cursor, DbTableName, DbFieldName, get_csv_header, select_to_csv
+from .db import PER_TARGETON_TABLES, _dump_table_or_view, cursor, DbTableName, DbFieldName, dump_table, get_csv_header, select_to_csv
 from .experiment_meta import ExperimentMeta
 from .exon import Exon
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
-from .sql_gen import SqlQuery, SqlScript
+from .sql_gen import SqlQuery, SqlScript, get_multi_range_check
+from .uint_range import UIntRange
 from .utils import get_enum_values
 from .variant import RegisteredVariant
 from .variant_select import VariantSelectStart
@@ -280,12 +282,14 @@ select_meta_fields = [
     DbFieldName.VCF_VAR_ID,
     DbFieldName.VCF_ALIAS,
     DbFieldName.MUTATOR,
+    DbFieldName.IN_CONST,
     DbFieldName.SGRNA_IDS
 ]
 select_meta_header = get_csv_header(select_meta_fields)
 
 
 def dump_metadata(conn: Connection, exp: ExperimentMeta, fp: str) -> None:
+    # TODO: filter by length
     sql_select_meta = SqlQuery.get_select(
         DbTableName.V_META,
         select_meta_fields,
@@ -314,6 +318,10 @@ select_bgs_in_range = VariantSelectStart.from_table(
     DbTableName.BACKGROUND_VARIANTS).select_in_range
 
 
+select_custom_variants_in_range = VariantSelectStart.from_table(
+    DbTableName.CUSTOM_VARIANTS).select_in_range
+
+
 sql_insert_targeton_ppes = SqlQuery.get_insert_values(
     DbTableName.TARGETON_PAM_PROTECTION_EDITS, [
         DbFieldName.ID,
@@ -337,3 +345,31 @@ def is_table_empty(conn: Connection, t: DbTableName) -> bool:
 
 def is_meta_table_empty(conn: Connection) -> bool:
     return is_table_empty(conn, DbTableName.MUTATIONS)
+
+
+sql_insert_targeton_custom_variants = SqlQuery.get_insert_values(
+    DbTableName.TARGETON_CUSTOM_VARIANTS, [DbFieldName.ID, DbFieldName.START])
+
+
+def insert_targeton_custom_variants(
+    conn: Connection,
+    variants: list[RegisteredVariant],
+    const_regions: list[UIntRange]
+) -> None:
+    with cursor(conn) as cur:
+        # Reference the custom variants in the targeton range
+        print(sql_insert_targeton_custom_variants)
+        cur.executemany(sql_insert_targeton_custom_variants, [
+            (v.id, v.pos)
+            for v in variants
+        ])
+
+        if const_regions:
+
+            # Mark the custom variants that are in constant regions
+            query = SqlQuery.get_update(
+                DbTableName.TARGETON_CUSTOM_VARIANTS, [DbFieldName.IN_CONST],
+                get_multi_range_check(len(const_regions), start_only=True),
+                value=1)
+            cur.execute(query, tuple(chain.from_iterable(
+                r.to_tuple() for r in const_regions)))

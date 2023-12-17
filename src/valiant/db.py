@@ -35,12 +35,14 @@ class DbTableName(str, Enum):
     PATTERN_VARIANTS = 'pattern_variants'
     V_META = 'v_meta'
     MUTATIONS = 'mutations'
+    TARGETON_CUSTOM_VARIANTS = 'targeton_custom_variants'
 
 
 PER_TARGETON_TABLES: set[DbTableName] = {
     DbTableName.MUTATIONS,
     DbTableName.PATTERN_VARIANTS,
-    DbTableName.TARGETON_PAM_PROTECTION_EDITS
+    DbTableName.TARGETON_PAM_PROTECTION_EDITS,
+    DbTableName.TARGETON_CUSTOM_VARIANTS
 }
 
 
@@ -80,6 +82,7 @@ class DbFieldName(str, Enum):
     ASSEMBLY = 'assembly'
     MSEQ = 'mseq'
     MSEQ_NO_ADAPT = 'mseq_no_adapt'
+    IN_CONST = 'in_const'
 
     def _sql_op(self, op: str) -> str:
         return f"{self.value} {op} ?"

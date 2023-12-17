@@ -19,13 +19,34 @@
 from __future__ import annotations
 
 from sqlite3 import Connection
-from typing import Iterable
+from typing import Any, Iterable
 
 from .db import DbFieldName, DbTableName, cursor
 
 
-def sql_and(*args) -> str:
-    return ' and '.join(args)
+def _sql_boolean_op(op: str, args: list[str], parens: bool = False):
+    s = f" {op} "
+    x = args if not parens else [f"({x})" for x in args]
+    return s.join(x)
+
+
+def sql_and(args, parens: bool = False) -> str:
+    return _sql_boolean_op('and', args, parens=parens)
+
+
+def sql_or(args, parens: bool = False) -> str:
+    return _sql_boolean_op('or', args, parens=parens)
+
+
+def sql_in_range(start_only: bool) -> str:
+    return sql_and([
+        DbFieldName.START.ge(),
+        DbFieldName.END.le() if not start_only else DbFieldName.START.le()
+    ])
+
+
+def get_multi_range_check(n: int, start_only: bool = False) -> str:
+    return sql_or([sql_in_range(start_only)] * n)
 
 
 class SqlQuery(str):
@@ -35,9 +56,9 @@ class SqlQuery(str):
         return cls(f"delete from {t.value}")
 
     @classmethod
-    def get_update(cls, t: DbTableName, values: list[DbFieldName], where: str) -> SqlQuery:
-        sets = ' '.join(k.sql_eq() for k in values)
-        return cls(f"update {t.value} {sets} where {where}")
+    def get_update(cls, t: DbTableName, values: list[DbFieldName], where: str, value: Any = None) -> SqlQuery:
+        sets = ','.join(k.sql_eq(value=value) for k in values)
+        return cls(f"update {t.value} set {sets} where {where}")
 
     @classmethod
     def get_update_at_id(cls, t: DbTableName, values: list[DbFieldName]) -> SqlQuery:
@@ -99,11 +120,7 @@ class SqlQuery(str):
         E.g.: select start, ref, alt from variants where start >= ? and end <= ?
         """
 
-        where = sql_and(
-            DbFieldName.START.ge(),
-            DbFieldName.END.le() if not start_only else DbFieldName.START.le()
-        )
-        return cls.get_select(t, fields, where=where)
+        return cls.get_select(t, fields, where=sql_in_range(start_only))
 
     @classmethod
     def get_select_name(cls, t: DbTableName) -> SqlQuery:
