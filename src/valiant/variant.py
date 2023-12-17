@@ -57,7 +57,7 @@ class Variant:
 
     @property
     def ref_end(self) -> int:
-        return self.pos + min(0, self.ref_len - 1)
+        return self.pos + max(0, self.ref_len - 1)
 
     @property
     def ref_range(self) -> UIntRange:
