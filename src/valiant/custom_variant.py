@@ -38,6 +38,18 @@ def validate_vcf_record_ref(var_id: str | None, r: VariantRecord) -> None:
         raise ValueError(f"Empty REF for variant{id_} at {r.contig}:{r.pos}!")
 
 
+def correct_vcf_start(start: int, var_type: VariantType) -> int:
+    if (
+        var_type == VariantType.DELETION or
+        var_type == VariantType.INSERTION
+    ):
+        if start == 1:
+            raise NotImplementedError
+        return start + 1
+
+    return start
+
+
 @dataclass
 class CustomVariant(Variant):
     contig: str
@@ -87,7 +99,8 @@ class CustomVariant(Variant):
             var_class: VariantClassification = VariantClassification.CLASSIFIED,
             vcf_nt: Nucleotide | None = None
         ) -> CustomVariant:
-            return cls.from_variant(var, contig, id, vcf_nt, var_type, var_class)
+            pos = correct_vcf_start(var.pos, var_type)
+            return cls(pos, var.ref, var.alt, contig, id, vcf_nt, var_type, var_class)
 
         alt_ref_delta: int = raw_var.alt_ref_delta
 
