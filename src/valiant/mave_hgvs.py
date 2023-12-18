@@ -60,13 +60,14 @@ def _get_snv_mave_nt_suffix(start: int, ref: str, alt: str) -> str:
 
 
 def _get_substitution_mave_nt_suffix(start: int, ref: str | None, alt: str | None) -> str:
-    ref_length: int = len(ref) if ref is not None else 0
-    alt_length: int = len(alt) if alt is not None else 0
-
-    if ref_length == 0:
+    if not ref:
         raise ValueError("Invalid substitution: missing reference!")
-    if alt_length == 0:
+
+    if not alt:
         raise ValueError("Invalid substitution: missing alternate!")
+
+    ref_length: int = len(ref)
+    alt_length: int = len(alt)
 
     is_snv: bool = ref_length == 1 and alt_length == 1
 
