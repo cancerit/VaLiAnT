@@ -23,6 +23,7 @@ from typing import ClassVar
 from .db import cursor
 from .experiment_meta import ExperimentMeta
 from .loaders.experiment import ExperimentConfig
+from .oligo_generation_info import OligoGenerationInfo
 from .options import Options
 from .seq import Seq
 from .sge_config import SGEConfig
@@ -117,7 +118,7 @@ class MetaTable:
         fh.write(self.CSV_HEADER)
         fh.write('\n')
 
-    def to_csv(self, conn: Connection, fp: str) -> None:
+    def to_csv(self, conn: Connection, fp: str) -> OligoGenerationInfo:
         species = self.cfg.species
         assembly = self.cfg.assembly
         revc = bool_to_int_str(self.opt.revcomp_minus_strand)
@@ -132,9 +133,7 @@ class MetaTable:
         # TODO: generalise for cDNA support
         src_type = 'ref'
 
-        # TODO: recover proper struct for reporting
-        too_short = 0
-        too_long = 0
+        info = OligoGenerationInfo()
 
         def get_full_oligo(mr: MetaRow) -> str:
             return f"{self.cfg.adaptor_5}{mr.oligo}{self.cfg.adaptor_3}"
@@ -154,11 +153,11 @@ class MetaTable:
                     oligo_length = len(oligo)
 
                     if oligo_length < self.opt.oligo_min_length:
-                        too_short += 1
+                        info.short_oligo_n += 1
                         continue
 
                     if oligo_length > self.opt.oligo_max_length:
-                        too_long += 1
+                        info.long_oligo_n += 1
                         continue
 
                     # Write fields
@@ -261,3 +260,4 @@ class MetaTable:
                     fh.write(str(mr.in_const))
 
                     fh.write('\n')
+        return info

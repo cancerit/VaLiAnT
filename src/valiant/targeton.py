@@ -29,6 +29,7 @@ from .loaders.experiment import ExperimentConfig
 from .loaders.targeton_config import TargetonConfig
 from .meta_table import MetaTable
 from .mutator import MutatorCollection
+from .oligo_generation_info import OligoGenerationInfo
 from .oligo_seq import OligoSeq
 from .options import Options
 from .pattern_variant import PatternVariant
@@ -223,14 +224,15 @@ def generate_metadata_table(
     config: SGEConfig,
     exp: ExperimentMeta,
     exp_cfg: ExperimentConfig
-) -> None:
+) -> OligoGenerationInfo:
     targeton_name = targeton.config.name
     if not is_meta_table_empty(conn):
         meta_fn = f"{targeton_name}_meta.csv"
         meta_fp = config.get_output_file_path(meta_fn)
         options = config.get_options()
         mt = MetaTable(config, exp, options, exp_cfg, targeton.seq, alt)
-        mt.to_csv(conn, meta_fp)
+        return mt.to_csv(conn, meta_fp)
     else:
         logging.warning(
             "No mutations for targeton '%s'!", targeton_name)
+        return OligoGenerationInfo()

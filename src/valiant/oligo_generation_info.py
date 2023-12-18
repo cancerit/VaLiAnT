@@ -16,10 +16,20 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, init=False)
 class OligoGenerationInfo:
     short_oligo_n: int
     long_oligo_n: int
+
+    def __init__(self) -> None:
+        self.short_oligo_n = 0
+        self.long_oligo_n = 0
+
+    def update(self, info: OligoGenerationInfo) -> None:
+        self.short_oligo_n += info.short_oligo_n
+        self.long_oligo_n += info.long_oligo_n

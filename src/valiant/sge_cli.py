@@ -35,6 +35,7 @@ from .loaders.experiment import ExperimentConfig
 from .loaders.fasta import open_fasta
 from .loaders.gtf import GtfLoader
 from .loaders.vcf_manifest import VcfManifest
+from .oligo_generation_info import OligoGenerationInfo
 from .pam_variant import PamVariant
 from .queries import insert_custom_variant_collection, insert_exons, insert_background_variants, insert_pam_protection_edits
 from .seq import Seq
@@ -204,12 +205,14 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         if config.vcf_fp:
             load_custom_variants(conn, config.vcf_fp, exp.contig, targeton_ranges)
 
+        stats = OligoGenerationInfo()
         for t in exp.targeton_configs:
             targeton = Targeton(targetons[t.ref.start], t)
             alt, _, _ = targeton.process(conn, options, codon_table, transcript)
 
             # Write metadata files
-            generate_metadata_table(conn, targeton, alt, config, exp_config, exp)
+            targeton_stats = generate_metadata_table(conn, targeton, alt, config, exp_config, exp)
+            stats.update(targeton_stats)
 
     # Write JSON configuration to file
     config.write(config.get_output_file_path(OUTPUT_CONFIG_FILE_NAME))
