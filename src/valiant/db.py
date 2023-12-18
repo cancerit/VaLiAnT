@@ -85,6 +85,7 @@ class DbFieldName(str, Enum):
     IN_CONST = 'in_const'
     REVC = 'revc'
     OLIGO = 'oligo'
+    MUTATION_TYPE = 'mutation_type'
 
     def _sql_op(self, op: str) -> str:
         return f"{self.value} {op} ?"
