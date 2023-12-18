@@ -36,7 +36,9 @@ select
     end, (
         lead((end - start + 1) % 3, -1, 0)
         over (order by exon_index)
-    ) as cds_prefix_length
+    ) as cds_prefix_length,
+    (end - start + 1) as length,
+    ((end - start + 1) / 3) as last_codon_index
 from exons;
 
 -- Background edits
