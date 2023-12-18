@@ -80,8 +80,9 @@ from v_meta
 """
 
 
-def _write_field(fh, value) -> None:
-    fh.write(value)
+def _write_field(fh, s: str | None) -> None:
+    if s:
+        fh.write(s)
     fh.write(',')
 
 
@@ -142,9 +143,7 @@ class MetaTable:
             self._write_header(fh)
 
             def wf(s: str | None) -> None:
-                if s:
-                    fh.write(s)
-                fh.write(',')
+                _write_field(fh, s)
 
             with cursor(conn) as cur:
                 it = cur.execute(SQL_SELECT)
