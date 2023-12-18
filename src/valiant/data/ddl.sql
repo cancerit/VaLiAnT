@@ -138,7 +138,8 @@ create table pattern_variants (
     codon_alt_a text,
     -- Amino acid change
     aa_ref text,
-    aa_alt text
+    aa_alt text,
+    mutation_type text
 );
 
 -- Map positions to reference
@@ -187,7 +188,8 @@ select
     cvc.name as vcf_alias,
     'custom' as mutator,
     tcv.in_const,
-    tcv.oligo
+    tcv.oligo,
+    null as mutation_type
 from targeton_custom_variants tcv
 left join custom_variants cv on cv.id = tcv.id
 left join custom_variant_collections cvc on cvc.id = cv.collection_id;
@@ -204,6 +206,7 @@ select
     s.mutator,
     s.in_const,
     s.oligo,
+    s.mutation_type,
     -- TODO: handle multiple guides
     si.name as sgrna_ids
 from (
@@ -226,7 +229,8 @@ from (
                 null as vcf_alias,
                 mutator,
                 0 as in_const,
-                oligo
+                oligo,
+                mutation_type
             from pattern_variants pv
             union all
             select * from v_meta_custom

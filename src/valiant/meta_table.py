@@ -76,6 +76,7 @@ select
     mutator,
     in_const,
     oligo,
+    mutation_type,
     sgrna_ids
 from v_meta
 """
@@ -99,6 +100,7 @@ class MetaRow:
     mutator: str
     in_const: int
     oligo: str
+    mutation_type: str
     sgrna_ids: str
 
 
@@ -231,8 +233,7 @@ class MetaTable:
                     wf(mr.alt_aa)
 
                     # mut_type
-                    # TODO
-                    wf('<MT>')
+                    wf(mr.mutation_type)
 
                     # mutator
                     wf(mr.mutator)

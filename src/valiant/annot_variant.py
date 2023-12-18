@@ -66,6 +66,7 @@ class AnnotVariant(Variant):
     def codon_start(self) -> int:
         return self.pos - self.codon_offset
 
+    @property
     def mutation_type(self) -> MutationType:
         return self.aa_ref.get_aa_change(self.aa_alt)
 

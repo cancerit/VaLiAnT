@@ -238,7 +238,8 @@ sql_insert_annot_pattern_variants = SqlQuery.get_insert_values(
         DbFieldName.CODON_REF_A,
         DbFieldName.CODON_ALT_A,
         DbFieldName.AA_REF,
-        DbFieldName.AA_ALT
+        DbFieldName.AA_ALT,
+        DbFieldName.MUTATION_TYPE
     ])
 
 
@@ -254,7 +255,8 @@ def insert_annot_pattern_variants(conn: Connection, vars: list[OligoSeq[AnnotVar
                 oligo.variant.codon_ref,
                 oligo.variant.codon_alt,
                 oligo.variant.aa_ref,
-                oligo.variant.aa_alt
+                oligo.variant.aa_alt,
+                oligo.variant.mutation_type.value
             )
             for oligo in vars
         ])
