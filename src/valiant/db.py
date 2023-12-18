@@ -32,7 +32,7 @@ class DbTableName(str, Enum):
     CUSTOM_VARIANTS = 'custom_variants'
     CUSTOM_VARIANT_COLLECTIONS = 'custom_variant_collections'
     SGRNA_IDS = 'sgrna_ids'
-    PATTERN_VARIANTS = 'pattern_variants'
+    PATTERN_VARIANTS = 'alt_pattern_variants'
     V_META = 'v_meta'
     MUTATIONS = 'mutations'
     TARGETON_CUSTOM_VARIANTS = 'targeton_custom_variants'

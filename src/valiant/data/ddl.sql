@@ -29,7 +29,7 @@ create table exons (
 create unique index exons_exon_index_idx on exons (exon_index);
 
 -- Compute the CDS prefix lengths
-create view if not exists v_exon_ext as
+create view v_exon_ext as
 select
     id,
     start,
@@ -120,7 +120,7 @@ PER TARGETON
 
 -- Pattern variants
 
-create table pattern_variants (
+create table alt_pattern_variants (
     id integer primary key,
     mutator text not null,
 
@@ -139,14 +139,42 @@ create table pattern_variants (
     -- Amino acid change
     aa_ref text,
     aa_alt text,
-    mutation_type text
+    mutation_type text  -- syn|mis|non
+);
+
+create table ref_pattern_variants (
+    id integer primary key references alt_pattern_variants (id),
+    start integer not null,
+    ref text not null,
+    alt text not null
 );
 
 -- Map positions to reference
-create view if not exists v_pattern_variants as
+create view v_alt_pattern_variants as
 select
-    *
-from pattern_variants pv;
+    v.*,
+    es.id as start_exon_id,
+    ((v.start - es.start - es.cds_prefix_length) / 3) as start_codon_index,
+    ee.id as end_exon_id,
+    ((v.end - es.start - es.cds_prefix_length) / 3) as end_codon_index
+from (
+    select
+        id,
+        mutator,
+        pos_a as start,
+        pos_a + min(0, length(ref_a) - 1) as end,
+        ref_a as ref,
+        alt_a as alt,
+        oligo,
+        codon_ref_a,
+        codon_alt_a,
+        aa_ref,
+        aa_alt,
+        mutation_type
+    from alt_pattern_variants
+) v
+left join v_exon_ext es on (v.start >= es.start and v.start <= es.end)
+left join v_exon_ext ee on (v.end >= ee.start and v.end <= ee.end);
 
 create table targeton_pam_protection_edits (
     id integer primary key references pam_protection_edits (id),
@@ -177,7 +205,22 @@ create table mutations (
     aa_alt text
 );
 
-create view if not exists v_meta_custom as
+create view v_meta_pattern as
+select
+    pos_a as ref_start,  -- pos_r?
+    ref_a as ref,
+    alt_a as alt,
+    aa_ref as ref_aa,
+    aa_alt as alt_aa,
+    null as vcf_var_id,
+    null as vcf_alias,
+    mutator,
+    0 as in_const,
+    oligo,
+    mutation_type
+from alt_pattern_variants;
+
+create view v_meta_custom as
 select
     cv.start as ref_start,
     cv.ref,
@@ -194,7 +237,7 @@ from targeton_custom_variants tcv
 left join custom_variants cv on cv.id = tcv.id
 left join custom_variant_collections cvc on cvc.id = cv.collection_id;
 
-create view if not exists v_meta as
+create view v_meta as
 select
     s.ref_start,
     s.ref,
@@ -219,19 +262,7 @@ from (
             v.*,
             v.ref_start + min(0, length(v.ref) - 1) as ref_end
         from (
-            select
-                pos_a as ref_start,  -- pos_r?
-                ref_a as ref,
-                alt_a as alt,
-                aa_ref as ref_aa,
-                aa_alt as alt_aa,
-                null as vcf_var_id,
-                null as vcf_alias,
-                mutator,
-                0 as in_const,
-                oligo,
-                mutation_type
-            from pattern_variants pv
+            select * from v_meta_pattern
             union all
             select * from v_meta_custom
         ) v
