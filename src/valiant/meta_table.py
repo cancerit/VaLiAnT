@@ -21,8 +21,10 @@ from sqlite3 import Connection
 from typing import ClassVar
 
 from .db import cursor
+from .enums import VariantType
 from .experiment_meta import ExperimentMeta
 from .loaders.experiment import ExperimentConfig
+from .mave_hgvs import get_mave_nt
 from .oligo_generation_info import OligoGenerationInfo
 from .options import Options
 from .seq import Seq
@@ -103,6 +105,19 @@ class MetaRow:
     mutation_type: str
     sgrna_ids: str
 
+    @property
+    def variant_type(self) -> VariantType:
+        has_ref = bool(self.ref)
+        has_alt = bool(self.alt)
+        if has_ref:
+            return (
+                VariantType.SUBSTITUTION if has_alt else
+                VariantType.DELETION
+            )
+        if has_alt:
+            return VariantType.INSERTION
+        raise ValueError("Invalid metadata row!")
+
 
 @dataclass
 class MetaTable:
@@ -152,6 +167,14 @@ class MetaTable:
                     mr = MetaRow(*r)
 
                     oligo = get_full_oligo(mr)
+
+                    # TODO: correct for PAM codons
+                    mave_nt = get_mave_nt(
+                        mr.pos,
+                        ref_range.start,
+                        mr.variant_type,
+                        mr.ref,
+                        mr.alt)
 
                     # Evaluate oligonucleotide length
 
@@ -255,8 +278,8 @@ class MetaTable:
                     wf(mr.sgrna_ids)
 
                     # mave_nt
-                    # TODO
-                    wf('<MV1>')
+                    # TODO: correct for PAM codons
+                    wf(mave_nt)
 
                     # mave_nt_ref
                     # TODO
