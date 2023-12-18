@@ -23,10 +23,10 @@ import sys
 import click
 
 from .constants import DEFAULT_OLIGO_MAX_LENGTH, DEFAULT_OLIGO_MIN_LENGTH, OUTPUT_CONFIG_FILE_NAME
-from .errors import InvalidConfig
 from .config import BaseConfig
+from .errors import InvalidConfig
+from .oligo_generation_info import OligoGenerationInfo
 from .main_config import get_main_config_from_config
-from .stats import Stats
 
 
 existing_file = click.Path(exists=True, file_okay=True, dir_okay=False)
@@ -91,13 +91,13 @@ def log_excluded_oligo_counts(config: BaseConfig, short_oligo_n: int, long_oligo
             (long_oligo_n, config.max_length))
 
 
-def finalise(config: BaseConfig, stats: Stats) -> None:
+def finalise(config: BaseConfig, stats: OligoGenerationInfo) -> None:
     """Common operations to be performed at the end independently of the execution mode"""
 
     # Log the count of oligonucleotides excluded by the length filter
     log_excluded_oligo_counts(config, stats.short_oligo_n, stats.long_oligo_n)
 
-    config_fp: str = os.path.join(config.output_dir, OUTPUT_CONFIG_FILE_NAME)
+    config_fp: str = config.get_output_file_path(OUTPUT_CONFIG_FILE_NAME)
 
     try:
 

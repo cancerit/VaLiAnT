@@ -150,15 +150,20 @@ class MetaTable:
                     mr = MetaRow(*r)
 
                     oligo = get_full_oligo(mr)
+
+                    # Evaluate oligonucleotide length
+
                     oligo_length = len(oligo)
 
                     if oligo_length < self.opt.oligo_min_length:
-                        info.short_oligo_n += 1
+                        info.too_short += 1
                         continue
 
                     if oligo_length > self.opt.oligo_max_length:
-                        info.long_oligo_n += 1
+                        info.too_long += 1
                         continue
+
+                    info.in_range += 1
 
                     # Write fields
 

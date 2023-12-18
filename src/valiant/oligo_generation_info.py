@@ -23,13 +23,24 @@ from dataclasses import dataclass
 
 @dataclass(slots=True, init=False)
 class OligoGenerationInfo:
-    short_oligo_n: int
-    long_oligo_n: int
+    too_short: int
+    in_range: int
+    too_long: int
+
+    @property
+    def short_oligo_n(self) -> int:
+        return self.too_short
+
+    @property
+    def long_oligo_n(self) -> int:
+        return self.too_long
 
     def __init__(self) -> None:
-        self.short_oligo_n = 0
-        self.long_oligo_n = 0
+        self.too_short = 0
+        self.in_range = 0
+        self.too_long = 0
 
     def update(self, info: OligoGenerationInfo) -> None:
-        self.short_oligo_n += info.short_oligo_n
-        self.long_oligo_n += info.long_oligo_n
+        self.too_short += info.too_short
+        self.in_range += info.in_range
+        self.too_long += info.too_long

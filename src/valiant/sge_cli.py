@@ -25,7 +25,7 @@ from pysam.libcfaidx import FastaFile
 from .annotation import Annotation
 from .codon_table import CodonTable
 from .codon_table_loader import load_codon_table_rows
-from .common_cli import common_params, existing_file
+from .common_cli import common_params, existing_file, finalise
 from .constants import OUTPUT_CONFIG_FILE_NAME
 from .contig_filter import ContigFilter
 from .custom_variant import CustomVariant
@@ -214,6 +214,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             targeton_stats = generate_metadata_table(conn, targeton, alt, config, exp_config, exp)
             stats.update(targeton_stats)
 
+    finalise(config, stats)
     # Write JSON configuration to file
     config.write(config.get_output_file_path(OUTPUT_CONFIG_FILE_NAME))
 
