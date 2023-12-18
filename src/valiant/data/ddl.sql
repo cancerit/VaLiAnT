@@ -162,7 +162,7 @@ from (
         id,
         mutator,
         pos_a as start,
-        pos_a + min(0, length(ref_a) - 1) as end,
+        pos_a + max(0, length(ref_a) - 1) as end,
         ref_a as ref,
         alt_a as alt,
         oligo,
@@ -260,7 +260,7 @@ from (
     from (
         select
             v.*,
-            v.ref_start + min(0, length(v.ref) - 1) as ref_end
+            v.ref_start + max(0, length(v.ref) - 1) as ref_end
         from (
             select * from v_meta_pattern
             union all
