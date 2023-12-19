@@ -100,6 +100,18 @@ create table exon_codon_ppes (
     primary key (exon_id, codon_index)
 );
 
+create view v_exon_codon_ppes as
+select
+    ecp.exon_id,
+    e.exon_index,
+    ecp.codon_index,
+    ecp.ppe_id,
+    ppe.start as ppe_start,
+    (ppe.start - e.start - e.cds_prefix_length) % 3 as codon_offset
+from exon_codon_ppes ecp
+left join v_exon_ext e on e.id = ecp.exon_id
+left join pam_protection_edits ppe on ppe.id = ecp.ppe_id;
+
 -- Custom variants
 
 create table custom_variant_collections (
@@ -243,6 +255,7 @@ left join custom_variant_collections cvc on cvc.id = cv.collection_id;
 create view v_meta as
 select
     s.ref_start,
+    s.ref_end,
     s.ref,
     s.alt,
     s.ref_aa,
@@ -254,9 +267,12 @@ select
     s.oligo,
     s.mutation_type,
     s.start_exon_index,
+    ecps.ppe_start as start_ppe_start,
     s.start_codon_index,
     s.end_exon_index,
-    s.end_codon_index, (
+    s.end_codon_index,
+    ecpe.ppe_start as end_ppe_start,
+    (
         select
             group_concat(z.name, ';')
         from (
@@ -298,4 +314,10 @@ from (
     ) w
     left join v_exon_ext es on (w.ref_start >= es.start and w.ref_start <= es.end)
     left join v_exon_ext ee on (w.ref_end >= ee.start and w.ref_end <= ee.end)
-) s;
+) s
+left join v_exon_codon_ppes ecps on
+    ecps.exon_index = s.start_exon_index and
+    ecps.codon_index = s.start_codon_index
+left join v_exon_codon_ppes ecpe on
+    ecpe.exon_index = s.end_exon_index and
+    ecpe.codon_index = s.end_codon_index;
