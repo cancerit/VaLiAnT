@@ -32,6 +32,7 @@ create unique index exons_exon_index_idx on exons (exon_index);
 create view v_exon_ext as
 select
     id,
+    exon_index,
     start,
     end, (
         lead((end - start + 1) % 3, -1, 0)
@@ -252,13 +253,39 @@ select
     s.in_const,
     s.oligo,
     s.mutation_type,
-    -- TODO: handle multiple guides
-    si.name as sgrna_ids
+    s.start_exon_index,
+    s.start_codon_index,
+    s.end_exon_index,
+    s.end_codon_index, (
+        select
+            group_concat(z.name, ';')
+        from (
+            select distinct si.name
+            from exon_codon_ppes ecp
+            left join exons e on e.id = ecp.exon_id
+            left join pam_protection_edit_sgrna_ids ppesi on
+                ppesi.var_ppe_id = ecp.ppe_id
+            left join sgrna_ids si on si.id = ppesi.sgrna_id
+            where
+                -- Start codon
+                (e.exon_index = s.start_exon_index and ecp.codon_index >= s.start_codon_index) or
+                -- End codon
+                (e.exon_index = s.end_exon_index and ecp.codon_index <= s.end_codon_index) or
+                -- In-between codons
+                (e.exon_index > s.start_exon_index and e.exon_index < s.end_exon_index)
+        ) z
+    ) as sgrna_ids
 from (
     select
         w.*,
-        e.id as exon_id,
-        ((w.ref_start - e.start - e.cds_prefix_length) / 3) as codon_index
+        es.id as start_exon_id,
+        es.exon_index as start_exon_index,
+        es.last_codon_index as start_last_codon_index,
+        ((w.ref_start - es.start - es.cds_prefix_length) / 3) as start_codon_index,
+        ee.id as end_exon_id,
+        ee.exon_index as end_exon_index,
+        ee.last_codon_index as end_last_codon_index,
+        ((w.ref_end - ee.start - ee.cds_prefix_length) / 3) as end_codon_index
     from (
         select
             v.*,
@@ -269,14 +296,6 @@ from (
             select * from v_meta_custom
         ) v
     ) w
-    left join v_exon_ext e on (
-        (w.ref_start >= e.start and w.ref_start <= e.end) or
-        (w.ref_end >= e.start and w.ref_end <= e.end)
-    )
-) s
-left join exon_codon_ppes ecp on
-    ecp.exon_id = s.exon_id and
-    ecp.codon_index = s.codon_index
-left join pam_protection_edit_sgrna_ids ppesi on
-    ppesi.var_ppe_id = ecp.ppe_id
-left join sgrna_ids si on si.id = ppesi.sgrna_id;
+    left join v_exon_ext es on (w.ref_start >= es.start and w.ref_start <= es.end)
+    left join v_exon_ext ee on (w.ref_end >= ee.start and w.ref_end <= ee.end)
+) s;
