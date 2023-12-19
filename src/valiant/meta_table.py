@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from sqlite3 import Connection
 from typing import ClassVar
 
+from .constants import REVCOMP_OLIGO_NAME_SUFFIX
 from .db import cursor
 from .enums import SrcType
 from .experiment_meta import ExperimentMeta
@@ -30,8 +31,9 @@ from .oligo_generation_info import OligoGenerationInfo
 from .options import Options
 from .seq import Seq
 from .sge_config import SGEConfig
-from .strings.dna_str import DnaStr
+from .strings.strand import Strand
 from .utils import bool_to_int_str
+from .variant import Variant
 
 
 META_CSV_FIELDS = [
@@ -74,6 +76,13 @@ def _write_field(fh, s: str | None) -> None:
     fh.write(',')
 
 
+def get_transcript_frag(gene_id: str | None, transcript_id: str | None) -> str:
+    return (
+        f"{transcript_id}.{gene_id}" if transcript_id and gene_id else
+        'NO_TRANSCRIPT'
+    )
+
+
 @dataclass(slots=True)
 class MetaTable:
     CSV_HEADER: ClassVar[str] = ','.join(META_CSV_FIELDS)
@@ -101,6 +110,10 @@ class MetaTable:
         ref_start = str(ref_range.start)
         ref_end = str(ref_range.end)
         pam_seq = self.alt_seq.s
+        gene_id = None
+        transcript_id = None
+
+        is_rc = self.opt.should_rc(Strand(strand))
 
         # TODO: generalise for cDNA support
         src_type = SrcType.REF.value
@@ -116,6 +129,12 @@ class MetaTable:
             """Compile the MAVE-HGVS string"""
 
             return get_mave_nt(pos, ref_range.start, v.type, ref, mr.alt)
+
+        def get_oligo_name(v: Variant) -> str:
+            tr_frag = get_transcript_frag(gene_id, transcript_id)
+            var_frag = v.get_oligo_name_frag()
+            rc = REVCOMP_OLIGO_NAME_SUFFIX if is_rc else ''
+            return f"{tr_frag}_{contig}:{var_frag}_{src_type}{rc}"
 
         with open(fp, 'w') as fh:
             self._write_header(fh)
@@ -135,6 +154,8 @@ class MetaTable:
 
                     pam_ref = v.ref
                     mave_nt = mave_nt_ref
+
+                    oligo_name = get_oligo_name(v)
 
                     if mr.overlaps_codon:
                         pam_range = mr.pam_ref_range
@@ -161,8 +182,7 @@ class MetaTable:
                     # Write fields
 
                     # oligo_name
-                    # TODO
-                    wf('<NAME>')
+                    wf(oligo_name)
 
                     # species
                     wf(species)
@@ -172,11 +192,11 @@ class MetaTable:
 
                     # gene_id
                     # TODO
-                    wf('<GID>')
+                    wf(gene_id)
 
                     # transcript_id
                     # TODO
-                    wf('<TID>')
+                    wf(transcript_id)
 
                     # src_type
                     wf(src_type)

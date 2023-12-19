@@ -18,9 +18,14 @@
 
 from dataclasses import dataclass
 
+from .strings.strand import Strand
+
 
 @dataclass(slots=True)
 class Options:
     revcomp_minus_strand: bool
     oligo_max_length: int
     oligo_min_length: int
+
+    def should_rc(self, strand: Strand) -> bool:
+        return self.revcomp_minus_strand and strand.is_minus

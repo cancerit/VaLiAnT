@@ -112,6 +112,22 @@ class Variant:
     def offset(self, offset: int) -> Variant:
         return replace(self, pos=self.pos + offset)
 
+    def get_oligo_name_frag(self) -> str:
+        pos_frag = (
+            str(self.pos) if self.ref_len == 1 else
+            f"{self.pos}_{self.ref_end}"
+        )
+
+        match self.type:
+            case VariantType.DELETION:
+                return f"{pos_frag}_{self.ref}"
+            case VariantType.SUBSTITUTION:
+                return f"{pos_frag}_{self.ref}>{self.alt}"
+            case VariantType.INSERTION:
+                return f"{pos_frag}_{self.alt}"
+            case VariantType.UNKNOWN:
+                raise ValueError("Unknown variant type!")
+
 
 @dataclass(slots=True)
 class RegisteredVariant(Variant):
