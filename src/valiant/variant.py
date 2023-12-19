@@ -19,11 +19,17 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from typing import NoReturn
 
 from .constants import NT_SNVS
+from .enums import VariantType
 from .strings.dna_str import DnaStr
 from .strings.nucleotide import Nucleotide
 from .uint_range import UIntRange
+
+
+def _raise_no_ref_alt() -> NoReturn:
+    raise ValueError("Invalid variant: both REF and ALT are null!")
 
 
 @dataclass(slots=True)
@@ -41,7 +47,7 @@ class Variant:
 
     def __post_init__(self) -> None:
         if not self.ref and not self.alt:
-            raise ValueError("Invalid variant: both REF and ALT are null!")
+            _raise_no_ref_alt()
 
     @property
     def ref_len(self) -> int:
@@ -62,6 +68,17 @@ class Variant:
     @property
     def ref_range(self) -> UIntRange:
         return UIntRange(self.pos, self.ref_end)
+
+    @property
+    def type(self) -> VariantType:
+        if self.ref:
+            return (
+                VariantType.SUBSTITUTION if self.alt else
+                VariantType.DELETION
+            )
+        if self.alt:
+            return VariantType.INSERTION
+        _raise_no_ref_alt()
 
     @classmethod
     def from_row(cls, pos: int, ref: str | None, alt: str | None):

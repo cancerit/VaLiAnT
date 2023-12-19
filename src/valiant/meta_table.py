@@ -120,6 +120,7 @@ class MetaTable:
                 it = cur.execute(sql_select_meta)
                 while r := it.fetchone():
                     mr = MetaRow(*r)
+                    v = mr.to_variant()
 
                     oligo = get_full_oligo(mr)
 
@@ -127,7 +128,7 @@ class MetaTable:
                     mave_nt = get_mave_nt(
                         mr.pos,
                         ref_range.start,
-                        mr.variant_type,
+                        v.type,
                         mr.ref,
                         mr.alt)
 

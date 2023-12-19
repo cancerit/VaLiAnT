@@ -18,7 +18,8 @@
 
 from dataclasses import dataclass
 
-from .enums import VariantType
+from .strings.dna_str import DnaStr
+from .variant import Variant
 
 
 sql_select_meta = """
@@ -62,15 +63,5 @@ class MetaRow:
     end_codon_index: int | None
     sgrna_ids: str
 
-    @property
-    def variant_type(self) -> VariantType:
-        has_ref = bool(self.ref)
-        has_alt = bool(self.alt)
-        if has_ref:
-            return (
-                VariantType.SUBSTITUTION if has_alt else
-                VariantType.DELETION
-            )
-        if has_alt:
-            return VariantType.INSERTION
-        raise ValueError("Invalid metadata row!")
+    def to_variant(self) -> Variant:
+        return Variant(self.pos, DnaStr(self.ref), DnaStr(self.alt))
