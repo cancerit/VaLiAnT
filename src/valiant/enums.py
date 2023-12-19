@@ -51,3 +51,8 @@ class VariantClassification(IntEnum):
 class ExecMode(str, Enum):
     SGE = 'sge'
     CDNA = 'cdna'
+
+
+class SrcType(str, Enum):
+    REF = 'ref'
+    CDNA = 'cdna'

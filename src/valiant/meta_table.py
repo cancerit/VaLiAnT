@@ -21,14 +21,16 @@ from sqlite3 import Connection
 from typing import ClassVar
 
 from .db import cursor
-from .enums import VariantType
+from .enums import SrcType
 from .experiment_meta import ExperimentMeta
 from .loaders.experiment import ExperimentConfig
 from .mave_hgvs import get_mave_nt
+from .meta_row import MetaRow, sql_select_meta
 from .oligo_generation_info import OligoGenerationInfo
 from .options import Options
 from .seq import Seq
 from .sge_config import SGEConfig
+from .strings.dna_str import DnaStr
 from .utils import bool_to_int_str
 
 
@@ -66,24 +68,6 @@ META_CSV_FIELDS = [
 ]
 
 
-SQL_SELECT = """
-select
-    ref_start,
-    ref,
-    alt,
-    ref_aa,
-    alt_aa,
-    vcf_var_id,
-    vcf_alias,
-    mutator,
-    in_const,
-    oligo,
-    mutation_type,
-    sgrna_ids
-from v_meta
-"""
-
-
 def _write_field(fh, s: str | None) -> None:
     if s:
         fh.write(s)
@@ -91,35 +75,6 @@ def _write_field(fh, s: str | None) -> None:
 
 
 @dataclass(slots=True)
-class MetaRow:
-    pos: int
-    ref: str
-    alt: str
-    ref_aa: str
-    alt_aa: str
-    vcf_var_id: str
-    vcf_alias: str
-    mutator: str
-    in_const: int
-    oligo: str
-    mutation_type: str
-    sgrna_ids: str
-
-    @property
-    def variant_type(self) -> VariantType:
-        has_ref = bool(self.ref)
-        has_alt = bool(self.alt)
-        if has_ref:
-            return (
-                VariantType.SUBSTITUTION if has_alt else
-                VariantType.DELETION
-            )
-        if has_alt:
-            return VariantType.INSERTION
-        raise ValueError("Invalid metadata row!")
-
-
-@dataclass
 class MetaTable:
     CSV_HEADER: ClassVar[str] = ','.join(META_CSV_FIELDS)
 
@@ -148,7 +103,7 @@ class MetaTable:
         pam_seq = self.alt_seq.s
 
         # TODO: generalise for cDNA support
-        src_type = 'ref'
+        src_type = SrcType.REF.value
 
         info = OligoGenerationInfo()
 
@@ -162,7 +117,7 @@ class MetaTable:
                 _write_field(fh, s)
 
             with cursor(conn) as cur:
-                it = cur.execute(SQL_SELECT)
+                it = cur.execute(sql_select_meta)
                 while r := it.fetchone():
                     mr = MetaRow(*r)
 
