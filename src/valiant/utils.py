@@ -110,3 +110,13 @@ def is_in_opt_range(r: UIntRange | None, pos: int) -> bool:
 
 def bool_to_int_str(x: bool) -> str:
     return '1' if x else '0'
+
+
+def clamp_non_negative(n: int) -> int:
+    return max(0, n)
+
+
+def get_end(start: int, length: int) -> int:
+    """Get inclusive end position given start and length"""
+
+    return start + clamp_non_negative(length - 1)

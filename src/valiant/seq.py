@@ -24,6 +24,7 @@ from typing import Sized
 from .int_pattern_builder import IntPatternBuilder
 from .strings.dna_str import DnaStr
 from .uint_range import UIntRange
+from .utils import get_end
 
 
 @dataclass(slots=True)
@@ -40,7 +41,7 @@ class Seq(Sized):
 
     @property
     def end(self) -> int:
-        return self.start + max(0, len(self) - 1)
+        return get_end(self.start, len(self))
 
     def get_range(self) -> UIntRange:
         return UIntRange(self.start, self.end)

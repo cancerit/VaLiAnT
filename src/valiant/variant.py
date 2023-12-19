@@ -26,6 +26,7 @@ from .enums import VariantType
 from .strings.dna_str import DnaStr
 from .strings.nucleotide import Nucleotide
 from .uint_range import UIntRange
+from .utils import get_end
 
 
 def _raise_no_ref_alt() -> NoReturn:
@@ -63,7 +64,7 @@ class Variant:
 
     @property
     def ref_end(self) -> int:
-        return self.pos + max(0, self.ref_len - 1)
+        return get_end(self.pos, self.ref_len)
 
     @property
     def ref_range(self) -> UIntRange:
