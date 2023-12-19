@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from sqlite3 import Connection
 from typing import ClassVar
 
+from .annotation import Annotation
 from .constants import REVCOMP_OLIGO_NAME_SUFFIX
 from .db import cursor
 from .enums import SrcType
@@ -94,6 +95,7 @@ class MetaTable:
     exp_cfg: ExperimentConfig
     seq: Seq
     alt_seq: Seq
+    annot: Annotation | None
 
     def _write_header(self, fh) -> None:
         fh.write(self.CSV_HEADER)
@@ -110,8 +112,12 @@ class MetaTable:
         ref_start = str(ref_range.start)
         ref_end = str(ref_range.end)
         pam_seq = self.alt_seq.s
+
         gene_id = None
         transcript_id = None
+        if self.annot:
+            transcript_id = self.annot.transcript_id
+            gene_id = self.annot.gene_id
 
         is_rc = self.opt.should_rc(Strand(strand))
 

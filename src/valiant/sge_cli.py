@@ -211,7 +211,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             alt, _, _ = targeton.process(conn, options, codon_table, transcript)
 
             # Write metadata files
-            targeton_stats = generate_metadata_table(conn, targeton, alt, config, exp_config, exp)
+            targeton_stats = generate_metadata_table(conn, targeton, alt, config, exp_config, exp, annot)
             stats.update(targeton_stats)
 
     finalise(config, stats)

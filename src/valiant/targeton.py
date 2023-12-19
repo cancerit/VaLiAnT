@@ -23,6 +23,7 @@ from sqlite3 import Connection
 from typing import Callable
 
 from .annot_variant import AnnotVariant
+from .annotation import Annotation
 from .codon_table import CodonTable
 from .experiment_meta import ExperimentMeta
 from .loaders.experiment import ExperimentConfig
@@ -226,14 +227,15 @@ def generate_metadata_table(
     alt: Seq,
     config: SGEConfig,
     exp: ExperimentMeta,
-    exp_cfg: ExperimentConfig
+    exp_cfg: ExperimentConfig,
+    annot: Annotation | None
 ) -> OligoGenerationInfo:
     targeton_name = targeton.config.name
     if not is_meta_table_empty(conn):
         meta_fn = f"{targeton_name}_meta.csv"
         meta_fp = config.get_output_file_path(meta_fn)
         options = config.get_options()
-        mt = MetaTable(config, exp, options, exp_cfg, targeton.seq, alt)
+        mt = MetaTable(config, exp, options, exp_cfg, targeton.seq, alt, annot)
         return mt.to_csv(conn, meta_fp)
     else:
         logging.warning(
