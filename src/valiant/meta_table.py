@@ -130,11 +130,11 @@ class MetaTable:
 
             return get_mave_nt(pos, ref_range.start, v.type, ref, mr.alt)
 
-        def get_oligo_name(v: Variant) -> str:
+        def get_oligo_name(src: str, v: Variant) -> str:
             tr_frag = get_transcript_frag(gene_id, transcript_id)
             var_frag = v.get_oligo_name_frag()
             rc = REVCOMP_OLIGO_NAME_SUFFIX if is_rc else ''
-            return f"{tr_frag}_{contig}:{var_frag}_{src_type}{rc}"
+            return f"{tr_frag}_{contig}:{var_frag}_{src}{rc}"
 
         with open(fp, 'w') as fh:
             self._write_header(fh)
@@ -155,7 +155,8 @@ class MetaTable:
                     pam_ref = v.ref
                     mave_nt = mave_nt_ref
 
-                    oligo_name = get_oligo_name(v)
+                    src = mr.vcf_alias or mr.mutator
+                    oligo_name = get_oligo_name(src, v)
 
                     if mr.overlaps_codon:
                         pam_range = mr.pam_ref_range
