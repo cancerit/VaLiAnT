@@ -133,16 +133,16 @@ class MetaTable:
 
                     mave_nt_ref = get_mave_hgvs(v.pos, v.ref)
 
-                    if mr.overlaps_codon:
-                        # Correct REF and start position in PAM protected codons
-                        pam_range = mr.pam_ref_range
-                        # TODO: retrieve from altered targeton sequence
-                        pam_ref = v.ref
-                        mave_nt = get_mave_hgvs(pam_range.start, pam_ref)
+                    pam_ref = v.ref
+                    mave_nt = mave_nt_ref
 
-                    else:
-                        pam_ref = v.ref
-                        mave_nt = mave_nt_ref
+                    if mr.overlaps_codon:
+                        pam_range = mr.pam_ref_range
+                        if pam_range.start != v.pos or pam_range.end != v.ref_end:
+
+                            # Correct REF and start position in PAM protected codons
+                            pam_ref = self.alt_seq.substr(pam_range, rel=False)
+                            mave_nt = get_mave_hgvs(pam_range.start, pam_ref)
 
                     # Evaluate oligonucleotide length
 
