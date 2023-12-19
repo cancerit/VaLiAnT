@@ -19,12 +19,14 @@
 from dataclasses import dataclass
 
 from .strings.dna_str import DnaStr
+from .uint_range import UIntRange
 from .variant import Variant
 
 
 sql_select_meta = """
 select
     ref_start,
+    ref_end,
     ref,
     alt,
     ref_aa,
@@ -37,8 +39,10 @@ select
     mutation_type,
     start_exon_index,
     start_codon_index,
+    start_ppe_start,
     end_exon_index,
     end_codon_index,
+    end_ppe_start,
     sgrna_ids
 from v_meta
 """
@@ -47,6 +51,7 @@ from v_meta
 @dataclass(slots=True)
 class MetaRow:
     pos: int
+    end: int
     ref: str
     alt: str
     ref_aa: str
@@ -59,9 +64,34 @@ class MetaRow:
     mutation_type: str
     start_exon_index: int | None
     start_codon_index: int | None
+    start_ppe_start: int | None
     end_exon_index: int | None
     end_codon_index: int | None
+    end_ppe_start: int | None
     sgrna_ids: str
 
     def to_variant(self) -> Variant:
         return Variant(self.pos, DnaStr(self.ref), DnaStr(self.alt))
+
+    @property
+    def overlaps_codon(self) -> bool:
+        return (
+            self.start_exon_index is not None or
+            self.end_exon_index is not None
+        )
+
+    @property
+    def pam_ref_start(self) -> int:
+        if self.start_ppe_start is None:
+            return self.pos
+        return min(self.pos, self.start_ppe_start)
+
+    @property
+    def pam_ref_end(self) -> int:
+        if self.end_ppe_start is None:
+            return self.end
+        return max(self.end, self.end_ppe_start)
+
+    @property
+    def pam_ref_range(self) -> UIntRange:
+        return UIntRange(self.pam_ref_start, self.pam_ref_end)

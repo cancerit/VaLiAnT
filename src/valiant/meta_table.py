@@ -108,7 +108,14 @@ class MetaTable:
         info = OligoGenerationInfo()
 
         def get_full_oligo(mr: MetaRow) -> str:
+            """Add the adaptors to the oligonucleotide sequence"""
+
             return f"{self.cfg.adaptor_5}{mr.oligo}{self.cfg.adaptor_3}"
+
+        def get_mave_hgvs(pos: int, ref: str) -> str:
+            """Compile the MAVE-HGVS string"""
+
+            return get_mave_nt(pos, ref_range.start, v.type, ref, mr.alt)
 
         with open(fp, 'w') as fh:
             self._write_header(fh)
@@ -124,13 +131,18 @@ class MetaTable:
 
                     oligo = get_full_oligo(mr)
 
-                    # TODO: correct for PAM codons
-                    mave_nt = get_mave_nt(
-                        mr.pos,
-                        ref_range.start,
-                        v.type,
-                        mr.ref,
-                        mr.alt)
+                    mave_nt_ref = get_mave_hgvs(v.pos, v.ref)
+
+                    if mr.overlaps_codon:
+                        # Correct REF and start position in PAM protected codons
+                        pam_range = mr.pam_ref_range
+                        # TODO: retrieve from altered targeton sequence
+                        pam_ref = v.ref
+                        mave_nt = get_mave_hgvs(pam_range.start, pam_ref)
+
+                    else:
+                        pam_ref = v.ref
+                        mave_nt = mave_nt_ref
 
                     # Evaluate oligonucleotide length
 
@@ -200,10 +212,10 @@ class MetaTable:
                     wf(str(mr.pos))
 
                     # ref
-                    wf(mr.ref)
+                    wf(pam_ref)
 
                     # new
-                    wf(mr.alt)
+                    wf(v.alt)
 
                     # ref_aa
                     wf(mr.ref_aa)
@@ -234,12 +246,11 @@ class MetaTable:
                     wf(mr.sgrna_ids)
 
                     # mave_nt
-                    # TODO: correct for PAM codons
                     wf(mave_nt)
 
                     # mave_nt_ref
                     # TODO
-                    wf('<MV2>')
+                    wf(mave_nt_ref)
 
                     # vcf_var_in_const
                     fh.write(str(mr.in_const))
