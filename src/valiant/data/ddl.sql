@@ -276,19 +276,16 @@ select
         select
             group_concat(z.name, ';')
         from (
+            -- Filter PPE's by position
             select distinct si.name
-            from exon_codon_ppes ecp
-            left join exons e on e.id = ecp.exon_id
+            from pam_protection_edits ppe
             left join pam_protection_edit_sgrna_ids ppesi on
-                ppesi.var_ppe_id = ecp.ppe_id
-            left join sgrna_ids si on si.id = ppesi.sgrna_id
+                ppesi.var_ppe_id = ppe.id
+            left join sgrna_ids si on
+                si.id = ppesi.sgrna_id
             where
-                -- Start codon
-                (e.exon_index = s.start_exon_index and ecp.codon_index >= s.start_codon_index) or
-                -- End codon
-                (e.exon_index = s.end_exon_index and ecp.codon_index <= s.end_codon_index) or
-                -- In-between codons
-                (e.exon_index > s.start_exon_index and e.exon_index < s.end_exon_index)
+                ppe.start >= ifnull(ecps.ppe_start, s.ref_start) and
+                ppe.start <= ifnull(ecpe.ppe_start, s.ref_end)
         ) z
     ) as sgrna_ids
 from (
