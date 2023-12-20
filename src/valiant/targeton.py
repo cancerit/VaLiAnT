@@ -55,8 +55,7 @@ class InvalidTargetonRegion(Exception):
 
 def get_targeton_region_exon_id(conn: Connection, r: UIntRange) -> int | None:
     exons = select_exons_in_range(conn, r.start, r.end)
-    en: int = len(exons)
-    match en:
+    match len(exons):
         case 0:
             return None
         case 1:
