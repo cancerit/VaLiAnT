@@ -32,7 +32,7 @@ class IntPatternBuilder:
 
     def build(self, start: int, length: int) -> list[int]:
         s = start + self.offset
-        return list(range(s, s + length + 1 - self.span, self.span))
+        return list(range(s, s + length + 1 - self.span + 1, self.span))
 
     def get_range(self, start: int) -> UIntRange:
         return UIntRange.from_length(start, self.span)
