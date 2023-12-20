@@ -23,9 +23,7 @@ import click
 from pysam.libcfaidx import FastaFile
 
 from .annotation import Annotation
-from .codon_table import CodonTable
-from .codon_table_loader import load_codon_table_rows
-from .common_cli import common_params, existing_file, finalise
+from .common_cli import common_params, existing_file, finalise, load_codon_table
 from .constants import OUTPUT_CONFIG_FILE_NAME
 from .contig_filter import ContigFilter
 from .custom_variant import CustomVariant
@@ -44,7 +42,7 @@ from .strings.dna_str import DnaStr
 from .targeton import Targeton, generate_metadata_table
 from .transcript_seq import TranscriptSeq
 from .uint_range import UIntRange
-from .utils import get_default_codon_table_path, get_ddl_path
+from .utils import get_ddl_path
 
 
 def fetch_sequence(fa: FastaFile, contig: str, r: UIntRange) -> Seq:
@@ -148,15 +146,12 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         config.min_length,
         config.max_length)
 
-    # Load codon table
-    if not config.codon_table_fp:
-        logging.info(
-            "Codon table not specified, the default one will be used.")
-    codon_table = CodonTable.from_list(load_codon_table_rows(
-        config.codon_table_fp or get_default_codon_table_path()))
-
     # Load experiment configuration
     exp = ExperimentConfig.load(config.oligo_info_fp)
+
+    # Load codon table
+    codon_table = load_codon_table(config, exp.strand)
+
     targeton_ranges = exp.ref_ranges
 
     # Load annotation

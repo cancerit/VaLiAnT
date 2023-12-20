@@ -21,6 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from ..loaders.targeton_config import TargetonConfig, CSV_HEADER
+from ..strings.strand import Strand
 from ..uint_range import UIntRange
 from .csv import load_csv
 
@@ -28,7 +29,7 @@ from .csv import load_csv
 @dataclass(slots=True)
 class ExperimentConfig:
     contig: str
-    strand: str
+    strand: Strand
     targeton_configs: list[TargetonConfig]
 
     @classmethod

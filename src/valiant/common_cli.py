@@ -16,17 +16,21 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from functools import wraps
 import logging
-import os
 import sys
+from functools import wraps
+
 import click
 
-from .constants import DEFAULT_OLIGO_MAX_LENGTH, DEFAULT_OLIGO_MIN_LENGTH, OUTPUT_CONFIG_FILE_NAME
+from .codon_table import CodonTable
+from .codon_table_loader import load_codon_table_rows
 from .config import BaseConfig
+from .constants import DEFAULT_OLIGO_MAX_LENGTH, DEFAULT_OLIGO_MIN_LENGTH, OUTPUT_CONFIG_FILE_NAME
 from .errors import InvalidConfig
-from .oligo_generation_info import OligoGenerationInfo
 from .main_config import get_main_config_from_config
+from .oligo_generation_info import OligoGenerationInfo
+from .strings.strand import Strand
+from .utils import get_default_codon_table_path
 
 
 existing_file = click.Path(exists=True, file_okay=True, dir_okay=False)
@@ -74,6 +78,15 @@ def common_params(f):
             sys.exit(1)
 
     return wrapper
+
+
+def load_codon_table(config: BaseConfig, strand: Strand) -> CodonTable:
+    if not config.codon_table_fp:
+        logging.info(
+            "Codon table not specified, the default one will be used.")
+    return CodonTable.from_list(load_codon_table_rows(
+        config.codon_table_fp or get_default_codon_table_path()),
+        rc=strand.is_minus)
 
 
 def log_excluded_oligo_counts(config: BaseConfig, short_oligo_n: int, long_oligo_n: int) -> None:
