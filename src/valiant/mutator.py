@@ -146,6 +146,8 @@ class MutatorCollection:
             nam = self.get_non_cds_mutators(exclude_annotable=True)
             av = self._get_annotated_variants(codon_table, seq)
         else:
+            if self.cds_mutators:
+                raise ValueError("CDS-only mutators assigned to non-CDS region!")
             nam = self.get_non_cds_mutators(exclude_annotable=False)
             av = []
 
