@@ -270,7 +270,10 @@ def insert_enum(conn: Connection, t: DbTableName, cls) -> None:
 
 
 sql_select_exons_in_range = """
-select exon_index
+select
+    exon_index,
+    start,
+    end
 from exons
 where
     (start >= ? and start <= ?) or
@@ -278,10 +281,10 @@ where
 """
 
 
-def select_exons_in_range(conn: Connection, start: int, end: int) -> list[int]:
+def select_exons_in_range(conn: Connection, start: int, end: int) -> list[tuple[int, UIntRange]]:
     with cursor(conn) as cur:
         return [
-            r[0]
+            (r[0], UIntRange(r[1], r[2]))
             for r in cur.execute(
                 sql_select_exons_in_range,
                 (start, end, start, end)).fetchall()

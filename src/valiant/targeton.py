@@ -47,16 +47,25 @@ from .variant_group import VariantGroup
 GetVariantsInRangeCallable = Callable[[Connection, UIntRange], list[RegisteredVariant]]
 
 
+class InvalidTargetonRegion(Exception):
+    def __init__(self, msg: str) -> None:
+        super().__init__()
+        self.msg = f"Invalid targeton region: {msg}!"
+
+
 def get_targeton_region_exon_id(conn: Connection, r: UIntRange) -> int | None:
-    exon_ids = select_exons_in_range(conn, r.start, r.end)
-    en: int = len(exon_ids)
+    exons = select_exons_in_range(conn, r.start, r.end)
+    en: int = len(exons)
     match en:
         case 0:
             return None
         case 1:
-            return exon_ids[0]
+            exon_id, exon_range = exons[0]
+            if r not in exon_range:
+                raise InvalidTargetonRegion("contains both exonic and intronic sequences")
+            return exon_id
         case _:
-            raise ValueError("Invalid targeton region: overlaps multiple exons!")
+            raise InvalidTargetonRegion("overlaps multiple exons")
 
 
 def get_pattern_variants_from_region(
@@ -67,11 +76,8 @@ def get_pattern_variants_from_region(
     region: UIntRange,
     mc: MutatorCollection
 ) -> tuple[list[PatternVariant], list[AnnotVariant]]:
-    # TODO: SNV's should be annotated for amino acid changes
-    # TODO: assign partial codons when interacting with PPE's
-    # TODO: assign sgRNA ID's based on PPE's
 
-    # Get overlapping exon ID's
+    # Get overlapping exon ID
     exon_id = get_targeton_region_exon_id(conn, region)
     is_cds = exon_id is not None
 
