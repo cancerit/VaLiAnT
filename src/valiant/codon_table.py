@@ -74,6 +74,17 @@ class CodonTable:
             if syn_codon != codon
         ]
 
+    def get_codon_at(self, aa: TranslationSymbol, i: int) -> Codon | None:
+        assert i >= 0
+        codons = self.get_codons(aa)
+        return codons[i] if i < len(codons) else None
+
+    def get_second_best_codon(self, aa: TranslationSymbol) -> Codon | None:
+        """Get second highest-ranking (most frequent) codon translating to an amino acid"""
+
+        # Assumption: aa_to_codons has its values (codons) sorted by rank
+        return self.get_codon_at(aa, 1)
+
     def get_top_codon(self, aa: TranslationSymbol) -> Codon:
         """Get highest-ranking (most frequent) codon translating to an amino acid"""
 

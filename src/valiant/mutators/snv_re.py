@@ -24,6 +24,7 @@ from ..codon_table import CodonTable
 from ..constants import STOP
 from ..enums import MutationType
 from ..mutator_type import MutatorType
+from ..strings.codon import Codon
 from ..strings.dna_str import DnaStr
 from ..strings.translation_symbol import TranslationSymbol
 from ..variant import Variant
@@ -35,16 +36,25 @@ def snv_to_snvres(codon_table: CodonTable, snv: AnnotVariant) -> list[Variant]:
     def get_snvre(x: str) -> Variant:
         return Variant(snv.codon_start, DnaStr(snv.codon_ref), DnaStr(x))
 
-    mt = snv.mutation_type
-    alts = (
-        codon_table.get_synonymous_codons(snv.codon_ref) if mt == MutationType.SYNONYMOUS else [
-            codon_table.get_top_codon(
-                snv.aa_alt if mt == MutationType.MISSENSE else
-                TranslationSymbol(STOP)  # NONSENSE
-            )
-        ])
+    def get_top_diff_codon(c: Codon, x: TranslationSymbol) -> Codon | None:
+        """Return highest ranking codon other than the input codon"""
 
-    return list(map(get_snvre, alts))
+        top_codon = codon_table.get_top_codon(x)
+        return (
+            codon_table.get_second_best_codon(x) if top_codon == c else
+            top_codon
+        )
+
+    def get_alt_codons() -> list[Codon]:
+        match snv.mutation_type:
+            case MutationType.SYNONYMOUS:
+                return codon_table.get_synonymous_codons(snv.codon_ref)
+            case MutationType.MISSENSE | MutationType.NONSENSE:
+                codon = get_top_diff_codon(snv.codon_ref, snv.aa_alt)
+                return [codon] if codon else []
+
+    alts = get_alt_codons()
+    return list(map(get_snvre, alts)) if alts else []
 
 
 @dataclass(frozen=True, init=False, slots=True)
