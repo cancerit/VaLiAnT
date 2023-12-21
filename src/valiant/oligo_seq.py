@@ -20,14 +20,11 @@ from __future__ import annotations
 
 from collections.abc import Sized
 from dataclasses import dataclass
-from typing import Generic, TypeVar
+from typing import Generic
 
 from .strings.dna_str import DnaStr
 from .seq import Seq
-from .variant import Variant
-
-
-VariantT = TypeVar('VariantT', bound=Variant)
+from .variant import Variant, VariantT
 
 
 def alter_seq(seq: Seq, variant: Variant) -> Seq:

@@ -19,7 +19,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import NoReturn
+from typing import NoReturn, TypeVar
 
 from .constants import NT_SNVS
 from .enums import VariantType
@@ -140,3 +140,6 @@ class Variant:
 @dataclass(slots=True)
 class RegisteredVariant(Variant):
     id: int
+
+
+VariantT = TypeVar('VariantT', bound=Variant)
