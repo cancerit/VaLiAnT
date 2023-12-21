@@ -20,11 +20,12 @@ from __future__ import annotations
 
 from collections.abc import Sized
 from dataclasses import dataclass
+from typing import Generic
 
 from .oligo_seq import alter_seq
 from .seq import Seq
 from .uint_range import UIntRange
-from .variant import RegisteredVariant, Variant
+from .variant import Variant, VariantT
 
 
 class InvalidVariantRef(Exception):
@@ -42,11 +43,11 @@ def check_ref(ref_seq: Seq, variant: Variant) -> None:
 
 
 @dataclass(frozen=True, slots=True)
-class VariantGroup(Sized):
-    variants: list[RegisteredVariant]
+class VariantGroup(Sized, Generic[VariantT]):
+    variants: list[VariantT]
 
     @classmethod
-    def from_variants(cls, variants: list[RegisteredVariant]):
+    def from_variants(cls, variants: list[VariantT]):
         return cls(sorted(variants, key=lambda x: x.pos))
 
     def __len__(self) -> int:
@@ -56,11 +57,17 @@ class VariantGroup(Sized):
     def is_empty(self):
         return len(self) == 0
 
-    def apply(self, ref_seq: Seq, ref_check: bool = False) -> tuple[Seq, list[RegisteredVariant]]:
+    def apply_no_offset(self, ref_seq: Seq) -> Seq:
+        alt_seq: Seq = ref_seq.clone()
+        for variant in self.variants:
+            alt_seq = alter_seq(alt_seq, variant)
+        return alt_seq
+
+    def apply(self, ref_seq: Seq, ref_check: bool = False) -> tuple[Seq, list[VariantT]]:
         alt_seq: Seq = ref_seq.clone()
         alt_offset: int = 0
-        alt_vars: list[RegisteredVariant] = []
-        offset_variant: RegisteredVariant
+        alt_vars: list[VariantT] = []
+        offset_variant: VariantT
 
         for variant in self.variants:
 

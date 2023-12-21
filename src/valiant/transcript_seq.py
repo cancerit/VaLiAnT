@@ -18,7 +18,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+
+from valiant.variant import Variant
+from valiant.variant_group import VariantGroup
 
 from .cds_seq import CdsSeq
 from .exon import Exon
@@ -39,6 +42,7 @@ class TranscriptSeq(SeqCollection):
 
     @classmethod
     def from_exons(cls, strand: str, seqs: list[Seq], exons: list[Exon]) -> TranscriptSeq:
+        assert len(exons) == len(seqs)
         return cls(seqs, Strand(strand), {
             e.index: e
             for e in exons
@@ -47,8 +51,14 @@ class TranscriptSeq(SeqCollection):
     def get_exon(self, exon_index: int) -> Exon:
         return self.exons[exon_index]
 
+    def _get_compl_index(self, i: int) -> int:
+        return len(self.seqs) - i - 1
+
     def get_exon_seq_index(self, exon_index: int) -> int:
-        return exon_index if self.strand.is_plus else (self.exon_count - exon_index - 1)
+        return exon_index if self.strand.is_plus else self._get_compl_index(exon_index)
+
+    def get_exon_index_from_seq_index(self, seq_index: int) -> int:
+        return seq_index if self.strand.is_plus else self._get_compl_index(seq_index)
 
     def get_codon_offset(self, exon_index: int, pos: int) -> int:
         return self.get_exon(exon_index).get_codon_offset(self.strand, pos)
@@ -70,3 +80,24 @@ class TranscriptSeq(SeqCollection):
     def get_as_cds_seq(self, i: int, r: UIntRange, before: int = 0, after: int = 0) -> CdsSeq:
         a, b, c = self.split_substr(i, r, before=before, after=after)
         return CdsSeq(r.start, b, a, c)
+
+    def alter(self, exon_ppes: dict[int, VariantGroup[Variant]]) -> TranscriptSeq:
+        # TODO: apply background variants as well
+
+        def alter_exon(seq_index: int) -> Seq:
+            exon_index = self.get_exon_index_from_seq_index(seq_index)
+            seq = self.seqs[seq_index]
+
+            return (
+                exon_ppes[exon_index].apply_no_offset(
+                    self.seqs[seq_index]) if exon_index in exon_ppes else
+                seq
+            )
+
+        alt_seqs = [
+            alter_exon(i)
+            for i in range(len(self.seqs))
+        ]
+
+        # TODO: alter the exon ranges as well after applying background variants
+        return replace(self, seqs=alt_seqs)

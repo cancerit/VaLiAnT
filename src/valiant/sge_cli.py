@@ -35,7 +35,7 @@ from .loaders.gtf import GtfLoader
 from .loaders.vcf_manifest import VcfManifest
 from .oligo_generation_info import OligoGenerationInfo
 from .pam_variant import PamVariant
-from .queries import insert_custom_variant_collection, insert_exons, insert_background_variants, insert_pam_protection_edits
+from .queries import insert_custom_variant_collection, insert_exons, insert_background_variants, insert_pam_protection_edits, select_exon_ppes
 from .seq import Seq
 from .sge_config import SGEConfig
 from .strings.dna_str import DnaStr
@@ -195,6 +195,12 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
         if config.pam_fp:
             load_pam_variants(conn, config.pam_fp, exp.contig, targeton_ranges)
+
+        if transcript:
+            # TODO: filter background variants as well
+            exon_ppes = select_exon_ppes(conn)
+
+            transcript = transcript.alter(exon_ppes)
 
         # Load custom variants (targetons)
         if config.vcf_fp:

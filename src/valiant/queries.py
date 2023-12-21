@@ -21,17 +21,16 @@ from sqlite3 import Connection, Cursor
 
 from .annot_variant import AnnotVariant
 from .custom_variant import CustomVariant
-from .db import PER_TARGETON_TABLES, cursor, DbTableName, DbFieldName, get_csv_header, select_to_csv
-from .exon import Exon
-from .experiment_meta import ExperimentMeta
+from .db import PER_TARGETON_TABLES, cursor, DbTableName, DbFieldName
+from .exon import Exon, RegisteredExon
 from .oligo_seq import OligoSeq
-from .options import Options
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
 from .sql_gen import SqlQuery, SqlScript, get_multi_range_check
 from .uint_range import UIntRange
-from .utils import bool_to_int_str, get_enum_values
-from .variant import RegisteredVariant
+from .utils import get_enum_values, safe_group_by
+from .variant import RegisteredVariant, Variant
+from .variant_group import VariantGroup
 from .variant_select import VariantSelectStart
 
 
@@ -185,6 +184,30 @@ def insert_pam_protection_edits(conn: Connection, vars: list[PamVariant]) -> Non
 
         # Assign exon ID's and codon indices to the PPE's
         cur.execute(sql_insert_exon_codon_ppes)
+
+
+sql_select_exon_ppes = """
+select
+    exon_index,
+    start,
+    ref,
+    alt
+from v_exon_ppes
+"""
+
+def select_exon_ppes(conn: Connection) -> dict[int, VariantGroup[Variant]]:
+    """Map exon indices to PPE's"""
+
+    with cursor(conn) as cur:
+        res = cur.execute(sql_select_exon_ppes).fetchall()
+
+    return {
+        x: VariantGroup.from_variants([
+            Variant(*t[1:])
+            for t in y
+        ])
+        for x, y in safe_group_by(res, lambda r: r[0])
+    }
 
 
 # TODO: consider start positions get offset as they go...
