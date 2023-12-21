@@ -112,6 +112,17 @@ from exon_codon_ppes ecp
 left join v_exon_ext e on e.id = ecp.exon_id
 left join pam_protection_edits ppe on ppe.id = ecp.ppe_id;
 
+create view v_exon_ppes as
+select
+    e.exon_index,
+    ppe.start,
+    ppe.ref,
+    ppe.alt
+from pam_protection_edits ppe
+inner join exons e on
+    ppe.start >= e.start and
+    ppe.start <= e.end;
+
 -- Custom variants
 
 create table custom_variant_collections (
