@@ -87,6 +87,12 @@ class MutatorCollection:
             )
         ]
 
+    def get_non_annotable_cds_mutators(self) -> list[BaseMutator]:
+        return [
+            m for m in self.mutators
+            if m.TYPE == MutatorType.IN_FRAME
+        ]
+
     @property
     def cds_mutators(self) -> list[BaseMutator]:
         return [m for m in self.mutators if m.TYPE in CDS_MUTATOR_TYPES]
@@ -143,7 +149,10 @@ class MutatorCollection:
 
     def get_variants(self, codon_table: CodonTable, seq: Seq) -> tuple[list[PatternVariant], list[AnnotVariant]]:
         if isinstance(seq, CdsSeq):
-            nam = self.get_non_cds_mutators(exclude_annotable=True)
+            nam = [
+                *self.get_non_cds_mutators(exclude_annotable=True),
+                *self.get_non_annotable_cds_mutators()
+            ]
             av = self._get_annotated_variants(codon_table, seq)
         else:
             if self.cds_mutators:

@@ -28,13 +28,21 @@ from ..strings.codon import Codon
 from ..strings.dna_str import DnaStr
 from ..strings.translation_symbol import TranslationSymbol
 from ..variant import Variant
-from . import BaseCdsMutator
+from . import BaseCdsMutator, BaseMutator
 from .utils import get_variant_from_ref
 
 
 # Translation symbols
 ala = TranslationSymbol('A')
 stop = TranslationSymbol(STOP)
+
+
+def get_codon_replacements(seq: CdsSeq, m: BaseMutator, value: Codon | None) -> list[Variant]:
+    alt = DnaStr(value or '')
+    return [
+        get_variant_from_ref(ref, alt)
+        for ref in m.get_refs(seq, r=seq.get_inner_cds_range())
+    ]
 
 
 @dataclass(frozen=True)
@@ -44,11 +52,7 @@ class CodonMutator(BaseCdsMutator, ABC):
         super().__init__(pt_codon)
 
     def _get_codon_replacements(self, seq: CdsSeq, value: Codon | None) -> list[Variant]:
-        alt = DnaStr(value or '')
-        return [
-            get_variant_from_ref(ref, alt)
-            for ref in self.get_refs(seq, r=seq.get_inner_cds_range())
-        ]
+        return get_codon_replacements(seq, self, value)
 
 
 @dataclass(frozen=True, slots=False, init=False)

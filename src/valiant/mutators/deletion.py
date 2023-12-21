@@ -19,6 +19,8 @@
 from dataclasses import dataclass
 
 from . import BaseMutator
+from .codon import get_codon_replacements
+from ..cds_seq import CdsSeq
 from ..int_pattern_builder import pt_codon
 from ..mutator_type import MutatorType
 from ..seq import Seq
@@ -54,8 +56,5 @@ class InFrameDeletionMutator(BaseMutator):
     def __init__(self) -> None:
         super().__init__(pt_codon)
 
-    def get_variants(self, seq: Seq) -> list[Variant]:
-        return [
-            Variant(ref.start, ref.s, DnaStr.empty())
-            for ref in seq.subseq_triplets()
-        ]
+    def get_variants(self, seq: CdsSeq) -> list[Variant]:
+        return get_codon_replacements(seq, self, None)
