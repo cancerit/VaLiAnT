@@ -156,10 +156,14 @@ class MetaTable:
 
                     oligo = get_full_oligo(mr)
 
-                    mave_nt_ref = get_mave_hgvs(v.pos, v.ref)
+                    # TODO: correct position for background offsetting
+                    ref_pos = v.pos
+                    ref_ref = self.seq.substr(v.ref_range, rel=False)
+
+                    mave_nt_ref = get_mave_hgvs(ref_pos, ref_ref)
 
                     pam_ref = v.ref
-                    mave_nt = mave_nt_ref
+                    mave_nt = get_mave_hgvs(v.pos, v.ref)
 
                     src = mr.vcf_alias or mr.mutator
                     oligo_name = get_oligo_name(src, v)
@@ -276,7 +280,6 @@ class MetaTable:
                     wf(mave_nt)
 
                     # mave_nt_ref
-                    # TODO
                     wf(mave_nt_ref)
 
                     # vcf_var_in_const
