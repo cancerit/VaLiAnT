@@ -29,6 +29,10 @@ from .uint_range import UIntRange
 from .utils import get_end
 
 
+# TODO: drop when frozen dataclasses with slots are fixed in CPython
+VariantTuple = tuple[int, DnaStr, DnaStr]
+
+
 def _raise_no_ref_alt() -> NoReturn:
     raise ValueError("Invalid variant: both REF and ALT are null!")
 
@@ -80,6 +84,10 @@ class Variant:
         if self.alt:
             return VariantType.INSERTION
         _raise_no_ref_alt()
+
+    @classmethod
+    def from_tuple(cls, t: VariantTuple) -> Variant:
+        return cls(*t)
 
     @classmethod
     def from_row(cls, pos: int, ref: str | None, alt: str | None):

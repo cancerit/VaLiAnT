@@ -27,14 +27,14 @@ from ..mutator_type import MutatorType
 from ..strings.codon import Codon
 from ..strings.dna_str import DnaStr
 from ..strings.translation_symbol import TranslationSymbol
-from ..variant import Variant
+from ..variant import Variant, VariantTuple
 from .codon import CodonMutator
 from .snv import SnvMutator
 
 
-def snv_to_snvres(codon_table: CodonTable, snv: AnnotVariant) -> list[Variant]:
-    def get_snvre(x: str) -> Variant:
-        return Variant(snv.codon_start, DnaStr(snv.codon_ref), DnaStr(x))
+def snv_to_snvres(codon_table: CodonTable, snv: AnnotVariant) -> list[VariantTuple]:
+    def get_snvre(x: str) -> VariantTuple:
+        return snv.codon_start, DnaStr(snv.codon_ref), DnaStr(x)
 
     def get_top_diff_codon(c: Codon, x: TranslationSymbol) -> Codon | None:
         """Return highest ranking codon other than the input codon"""
@@ -48,12 +48,16 @@ def snv_to_snvres(codon_table: CodonTable, snv: AnnotVariant) -> list[Variant]:
     def get_alt_codons() -> list[Codon]:
         match snv.mutation_type:
             case MutationType.SYNONYMOUS:
-                return codon_table.get_synonymous_codons(snv.codon_ref)
+                return codon_table.get_synonymous_codons(snv.codon_alt)
             case MutationType.MISSENSE | MutationType.NONSENSE:
-                codon = get_top_diff_codon(snv.codon_ref, snv.aa_alt)
+                codon = get_top_diff_codon(snv.codon_alt, snv.aa_alt)
                 return [codon] if codon else []
 
-    alts = get_alt_codons()
+    alts = [
+        alt
+        for alt in get_alt_codons()
+        if alt != snv.codon_ref and alt != snv.codon_alt
+    ]
     return list(map(get_snvre, alts)) if alts else []
 
 
@@ -64,8 +68,14 @@ class SnvReMutator(CodonMutator):
     def _get_variants(self, codon_table: CodonTable, seq: CdsSeq) -> list[Variant]:
         # TODO: avoid recomputing the SNV's
         snvs = SnvMutator().get_annot_variants(codon_table, seq)
+
+        max_pos = seq.end - 2
         return [
-            snvre
-            for snv in snvs
-            for snvre in snv_to_snvres(codon_table, snv)
+            Variant.from_tuple(t)
+            for t in sorted({
+                snvre
+                for snv in snvs
+                for snvre in snv_to_snvres(codon_table, snv)
+                if snvre[0] <= max_pos
+            }, key=lambda t: t[0])
         ]
