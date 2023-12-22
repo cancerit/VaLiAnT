@@ -51,7 +51,7 @@ class CodonMutator(BaseCdsMutator, ABC):
     def __init__(self) -> None:
         super().__init__(pt_codon)
 
-    def _get_codon_replacements(self, seq: CdsSeq, value: Codon | None) -> list[Variant]:
+    def _get_codon_replacements(self, seq: CdsSeq, value: Codon) -> list[Variant]:
         return get_codon_replacements(seq, self, value)
 
 
@@ -59,7 +59,7 @@ class CodonMutator(BaseCdsMutator, ABC):
 class BaseReplaceCodonMutator(CodonMutator, ABC):
 
     @abstractmethod
-    def get_alt(self, codon_table: CodonTable) -> Codon | None:
+    def get_alt(self, codon_table: CodonTable) -> Codon:
         pass
 
     def _get_variants(self, codon_table: CodonTable, seq: CdsSeq) -> list[Variant]:
@@ -70,7 +70,7 @@ class BaseReplaceCodonMutator(CodonMutator, ABC):
 class AlaMutator(BaseReplaceCodonMutator):
     TYPE = MutatorType.ALA
 
-    def get_alt(self, codon_table: CodonTable) -> Codon | None:
+    def get_alt(self, codon_table: CodonTable) -> Codon:
         return codon_table.get_top_codon(ala)
 
 
@@ -78,7 +78,7 @@ class AlaMutator(BaseReplaceCodonMutator):
 class StopMutator(BaseReplaceCodonMutator):
     TYPE = MutatorType.STOP
 
-    def get_alt(self, codon_table: CodonTable) -> Codon | None:
+    def get_alt(self, codon_table: CodonTable) -> Codon:
         return codon_table.get_top_codon(stop)
 
 
