@@ -25,6 +25,7 @@ from itertools import chain
 from .csv import load_csv
 from ..annotation import Annotation
 from ..exon import Exon
+from ..strings.strand import Strand
 from ..uint_range import UIntRange, UIntRangeSortedList
 
 
@@ -102,10 +103,23 @@ class CdsFeature(GtfFeature):
         return Exon(self.start, self.end, index, self.frame)
 
 
+def add_stop_codon_to_last_exon(strand: Strand, exons: UIntRangeSortedList) -> None:
+    if strand.is_plus:
+        last_exon_index = -1
+        last_exon = exons.ranges[last_exon_index]
+        assert last_exon.index == len(exons.ranges) - 1
+        exons.ranges[last_exon_index] = last_exon.offset_end(3)
+    else:
+        last_exon_index = 0
+        last_exon = exons.ranges[last_exon_index]
+        assert last_exon.index == len(exons.ranges) - 1
+        exons.ranges[last_exon_index] = last_exon.offset_start(-3)
+
+
 @dataclass(slots=True)
 class GtfLoader:
     contig: str
-    strand: str
+    strand: Strand
 
     def load_gtf(self, fp: str) -> Annotation:
         utr: list[GtfFeature] = []
@@ -141,8 +155,12 @@ class GtfLoader:
             for i, r in enumerate(sorted(
                 cds,
                 key=lambda x: x.start,
-                reverse=self.strand == '-'))
+                reverse=self.strand.is_minus))
         ])
+
+        # Add stop codon to the last exon
+        add_stop_codon_to_last_exon(self.strand, exons)
+
         return Annotation(
             self.contig, self.strand,
             gene_id, transcript_id,

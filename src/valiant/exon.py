@@ -16,7 +16,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, replace
 
 from .uint_range import UIntRange
 from .utils import get_cds_ext_3_length, get_codon_offset_complement
@@ -38,6 +40,12 @@ class Exon(UIntRange):
     @property
     def compl_frame(self) -> int:
         return get_codon_offset_complement(self.frame)
+
+    def offset_start(self, offset: int) -> Exon:
+        return replace(self, start=self.start + offset)
+
+    def offset_end(self, offset: int) -> Exon:
+        return replace(self, end=self.end + offset)
 
     def get_codon_index_at(self, pos: int) -> int | None:
         return (
