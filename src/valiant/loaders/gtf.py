@@ -103,17 +103,23 @@ class CdsFeature(GtfFeature):
         return Exon(self.start, self.end, index, self.frame)
 
 
-def add_stop_codon_to_last_exon(strand: Strand, exons: UIntRangeSortedList) -> None:
-    if strand.is_plus:
-        last_exon_index = -1
-        last_exon = exons.ranges[last_exon_index]
-        assert last_exon.index == len(exons.ranges) - 1
-        exons.ranges[last_exon_index] = last_exon.offset_end(3)
-    else:
-        last_exon_index = 0
-        last_exon = exons.ranges[last_exon_index]
-        assert last_exon.index == len(exons.ranges) - 1
-        exons.ranges[last_exon_index] = last_exon.offset_start(-3)
+def cds_features_to_exons(strand: Strand, cds: list[CdsFeature]) -> UIntRangeSortedList[Exon]:
+
+    # Order by prospective exon number
+    fts = sorted(cds, key=lambda x: x.start, reverse=strand.is_minus)
+
+    # Add stop codon to the last exon
+    last_exon_index = -1
+    fts[last_exon_index] = (
+        fts[last_exon_index].offset_end(3) if strand.is_plus else
+        fts[last_exon_index].offset_start(-3)
+    )
+
+    # Assign exon numbers
+    return UIntRangeSortedList([
+        ft.to_exon(i)
+        for i, ft in enumerate(fts)
+    ])
 
 
 @dataclass(slots=True)
@@ -149,17 +155,8 @@ class GtfLoader:
         gene_id, transcript_id = list(id_pair)[0]
         utr_ranges = UIntRangeSortedList([x.to_range() for x in utr])
 
-        # Assign exon indices (strand-dependent)
-        exons = UIntRangeSortedList([
-            r.to_exon(i)
-            for i, r in enumerate(sorted(
-                cds,
-                key=lambda x: x.start,
-                reverse=self.strand.is_minus))
-        ])
-
-        # Add stop codon to the last exon
-        add_stop_codon_to_last_exon(self.strand, exons)
+        # Assign exon numbers and add final stop codon
+        exons = cds_features_to_exons(self.strand, cds)
 
         return Annotation(
             self.contig, self.strand,

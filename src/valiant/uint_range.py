@@ -19,7 +19,7 @@
 from __future__ import annotations
 
 from collections.abc import Container
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Sized, Generic, TypeVar
 
 
@@ -50,6 +50,12 @@ class UIntRange(Sized, Container):
         elif isinstance(x, UIntRange):
             return x.start in self and x.end in self
         raise TypeError("Operand type not supported!")
+
+    def offset_start(self, offset: int):
+        return replace(self, start=self.start + offset)
+
+    def offset_end(self, offset: int):
+        return replace(self, end=self.end + offset)
 
     def intersect(self, r: UIntRange) -> UIntRange | None:
         if r not in self:

@@ -18,7 +18,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from .uint_range import UIntRange
 from .utils import get_cds_ext_3_length, get_codon_offset_complement
@@ -41,11 +41,9 @@ class Exon(UIntRange):
     def compl_frame(self) -> int:
         return get_codon_offset_complement(self.frame)
 
-    def offset_start(self, offset: int) -> Exon:
-        return replace(self, start=self.start + offset)
-
-    def offset_end(self, offset: int) -> Exon:
-        return replace(self, end=self.end + offset)
+    @property
+    def number(self) -> int:
+        return self.index
 
     def get_codon_index_at(self, pos: int) -> int | None:
         return (
