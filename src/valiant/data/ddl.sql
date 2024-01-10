@@ -26,7 +26,8 @@ create table exons (
     end integer not null,
     exon_index integer not null,
     cds_prefix_length integer not null,
-    cds_suffix_length integer not null
+    cds_suffix_length integer not null,
+    first_codon_start integer not null
 );
 create unique index exons_exon_index_idx on exons (exon_index);
 
@@ -106,7 +107,7 @@ select
     ecp.codon_index,
     ecp.ppe_id,
     ppe.start as ppe_start,
-    (ppe.start - e.start - e.cds_prefix_length) % 3 as codon_offset
+    abs(ppe.start - e.first_codon_start) % 3 as codon_offset
 from exon_codon_ppes ecp
 left join v_exon_ext e on e.id = ecp.exon_id
 left join pam_protection_edits ppe on ppe.id = ecp.ppe_id;
@@ -173,33 +174,6 @@ create table ref_pattern_variants (
     ref text not null,
     alt text not null
 );
-
--- Map positions to reference
-create view v_alt_pattern_variants as
-select
-    v.*,
-    es.id as start_exon_id,
-    ((v.start - es.start - es.cds_prefix_length) / 3) as start_codon_index,
-    ee.id as end_exon_id,
-    ((v.end - es.start - es.cds_prefix_length) / 3) as end_codon_index
-from (
-    select
-        id,
-        mutator,
-        pos_a as start,
-        pos_a + max(0, length(ref_a) - 1) as end,
-        ref_a as ref,
-        alt_a as alt,
-        oligo,
-        codon_ref_a,
-        codon_alt_a,
-        aa_ref,
-        aa_alt,
-        mutation_type
-    from alt_pattern_variants
-) v
-left join v_exon_ext es on (v.start >= es.start and v.start <= es.end)
-left join v_exon_ext ee on (v.end >= ee.start and v.end <= ee.end);
 
 create table targeton_pam_protection_edits (
     id integer primary key references pam_protection_edits (id),
@@ -304,11 +278,11 @@ from (
         es.id as start_exon_id,
         es.exon_index as start_exon_index,
         es.last_codon_index as start_last_codon_index,
-        ((w.ref_start - es.start - es.cds_prefix_length) / 3) as start_codon_index,
+        (abs(w.ref_start - es.first_codon_start) / 3) as start_codon_index,
         ee.id as end_exon_id,
         ee.exon_index as end_exon_index,
         ee.last_codon_index as end_last_codon_index,
-        ((w.ref_end - ee.start - ee.cds_prefix_length) / 3) as end_codon_index
+        (abs(w.ref_end - ee.first_codon_start) / 3) as end_codon_index
     from (
         select
             v.*,
@@ -319,8 +293,12 @@ from (
             select * from v_meta_custom
         ) v
     ) w
-    left join v_exon_ext es on (w.ref_start >= es.start and w.ref_start <= es.end)
-    left join v_exon_ext ee on (w.ref_end >= ee.start and w.ref_end <= ee.end)
+    left join v_exon_ext es on
+        w.ref_start >= es.start and
+        w.ref_start <= es.end
+    left join v_exon_ext ee on
+        w.ref_end >= ee.start and
+        w.ref_end <= ee.end
 ) s
 left join v_exon_codon_ppes ecps on
     ecps.exon_index = s.start_exon_index and

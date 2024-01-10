@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .strings.strand import Strand
 from .uint_range import UIntRange
 from .utils import get_cds_ext_3_length, get_codon_offset_complement
 
@@ -44,6 +45,12 @@ class Exon(UIntRange):
     @property
     def number(self) -> int:
         return self.index
+
+    def get_first_codon_start(self, strand: Strand) -> int:
+        return (
+            self.start - self.cds_prefix_length if strand.is_plus else
+            self.end + self.cds_prefix_length
+        )
 
     def get_codon_index_at(self, pos: int) -> int | None:
         return (

@@ -186,7 +186,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         if annot:
 
             # Load CDS annotation
-            insert_exons(conn, annot.cds.ranges)
+            insert_exons(conn, exp.strand, annot.cds.ranges)
 
         # Load background variants (targetons & exons)
         if config.bg_fp:

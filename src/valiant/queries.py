@@ -27,6 +27,7 @@ from .oligo_seq import OligoSeq
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
 from .sql_gen import SqlQuery, SqlScript, get_multi_range_check
+from .strings.strand import Strand
 from .uint_range import UIntRange
 from .utils import get_enum_values, safe_group_by
 from .variant import RegisteredVariant, Variant
@@ -63,7 +64,8 @@ sql_insert_exon = SqlQuery.get_insert_values(
         DbFieldName.END,
         DbFieldName.EXON_INDEX,
         DbFieldName.CDS_PREFIX_LENGTH,
-        DbFieldName.CDS_SUFFIX_LENGTH
+        DbFieldName.CDS_SUFFIX_LENGTH,
+        DbFieldName.FIRST_CODON_START
     ])
 
 sql_insert_background_variant = SqlQuery.get_insert_values(
@@ -108,10 +110,17 @@ def insert_custom_variant_collection(conn: Connection, name: str, vars: list[Cus
         ])
 
 
-def insert_exons(conn: Connection, exons: list[Exon]) -> None:
+def insert_exons(conn: Connection, strand: Strand, exons: list[Exon]) -> None:
     with cursor(conn) as cur:
         cur.executemany(sql_insert_exon, [
-            (e.start, e.end, e.index, e.cds_prefix_length, e.cds_suffix_length)
+            (
+                e.start,
+                e.end,
+                e.index,
+                e.cds_prefix_length,
+                e.cds_suffix_length,
+                e.get_first_codon_start(strand)
+            )
             for e in exons
         ])
 
@@ -142,7 +151,7 @@ insert into exon_codon_ppes (
 select
     p.id,
     e.id, (
-        (p.start - e.start - e.cds_prefix_length) / 3
+        abs(p.start - e.first_codon_start) / 3
     ) as codon_index
 from pam_protection_edits p
 left join v_exon_ext e on
@@ -196,6 +205,7 @@ select
     alt
 from v_exon_ppes
 """
+
 
 def select_exon_ppes(conn: Connection) -> dict[int, VariantGroup[Variant]]:
     """Map exon indices to PPE's"""

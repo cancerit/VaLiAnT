@@ -88,6 +88,7 @@ class DbFieldName(str, Enum):
     MUTATION_TYPE = 'mutation_type'
     CDS_PREFIX_LENGTH = 'cds_prefix_length'
     CDS_SUFFIX_LENGTH = 'cds_suffix_length'
+    FIRST_CODON_START = 'first_codon_start'
 
     def _sql_op(self, op: str) -> str:
         return f"{self.value} {op} ?"
