@@ -20,15 +20,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from valiant.variant import Variant
-from valiant.variant_group import VariantGroup
-
 from .cds_seq import CdsSeq
+from .codon_table import CodonTable
 from .exon import Exon
 from .seq import Seq
 from .seq_collection import SeqCollection
 from .strings.strand import Strand
 from .uint_range import UIntRange
+from .variant import Variant
+from .variant_group import VariantGroup
 
 
 @dataclass(slots=True)
@@ -47,6 +47,13 @@ class TranscriptSeq(SeqCollection):
             e.index: e
             for e in exons
         })
+
+    def begins_with_start_codon(self, codon_table: CodonTable) -> bool:
+        first_exon = self.seqs[self.get_exon_seq_index(0)].s
+        return (
+            first_exon.startswith(codon_table.start_codon) if self.strand.is_plus else
+            first_exon.endswith(codon_table.start_codon)
+        )
 
     def get_exon(self, exon_index: int) -> Exon:
         return self.exons[exon_index]

@@ -85,5 +85,5 @@ class DnaStr(str):
         return self.head(delta)
 
     @property
-    def revc(self) -> DnaStr:
-        return DnaStr(reverse_complement(self))
+    def revc(self):
+        return self.__class__(reverse_complement(self))

@@ -173,6 +173,8 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         if annot:
             cds_ref_seqs = load_sequences(fa, exp.contig, annot.cds.ranges)
             transcript = TranscriptSeq.from_exons(exp.strand, cds_ref_seqs, annot.cds.ranges)
+            if not transcript.begins_with_start_codon:
+                logging.warning("The CDS does not begin with the start codon!")
 
     targetons = {
         s.start: s
@@ -201,6 +203,11 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             exon_ppes = select_exon_ppes(conn)
 
             transcript = transcript.alter(exon_ppes)
+
+            if not transcript.begins_with_start_codon:
+                logging.warning(
+                    "The CDS does not begin with the start codon "
+                    "(after PAM and background variant application)!")
 
         # Load custom variants (targetons)
         if config.vcf_fp:

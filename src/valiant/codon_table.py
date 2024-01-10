@@ -33,14 +33,21 @@ TranslToCodons = dict[TranslationSymbol, list[Codon]]
 CodonToCodons = dict[Codon, list[Codon]]
 
 
+# TODO: make it configurable for maximum generality
+START_CODON = Codon('ATG')
+
+
 @dataclass(slots=True, frozen=True)
 class CodonTable:
+    start_codon: Codon
     codon_to_aa: CodonToTransl
     aa_to_codons: TranslToCodons
     codon_to_syn: CodonToCodons
 
     @classmethod
     def from_list(cls, rows: list[CodonTableRow], rc: bool = False) -> CodonTable:
+        start_codon = START_CODON.revc if rc else START_CODON
+
         rows = [r.reverse_complement() for r in rows] if rc else rows
 
         # Codon -> Amino acid
@@ -61,7 +68,7 @@ class CodonTable:
             for codon in codon_to_aa.keys()
         }
 
-        return cls(codon_to_aa, aa_to_codon, codon_to_syn)
+        return cls(start_codon, codon_to_aa, aa_to_codon, codon_to_syn)
 
     def get_codons(self, aa: TranslationSymbol) -> list[Codon]:
         return self.aa_to_codons[aa]
