@@ -24,23 +24,22 @@ create table exons (
     id integer primary key,
     start integer not null,
     end integer not null,
-    exon_index integer not null
+    exon_index integer not null,
+    cds_prefix_length integer not null,
+    cds_suffix_length integer not null
 );
 create unique index exons_exon_index_idx on exons (exon_index);
 
 -- Compute the CDS prefix lengths
 create view v_exon_ext as
 select
-    id,
-    exon_index,
-    start,
-    end, (
-        lead((end - start + 1) % 3, -1, 0)
-        over (order by exon_index)
-    ) as cds_prefix_length,
-    (end - start + 1) as length,
-    ((end - start + 1) / 3) as last_codon_index
-from exons;
+    e.*,
+    e.length / 3 as last_codon_index,
+    e.cds_prefix_length as frame  -- to avoid breaking other queries
+from (
+    select *, (end - start + 1) as length
+    from exons
+) e;
 
 -- Background edits
 

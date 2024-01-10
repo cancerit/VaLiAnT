@@ -61,7 +61,9 @@ sql_insert_exon = SqlQuery.get_insert_values(
     [
         DbFieldName.START,
         DbFieldName.END,
-        DbFieldName.EXON_INDEX
+        DbFieldName.EXON_INDEX,
+        DbFieldName.CDS_PREFIX_LENGTH,
+        DbFieldName.CDS_SUFFIX_LENGTH
     ])
 
 sql_insert_background_variant = SqlQuery.get_insert_values(
@@ -109,7 +111,7 @@ def insert_custom_variant_collection(conn: Connection, name: str, vars: list[Cus
 def insert_exons(conn: Connection, exons: list[Exon]) -> None:
     with cursor(conn) as cur:
         cur.executemany(sql_insert_exon, [
-            (e.start, e.end, e.index)
+            (e.start, e.end, e.index, e.cds_prefix_length, e.cds_suffix_length)
             for e in exons
         ])
 
