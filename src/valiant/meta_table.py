@@ -32,8 +32,9 @@ from .oligo_generation_info import OligoGenerationInfo
 from .options import Options
 from .seq import Seq
 from .sge_config import SGEConfig
+from .strings.dna_str import DnaStr
 from .strings.strand import Strand
-from .utils import bool_to_int_str
+from .utils import bool_to_int_str, reverse_complement
 from .variant import Variant
 
 
@@ -126,15 +127,15 @@ class MetaTable:
 
         info = OligoGenerationInfo()
 
-        def get_full_oligo(mr: MetaRow) -> str:
+        def get_full_oligo(frag: str) -> str:
             """Add the adaptors to the oligonucleotide sequence"""
 
-            return f"{self.cfg.adaptor_5}{mr.oligo}{self.cfg.adaptor_3}"
+            return f"{self.cfg.adaptor_5}{frag}{self.cfg.adaptor_3}"
 
-        def get_mave_hgvs(pos: int, ref: str) -> str:
+        def get_mave_hgvs(pos: int, ref: str, alt: str | None = None) -> str:
             """Compile the MAVE-HGVS string"""
 
-            return get_mave_nt(pos, ref_range.start, v.type, ref, mr.alt)
+            return get_mave_nt(pos, ref_range.start, v.type, ref, alt or mr.alt)
 
         def get_oligo_name(src: str, v: Variant) -> str:
             tr_frag = get_transcript_frag(gene_id, transcript_id)
@@ -154,7 +155,10 @@ class MetaTable:
                     mr = MetaRow(*r)
                     v = mr.to_variant()
 
-                    oligo = get_full_oligo(mr)
+                    oligo_no_adapt = mr.oligo
+                    if is_rc:
+                        oligo_no_adapt = reverse_complement(oligo_no_adapt)
+                    oligo = get_full_oligo(oligo_no_adapt)
 
                     # TODO: correct position for background offsetting
                     ref_pos = v.pos
@@ -174,7 +178,15 @@ class MetaTable:
 
                             # Correct REF and start position in PAM protected codons
                             pam_ref = self.alt_seq.substr(pam_range, rel=False)
-                            mave_nt = get_mave_hgvs(pam_range.start, pam_ref)
+                            # Assumption: the targeton start can't change due to background variants
+                            # TODO: this may be violated whenever the full transcript is altered,
+                            #  unless it is corrected earlier on (once per targeton)
+                            oligo_seq = Seq(ref_range.start, DnaStr(mr.oligo))
+                            pam_alt = oligo_seq.substr(
+                                pam_range.offset_end(v.alt_ref_delta), rel=False)
+
+                            assert len(pam_ref) <= 3
+                            mave_nt = get_mave_hgvs(pam_range.start, pam_ref, alt=pam_alt)
 
                     # Evaluate oligonucleotide length
 
@@ -202,11 +214,9 @@ class MetaTable:
                     wf(assembly)
 
                     # gene_id
-                    # TODO
                     wf(gene_id)
 
                     # transcript_id
-                    # TODO
                     wf(transcript_id)
 
                     # src_type
@@ -243,7 +253,7 @@ class MetaTable:
                     wf(str(mr.pos))
 
                     # ref
-                    wf(pam_ref)
+                    wf(mr.ref)
 
                     # new
                     wf(v.alt)
@@ -267,7 +277,7 @@ class MetaTable:
                     wf(oligo)
 
                     # mseq_no_adapt
-                    wf(mr.oligo)
+                    wf(oligo_no_adapt)
 
                     # pam_mut_annot
                     # TODO

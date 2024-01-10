@@ -37,7 +37,6 @@ from .pattern_variant import PatternVariant
 from .queries import insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, insert_targeton_ppes, is_meta_table_empty, select_exons_in_range, select_ppes_in_range, select_bgs_in_range, clear_per_targeton_tables, select_custom_variants_in_range
 from .seq import Seq
 from .sge_config import SGEConfig
-from .strings.dna_str import DnaStr
 from .transcript_seq import TranscriptSeq
 from .uint_range import UIntRange
 from .variant import RegisteredVariant, Variant
@@ -96,8 +95,6 @@ class Targeton:
     seq: Seq
     config: TargetonConfig
 
-    def get_variant_oligo(self, variant: Variant) -> DnaStr:
-        return self.seq.replace_substr(variant.ref_range, variant.alt)
 
     def _fetch_variant_group(self, conn: Connection, f: GetVariantsInRangeCallable) -> VariantGroup:
         return VariantGroup.from_variants(f(conn, self.seq.get_range()))
@@ -112,7 +109,7 @@ class Targeton:
 
     def apply_custom_variants(self) -> None:
         """
-        1. read all custom variants in range (bacground-corrected)
+        1. read all custom variants in range (background-corrected)
         2. mark those that occur in the custom regions, if any
         3. generate the oligonucleotide sequences?
         """
@@ -158,15 +155,16 @@ class Targeton:
             for r, m in self.config.get_mutable_regions()
         ]
 
-    def _get_oligo(self, opt: Options, alt: Seq, x: Variant) -> OligoSeq:
-        return OligoSeq.from_ref(alt, x, rc=opt.should_rc(self.config.strand))
+    def _get_oligo(self, alt: Seq, x: Variant) -> OligoSeq:
+        return OligoSeq.from_ref(alt, x)
 
     def _process_custom_variants(self, conn: Connection, opt: Options, alt: Seq) -> None:
         custom_vars = select_custom_variants_in_range(conn, self.seq.get_range())
 
         def get_oligo(x: Variant) -> OligoSeq:
-            return self._get_oligo(opt, alt, x)
+            return self._get_oligo(alt, x)
 
+        # Register the filtered custom variants
         insert_targeton_custom_variants(
             conn,
             list(map(get_oligo, custom_vars)),
