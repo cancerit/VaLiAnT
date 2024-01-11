@@ -747,38 +747,38 @@ The [MAVE-HGVS](https://www.mavedb.org/docs/mavehgvs/) strings are all **linear 
 
 Array fields use the semicolon as separator.
 
-|Field|Format|Description|
-|-|-|-|
-|`oligo_name`|string|Name of the oligonucleotide.|
-|`species`|species name|Species.|
-|`assembly`|assembly name|Assembly.|
-|`gene_id`|string|Gene ID.|
-|`transcript_id`|string|Transcript ID.|
-|`src_type`|`ref`\|`cdna`|Sequence source type (reference genome or cDNA).|
-|`ref_chr`|string|Chromosome name.|
-|`ref_strand`|`+`\|`-`|DNA strand.|
-|`ref_start`|integer|Start position of the reference sequence.|
-|`ref_end`|integer|End position of the reference sequence.|
-|`revc`|0\|1|Whether the oligonucleotide contains the reverse complement of the reference sequence (minus strand transcripts only).|
-|`ref_seq`|DNA sequence|Reference sequence.|
-|`pam_seq`|DNA sequence|PAM-protected reference sequence.|
-|`vcf_alias`|string|VCF file alias (custom mutations only).|
-|`vcf_var_id`|string|Variant ID (custom mutations only).|
-|`mut_position`|integer|Start position of the mutation.|
-|`ref`|DNA sequence|Reference nucleotide or triplet.|
-|`new`|DNA sequence|Mutated nucleotide or triplet. Not set for deletions.|
-|`ref_aa`|amino acid|Reference amino acid.|
-|`alt_aa`|amino acid|Alternative amino acid.|
-|`mut_type`|`syn`\|`mis`\|`non`|Mutation type.|
-|`mutator`|type of mutator|Label of the [type of mutator](#mutation-types) that generated the oligonucleotide.|
-|`oligo_length`|integer|Oligonucleotide length.|
-|`mseq`|DNA sequence|Full oligonucleotide sequence (with adaptors, if any).|
-|`mseq_no_adapt`|DNA sequence|Oligonucleotide sequence excluding adaptors.|
-|`pam_mut_annot`|Array of `syn`\|`mis`\|`non`\|`ncd`|Applied PAM protection variant [mutation types](#mutation-types) (or `ncd` if affecting a noncoding region).|
-|`pam_mut_sgrna_id`|Array of sgRNA ID's|sgRNA ID's bound to the PAM protection variants spanned by the mutation or affecting the same codons as the mutation, if any.|
-|`mave_nt`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation.|
-|`mave_nt_ref`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation, where `REF` does not include PAM protection.|
-|`vcf_var_in_const`|0\|1|Whether the variant is in a region defined as constant (custom mutations only).|
+|Index|Field|Format|Description|
+|-|-|-|-|
+|1|`oligo_name`|string|Name of the oligonucleotide.|
+|2|`species`|species name|Species.|
+|3|`assembly`|assembly name|Assembly.|
+|4|`gene_id`|string|Gene ID.|
+|5|`transcript_id`|string|Transcript ID.|
+|6|`src_type`|`ref`\|`cdna`|Sequence source type (reference genome or cDNA).|
+|7|`ref_chr`|string|Chromosome name.|
+|8|`ref_strand`|`+`\|`-`|DNA strand.|
+|9|`ref_start`|integer|Start position of the reference sequence.|
+|10|`ref_end`|integer|End position of the reference sequence.|
+|11|`revc`|0\|1|Whether the oligonucleotide contains the reverse complement of the reference sequence (minus strand transcripts only).|
+|12|`ref_seq`|DNA sequence|Reference sequence.|
+|13|`pam_seq`|DNA sequence|PAM-protected reference sequence.|
+|14|`vcf_alias`|string|VCF file alias (custom mutations only).|
+|15|`vcf_var_id`|string|Variant ID (custom mutations only).|
+|16|`mut_position`|integer|Start position of the mutation.|
+|17|`ref`|DNA sequence|Reference nucleotide or triplet.|
+|18|`new`|DNA sequence|Mutated nucleotide or triplet. Not set for deletions.|
+|19|`ref_aa`|amino acid|Reference amino acid.|
+|20|`alt_aa`|amino acid|Alternative amino acid.|
+|21|`mut_type`|`syn`\|`mis`\|`non`|Mutation type.|
+|22|`mutator`|type of mutator|Label of the [type of mutator](#mutation-types) that generated the oligonucleotide.|
+|23|`oligo_length`|integer|Oligonucleotide length.|
+|24|`mseq`|DNA sequence|Full oligonucleotide sequence (with adaptors, if any).|
+|25|`mseq_no_adapt`|DNA sequence|Oligonucleotide sequence excluding adaptors.|
+|26|`pam_mut_annot`|Array of `syn`\|`mis`\|`non`\|`ncd`|Applied PAM protection variant [mutation types](#mutation-types) (or `ncd` if affecting a noncoding region).|
+|27|`pam_mut_sgrna_id`|Array of sgRNA ID's|sgRNA ID's bound to the PAM protection variants spanned by the mutation or affecting the same codons as the mutation, if any.|
+|28|`mave_nt`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation.|
+|29|`mave_nt_ref`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation, where `REF` does not include PAM protection.|
+|30|`vcf_var_in_const`|0\|1|Whether the variant is in a region defined as constant (custom mutations only).|
 
 Example:
 
