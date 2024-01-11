@@ -82,6 +82,10 @@ class CustomVariant(Variant):
 
         contig: str = r.contig
         start: int = r.pos
+
+        if not r.ref:
+            raise ValueError(f"Custom variant {id or '(no ID)'} has no REF!")
+
         ref = DnaStr(r.ref.upper())
 
         # Monomorphic variant
