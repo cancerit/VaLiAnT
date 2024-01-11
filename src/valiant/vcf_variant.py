@@ -70,7 +70,7 @@ class VcfVariant(Variant):
             return self.as_variant(), None
 
         # Correct position
-        pos = (self.pos - 1) if pos_gt_one else self.pos
+        pos = (self.pos + 1) if pos_gt_one else self.pos
 
         if ref_one:
 

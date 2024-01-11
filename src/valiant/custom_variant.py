@@ -103,8 +103,7 @@ class CustomVariant(Variant):
             var_class: VariantClassification = VariantClassification.CLASSIFIED,
             vcf_nt: Nucleotide | None = None
         ) -> CustomVariant:
-            pos = correct_vcf_start(var.pos, var_type)
-            return cls(pos, var.ref, var.alt, contig, id, vcf_nt, var_type, var_class)
+            return cls(var.pos, var.ref, var.alt, contig, id, vcf_nt, var_type, var_class)
 
         alt_ref_delta: int = raw_var.alt_ref_delta
 
