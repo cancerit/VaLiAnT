@@ -85,6 +85,10 @@ class Variant:
             return VariantType.INSERTION
         _raise_no_ref_alt()
 
+    @property
+    def is_insertion(self) -> bool:
+        return self.type == VariantType.INSERTION
+
     @classmethod
     def from_tuple(cls, t: VariantTuple) -> Variant:
         return cls(*t)

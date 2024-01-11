@@ -28,7 +28,7 @@ from .variant import Variant, VariantT
 
 
 def alter_seq(seq: Seq, variant: Variant) -> Seq:
-    return seq.alter(variant.ref_range, variant.alt)
+    return seq.alter(variant.ref_range, variant.is_insertion, variant.alt)
 
 
 @dataclass(slots=True)

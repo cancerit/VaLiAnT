@@ -53,6 +53,9 @@ class Seq(Sized):
     def get_rel_range(self, r: UIntRange) -> UIntRange:
         return r.offset(-self.start)
 
+    def get_rel_pos(self, pos: int) -> int:
+        return pos - self.start
+
     def _substr(self, s: DnaStr, r: UIntRange, rel: bool = True) -> DnaStr:
         return s.substr(r if rel else self.get_rel_range(r))
 
@@ -61,11 +64,19 @@ class Seq(Sized):
         # Assumption: if the range is relative, it is zero-based
         return self._substr(self.s, r, rel=rel)
 
-    def replace_substr(self, r: UIntRange, alt: str) -> DnaStr:
-        return self.s.replace_substr(self.get_rel_range(r), alt)
+    def replace_substr(self, r: UIntRange, alt: str, rel: bool = True) -> DnaStr:
+        return self.s.replace_substr(r if rel else self.get_rel_range(r), alt)
 
-    def alter(self, r: UIntRange, alt: str) -> Seq:
-        return replace(self, s=self.replace_substr(r, alt))
+    def insert_substr(self, pos: int, alt: str, rel: bool = True) -> DnaStr:
+        return self.s.insert_substr(pos if rel else self.get_rel_pos(pos), alt)
+
+    def alter(self, r: UIntRange, is_insertion: bool, alt: str) -> Seq:
+        assert not is_insertion or len(r) == 1
+        s = (
+            self.replace_substr(r, alt, rel=False) if not is_insertion else
+            self.insert_substr(r.start, alt, rel=False)
+        )
+        return replace(self, s=s)
 
     def clone(self) -> Seq:
         return replace(self)

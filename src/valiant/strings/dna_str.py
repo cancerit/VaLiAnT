@@ -53,6 +53,19 @@ class DnaStr(str):
         assert r.start < len(self) and r.end < len(self)
         return DnaStr(f"{self[:r.start]}{alt}{self[r.end + 1:]}")
 
+    def insert_substr(self, offset: int, alt: str) -> DnaStr:
+        """Insert or append a substring"""
+
+        if offset < 0:
+            raise ValueError("Invalid string offset: negative!")
+        n = len(self)
+        if offset > n:
+            raise ValueError("Invalid string offset: out of bounds!")
+        return DnaStr(
+            f"{self[:offset]}{alt}{self[offset:]}" if offset < n else
+            self + alt
+        )
+
     def tail(self, n: int) -> DnaStr:
         assert n >= 0 and n <= len(self)
         match n:
