@@ -191,7 +191,7 @@ class Targeton:
             annot_variants.extend(annot_vars)
 
         def get_oligo(x: Variant) -> OligoSeq:
-            return self._get_oligo(opt, alt, x)
+            return self._get_oligo(alt, x)
 
         insert_pattern_variants(conn, list(map(get_oligo, pattern_variants)))
         insert_annot_pattern_variants(conn, list(map(get_oligo, annot_variants)))
