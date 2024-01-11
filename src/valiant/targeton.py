@@ -173,7 +173,6 @@ class Targeton:
     def _process_pattern_variants(
         self,
         conn: Connection,
-        opt: Options,
         codon_table: CodonTable,
         transcript: TranscriptSeq | None,
         alt: Seq
@@ -219,7 +218,7 @@ class Targeton:
 
         # Process pattern variants
         pattern_variants, annot_variants = self._process_pattern_variants(
-            conn, opt, codon_table, transcript, alt)
+            conn, codon_table, transcript, alt)
 
         return alt, pattern_variants, annot_variants
 
