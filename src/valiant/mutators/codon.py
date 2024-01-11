@@ -42,6 +42,7 @@ def get_codon_replacements(seq: CdsSeq, m: BaseMutator, value: Codon | None) -> 
     return [
         get_variant_from_ref(ref, alt)
         for ref in m.get_refs(seq, r=seq.get_inner_cds_range())
+        if alt != ref.s
     ]
 
 
