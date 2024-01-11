@@ -162,22 +162,27 @@ class MetaTable:
 
                     # TODO: correct position for background offsetting
                     ref_pos = v.pos
-                    ref_ref = self.seq.substr(v.ref_range, rel=False)
+
+                    if mr.ref:
+                        ref_ref = self.seq.substr(v.ref_range, rel=False)
+                        pam_ref = self.alt_seq.substr(mr.ref_range, rel=False)
+                    else:
+                        ref_ref = ''
+                        pam_ref = ''
 
                     mave_nt_ref = get_mave_hgvs(ref_pos, ref_ref)
-
-                    pam_ref = v.ref
-                    mave_nt = get_mave_hgvs(v.pos, v.ref)
+                    mave_nt = get_mave_hgvs(v.pos, pam_ref)
 
                     src = mr.vcf_alias or mr.mutator
-                    oligo_name = get_oligo_name(src, v)
+                    pam_var = Variant(v.pos, DnaStr(pam_ref), DnaStr(mr.alt))
+                    oligo_name = get_oligo_name(src, pam_var)
 
                     if mr.overlaps_codon:
                         pam_range = mr.pam_ref_range
                         if pam_range.start != v.pos or pam_range.end != v.ref_end:
 
                             # Correct REF and start position in PAM protected codons
-                            pam_ref = self.alt_seq.substr(pam_range, rel=False)
+                            pam_codon_ref = self.alt_seq.substr(pam_range, rel=False)
                             # Assumption: the targeton start can't change due to background variants
                             # TODO: this may be violated whenever the full transcript is altered,
                             #  unless it is corrected earlier on (once per targeton)
@@ -185,8 +190,8 @@ class MetaTable:
                             pam_alt = oligo_seq.substr(
                                 pam_range.offset_end(v.alt_ref_delta), rel=False)
 
-                            assert len(pam_ref) <= 3
-                            mave_nt = get_mave_hgvs(pam_range.start, pam_ref, alt=pam_alt)
+                            assert len(pam_codon_ref) <= 3
+                            mave_nt = get_mave_hgvs(pam_range.start, pam_codon_ref, alt=pam_alt)
 
                     # Evaluate oligonucleotide length
 
@@ -204,95 +209,95 @@ class MetaTable:
 
                     # Write fields
 
-                    # oligo_name
+                    # 1. oligo_name
                     wf(oligo_name)
 
-                    # species
+                    # 2. species
                     wf(species)
 
-                    # assembly
+                    # 3. assembly
                     wf(assembly)
 
-                    # gene_id
+                    # 4. gene_id
                     wf(gene_id)
 
-                    # transcript_id
+                    # 5. transcript_id
                     wf(transcript_id)
 
-                    # src_type
+                    # 6. src_type
                     wf(src_type)
 
-                    # ref_chr
+                    # 7. ref_chr
                     wf(contig)
 
-                    # ref_strand
+                    # 8. ref_strand
                     wf(strand)
 
-                    # ref_start
+                    # 9. ref_start
                     wf(ref_start)
 
-                    # ref_end
+                    # 10. ref_end
                     wf(ref_end)
 
-                    # revc
+                    # 11. revc
                     wf(revc)
 
-                    # ref_seq
+                    # 12. ref_seq
                     wf(ref_seq)
 
-                    # pam_seq
+                    # 13. pam_seq
                     wf(pam_seq)
 
-                    # vcf_alias
+                    # 14. vcf_alias
                     wf(mr.vcf_alias)
 
-                    # vcf_var_id
+                    # 15. vcf_var_id
                     wf(mr.vcf_var_id)
 
-                    # mut_position
+                    # 16. mut_position
                     wf(str(mr.pos))
 
-                    # ref
-                    wf(mr.ref)
+                    # 17. ref
+                    wf(pam_ref)
 
-                    # new
+                    # 18. new
                     wf(v.alt)
 
-                    # ref_aa
+                    # 19. ref_aa
                     wf(mr.ref_aa)
 
-                    # alt_aa
+                    # 20. alt_aa
                     wf(mr.alt_aa)
 
-                    # mut_type
+                    # 21. mut_type
                     wf(mr.mutation_type)
 
-                    # mutator
+                    # 22. mutator
                     wf(mr.mutator)
 
-                    # oligo_length
+                    # 23. oligo_length
                     wf(str(oligo_length))
 
-                    # mseq
+                    # 24. mseq
                     wf(oligo)
 
-                    # mseq_no_adapt
+                    # 25. mseq_no_adapt
                     wf(oligo_no_adapt)
 
-                    # pam_mut_annot
+                    # 26. pam_mut_annot
                     # TODO
                     wf('<PMA>')
 
-                    # pam_mut_sgrna_id
+                    # 27. pam_mut_sgrna_id
                     wf(mr.sgrna_ids)
 
-                    # mave_nt
+                    # 28. mave_nt
                     wf(mave_nt)
 
-                    # mave_nt_ref
+                    # 29. mave_nt_ref
                     wf(mave_nt_ref)
 
-                    # vcf_var_in_const
+                    # 30. vcf_var_in_const
                     fh.write(str(mr.in_const))
 
                     fh.write('\n')

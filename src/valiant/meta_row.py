@@ -74,6 +74,10 @@ class MetaRow:
         return Variant(self.pos, DnaStr(self.ref), DnaStr(self.alt))
 
     @property
+    def ref_range(self) -> UIntRange:
+        return UIntRange(self.pos, self.end)
+
+    @property
     def overlaps_codon(self) -> bool:
         return (
             self.start_exon_index is not None or
