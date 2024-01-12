@@ -237,6 +237,17 @@ left join custom_variants cv on cv.id = tcv.id
 left join custom_variant_collections cvc on cvc.id = cv.collection_id;
 
 create view v_meta as
+-- Map: PPE position -> sgRNA ID
+with t_pos_sgrna_ids as (
+    select
+        ppe.start,
+        si.name as sgrna_id
+    from pam_protection_edits ppe
+    left join pam_protection_edit_sgrna_ids ppesi on
+        ppesi.var_ppe_id = ppe.id
+    left join sgrna_ids si on
+        si.id = ppesi.sgrna_id
+)
 select
     s.ref_start,
     s.ref_end,
@@ -258,18 +269,16 @@ select
     ecpe.ppe_start as end_ppe_start,
     (
         select
-            group_concat(z.name, ';')
+            group_concat(z.sgrna_id, ';')
         from (
             -- Filter PPE's by position
-            select distinct si.name
-            from pam_protection_edits ppe
-            left join pam_protection_edit_sgrna_ids ppesi on
-                ppesi.var_ppe_id = ppe.id
-            left join sgrna_ids si on
-                si.id = ppesi.sgrna_id
+            select sgrna_id
+            from t_pos_sgrna_ids as t
             where
-                ppe.start >= ifnull(ecps.ppe_start, s.ref_start) and
-                ppe.start <= ifnull(ecpe.ppe_start, s.ref_end)
+                t.start >= ifnull(ecps.ppe_start, s.ref_start) and
+                t.start <= ifnull(ecpe.ppe_start, s.ref_end)
+            group by t.sgrna_id
+            order by t.sgrna_id
         ) z
     ) as sgrna_ids
 from (
