@@ -18,8 +18,7 @@ Please also see the [VaLiAnT Wiki](https://github.com/cancerit/VaLiAnT/wiki) for
     - [valiant sge](#valiant-sge)
     - [valiant cdna](#valiant-cdna)
   - [Mutation types](#mutation-types)
-    - [Single-nucleotide deletion](#single-nucleotide-deletion)
-    - [Two-nucleotide deletion](#two-nucleotide-deletion)
+    - [Parametric deletion](#parametric-deletion)
     - [Single-nucleotide variant](#single-nucleotide-variant)
     - [In-frame deletion](#in-frame-deletion)
     - [Alanine codon substitution](#alanine-codon-substitution)
@@ -246,8 +245,7 @@ The `REF_FASTA` path is expected to point to a multi-FASTA containing cDNA seque
 
 Types of mutation that apply to any target (label):
 
-- [single-nucleotide deletion](#single-nucleotide-deletion) (`1del`)
-- [two-nucleotide deletion](#two-nucleotide-deletion) (`2del0`, `2del1`)
+- [parametric deletion](#parametric-deletion) (*e.g.*: `1del`, `2del0`, `2del1`)
 - [single-nucleotide variant](#single-nucleotide-variant) (`snv`)
 
 Types of mutation that apply to CDS targets only (label):
@@ -260,24 +258,13 @@ Types of mutation that apply to CDS targets only (label):
 
 [Variants imported from VCF files](#custom-variants) are labelled as `custom`.
 
-### Single-nucleotide deletion
+### Parametric deletion
 
-A single nucleotide is deleted at any one position of the target.
+Non-overlapping stretches of nucleotides of a given length are deleted starting from a given offset. No partial deletions are performed at the end of the target regions. Format: `<SPAN>del[<OFFSET>]` (the offset is assumed to be zero if not set).
 
-Given the target `ACGT`, *e.g.*:
+For backwards compatibility, in the [metadata table](#oligonucleotide-metadata-file), `1del0` is reported as `1del`.
 
-```
-CGT
-AGT
-ACT
-ACG
-```
-
-### Two-nucleotide deletion
-
-Non-overlapping pairs of nucleotides are deleted starting from the first (`2del0`) or the second (`2del1`) nucleotide. No partial (single-nucleotide) deletions are performed at the end of sequences with an odd or even length when the start offset is zero or one, respectively.
-
-Given the target `ACGTAAA` and start offset zero (`2del0`), *e.g.*:
+Given the target `ACGTAAA`, span two, and start offset zero (`2del0`), *e.g.*:
 
 ```
 GTAAA
