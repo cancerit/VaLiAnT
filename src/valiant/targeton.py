@@ -20,7 +20,7 @@ import logging
 from dataclasses import dataclass
 from functools import partial
 from sqlite3 import Connection
-from typing import Callable
+from typing import Callable, Iterable
 
 from .annot_variant import AnnotVariant
 from .annotation import Annotation
@@ -39,7 +39,7 @@ from .seq import Seq
 from .sge_config import SGEConfig
 from .transcript_seq import TranscriptSeq
 from .uint_range import UIntRange
-from .variant import RegisteredVariant, Variant
+from .variant import RegisteredVariant, Variant, VariantT
 from .variant_group import VariantGroup
 
 
@@ -75,6 +75,9 @@ def get_pattern_variants_from_region(
     mc: MutatorCollection
 ) -> tuple[list[PatternVariant], list[AnnotVariant]]:
 
+    def get_vars_in_region(a: Iterable[VariantT]) -> list[VariantT]:
+        return [x for x in a if x.pos in region and x.ref_end in region]
+
     # Get overlapping exon ID
     exon_id = get_targeton_region_exon_id(conn, region)
     is_cds = exon_id is not None
@@ -86,6 +89,10 @@ def get_pattern_variants_from_region(
         r_seq = targeton.subseq(region, rel=False)
 
     vars, annot_vars = mc.get_variants(codon_table, r_seq)
+
+    if is_cds:
+        vars = get_vars_in_region(vars)
+        annot_vars = get_vars_in_region(annot_vars)
 
     return vars, annot_vars
 
