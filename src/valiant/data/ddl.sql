@@ -155,8 +155,12 @@ select
     e.exon_index,
     ppe.start,
     ppe.ref,
-    ppe.alt
-from pam_protection_edits ppe
+    ppe.alt,
+    si.name as sgrna_id
+from targeton_pam_protection_edits tppe
+left join pam_protection_edits ppe on ppe.id = tppe.id
+left join pam_protection_edit_sgrna_ids ppesi on ppesi.var_ppe_id = ppe.id
+left join sgrna_ids si on si.id = ppesi.sgrna_id
 inner join exons e on
     ppe.start >= e.start and
     ppe.start <= e.end;
@@ -254,7 +258,8 @@ with t_pos_sgrna_ids as (
     select
         ppe.start,
         si.name as sgrna_id
-    from pam_protection_edits ppe
+    from targeton_pam_protection_edits tppe
+    left join pam_protection_edits ppe on ppe.id = tppe.id
     left join pam_protection_edit_sgrna_ids ppesi on
         ppesi.var_ppe_id = ppe.id
     left join sgrna_ids si on

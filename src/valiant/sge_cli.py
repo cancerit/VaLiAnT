@@ -204,9 +204,6 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             # TODO: filter background variants as well
             transcript_bg = transcript
 
-            exon_ppes = select_exon_ppes(conn)
-            transcript_ppe = transcript_bg.alter(exon_ppes)
-
             if not transcript.begins_with_start_codon:
                 logging.warning(
                     "The CDS does not begin with the start codon "
@@ -219,10 +216,20 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         stats = OligoGenerationInfo()
         for t in exp.targeton_configs:
             targeton = Targeton(targetons[t.ref.start], t)
-            alt, ppe_mut_types, _, _ = targeton.process(conn, options, codon_table, transcript_bg, transcript_ppe)
+            alt = targeton.alter(conn)
+
+            if transcript_bg:
+
+                # Apply PPE's
+                exon_ppes = select_exon_ppes(conn, sgrna_ids=t.sgrna_ids)
+                transcript_ppe = transcript_bg.alter(exon_ppes)
+
+            ppe_mut_types, _, _ = targeton.process(
+                conn, options, codon_table, alt, transcript_bg, transcript_ppe)
 
             # Write metadata files
-            targeton_stats = generate_metadata_table(conn, targeton, alt, ppe_mut_types, config, exp_config, exp, annot)
+            targeton_stats = generate_metadata_table(
+                conn, targeton, alt, ppe_mut_types, config, exp_config, exp, annot)
             stats.update(targeton_stats)
 
     finalise(config, stats)

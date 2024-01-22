@@ -146,6 +146,11 @@ class Targeton:
         self.apply_pattern_variants()
 
     def alter(self, conn: Connection) -> Seq:
+
+        # Truncate targeton-specific tables
+        clear_per_targeton_tables.execute(conn)
+        conn.commit()
+
         bg_vars = self._fetch_variant_group(conn, select_bgs_in_range)
 
         # Apply background variants
@@ -255,17 +260,10 @@ class Targeton:
         conn: Connection,
         opt: Options,
         codon_table: CodonTable,
+        alt: Seq,
         transcript_bg: TranscriptSeq | None,
         transcript_ppe: TranscriptSeq | None
-    ) -> tuple[Seq, list[MutationType], list[PatternVariant], list[AnnotVariant]]:
-
-        # Truncate targeton-specific tables
-        clear_per_targeton_tables.execute(conn)
-        conn.commit()
-
-        # Alter the sequence based on background variants and PPE's
-        alt = self.alter(conn)
-        conn.commit()
+    ) -> tuple[list[MutationType], list[PatternVariant], list[AnnotVariant]]:
 
         assert bool(transcript_bg) == bool(transcript_ppe)
 
@@ -289,7 +287,7 @@ class Targeton:
         pattern_variants, annot_variants = self._process_pattern_variants(
             conn, codon_table, transcript_ppe, alt)
 
-        return alt, ppe_mut_types, pattern_variants, annot_variants
+        return ppe_mut_types, pattern_variants, annot_variants
 
 
 def generate_metadata_table(

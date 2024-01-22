@@ -26,7 +26,7 @@ from .exon import Exon
 from .oligo_seq import OligoSeq
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
-from .sql_gen import SqlQuery, SqlScript, get_multi_range_check
+from .sql_gen import SqlQuery, SqlScript, get_multi_range_check, sql_eq_or_in_str_list
 from .strings.strand import Strand
 from .uint_range import UIntRange
 from .utils import get_enum_values, safe_group_by
@@ -207,11 +207,16 @@ from v_exon_ppes
 """
 
 
-def select_exon_ppes(conn: Connection) -> dict[int, VariantGroup[Variant]]:
-    """Map exon indices to PPE's"""
+def select_exon_ppes(conn: Connection, sgrna_ids: frozenset[str] | None = None) -> dict[int, VariantGroup[Variant]]:
+    """Map exon indices to PPE's, optionally filtering by sgRNA ID"""
+
+    query = sql_select_exon_ppes
+    if sgrna_ids:
+        query = f"{query} where {sql_eq_or_in_str_list('sgrna_id', list(sgrna_ids))}"
 
     with cursor(conn) as cur:
-        res = cur.execute(sql_select_exon_ppes).fetchall()
+        res = cur.execute(query).fetchall()
+        print(cur.execute("select * from targeton_pam_protection_edits").fetchall())
 
     return {
         x: VariantGroup.from_variants([
