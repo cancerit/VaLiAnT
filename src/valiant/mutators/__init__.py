@@ -52,7 +52,6 @@ class BaseMutator(ABC):
         else:
             start = seq.start
             length = len(seq)
-
         return seq.subseq_window(self.pt, start=start, length=length)
 
     def get_variants(self, seq: Seq) -> list[Variant]:

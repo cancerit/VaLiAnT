@@ -201,7 +201,6 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         if transcript:
             # TODO: filter background variants as well
             exon_ppes = select_exon_ppes(conn)
-
             transcript = transcript.alter(exon_ppes)
 
             if not transcript.begins_with_start_codon:
