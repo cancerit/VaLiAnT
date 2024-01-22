@@ -165,6 +165,8 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     ] if annot else []
 
     transcript: TranscriptSeq | None = None
+    transcript_bg: TranscriptSeq | None = None
+    transcript_ppe: TranscriptSeq | None = None
 
     # Get FASTA file
     with open_fasta(config.ref_fasta_fp) as fa:
@@ -200,8 +202,10 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
         if transcript:
             # TODO: filter background variants as well
+            transcript_bg = transcript
+
             exon_ppes = select_exon_ppes(conn)
-            transcript = transcript.alter(exon_ppes)
+            transcript_ppe = transcript_bg.alter(exon_ppes)
 
             if not transcript.begins_with_start_codon:
                 logging.warning(
@@ -215,10 +219,10 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         stats = OligoGenerationInfo()
         for t in exp.targeton_configs:
             targeton = Targeton(targetons[t.ref.start], t)
-            alt, _, _ = targeton.process(conn, options, codon_table, transcript)
+            alt, ppe_mut_types, _, _ = targeton.process(conn, options, codon_table, transcript_bg, transcript_ppe)
 
             # Write metadata files
-            targeton_stats = generate_metadata_table(conn, targeton, alt, config, exp_config, exp, annot)
+            targeton_stats = generate_metadata_table(conn, targeton, alt, ppe_mut_types, config, exp_config, exp, annot)
             stats.update(targeton_stats)
 
     finalise(config, stats)

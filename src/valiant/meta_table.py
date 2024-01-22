@@ -23,7 +23,7 @@ from typing import ClassVar
 from .annotation import Annotation
 from .constants import REVCOMP_OLIGO_NAME_SUFFIX
 from .db import cursor
-from .enums import SrcType
+from .enums import MutationType, SrcType
 from .experiment_meta import ExperimentMeta
 from .loaders.experiment import ExperimentConfig
 from .mave_hgvs import get_mave_nt
@@ -96,6 +96,7 @@ class MetaTable:
     exp_cfg: ExperimentConfig
     seq: Seq
     alt_seq: Seq
+    ppe_mut_types: list[MutationType]
     annot: Annotation | None
 
     def _write_header(self, fh) -> None:
@@ -113,6 +114,7 @@ class MetaTable:
         ref_start = str(ref_range.start)
         ref_end = str(ref_range.end)
         pam_seq = self.alt_seq.s
+        pam_mut_annot = ';'.join([x.value for x in self.ppe_mut_types])
 
         gene_id = None
         transcript_id = None
@@ -285,8 +287,7 @@ class MetaTable:
                     wf(oligo_no_adapt)
 
                     # 26. pam_mut_annot
-                    # TODO
-                    wf('<PMA>')
+                    wf(pam_mut_annot)
 
                     # 27. pam_mut_sgrna_id
                     wf(mr.sgrna_ids)

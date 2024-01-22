@@ -25,6 +25,7 @@ from typing import Callable, Iterable
 from .annot_variant import AnnotVariant
 from .annotation import Annotation
 from .codon_table import CodonTable
+from .enums import MutationType
 from .experiment_meta import ExperimentMeta
 from .loaders.experiment import ExperimentConfig
 from .loaders.targeton_config import TargetonConfig
@@ -34,10 +35,11 @@ from .oligo_generation_info import OligoGenerationInfo
 from .oligo_seq import OligoSeq
 from .options import Options
 from .pattern_variant import PatternVariant
-from .queries import insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, insert_targeton_ppes, is_meta_table_empty, select_exons_in_range, select_bgs_in_range, clear_per_targeton_tables, select_custom_variants_in_range, sql_select_ppes_in_range
+from .queries import insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, insert_targeton_ppes, is_meta_table_empty, select_exons_in_range, select_bgs_in_range, clear_per_targeton_tables, select_custom_variants_in_range, select_ppes_with_offset, sql_select_ppes_in_range
 from .seq import Seq
 from .sge_config import SGEConfig
 from .sql_gen import SqlQuery, sql_and, sql_eq_or_in_str_list
+from .strings.strand import Strand
 from .transcript_seq import TranscriptSeq
 from .uint_range import UIntRange
 from .variant import RegisteredVariant, Variant, VariantT
@@ -97,6 +99,16 @@ def get_pattern_variants_from_region(
         annot_vars = get_vars_in_region(annot_vars)
 
     return vars, annot_vars
+
+
+def get_codon_range(strand: Strand, pos: int, codon_offset: int) -> UIntRange:
+    if strand.is_plus:
+        start = pos - codon_offset
+        end = start + 2
+    else:
+        end = pos + codon_offset
+        start = end - 2
+    return UIntRange(start, end)
 
 
 @dataclass(slots=True)
@@ -221,13 +233,31 @@ class Targeton:
 
         return pattern_variants, annot_variants
 
+    def _process_ppe_codon(
+        self,
+        codon_table: CodonTable,
+        transcript_bg: TranscriptSeq,
+        transcript_ppe: TranscriptSeq,
+        exon_index: int,
+        ppe_start: int,
+        codon_offset: int
+    ) -> MutationType:
+        rng = get_codon_range(self.config.strand, ppe_start, codon_offset)
+        assert len(rng) == 3
+
+        codon_ref = transcript_bg.get_cds_seq(exon_index, rng).as_codon()
+        codon_alt = transcript_ppe.get_cds_seq(exon_index, rng).as_codon()
+
+        return codon_table.get_aa_change(codon_ref, codon_alt)
+
     def process(
         self,
         conn: Connection,
         opt: Options,
         codon_table: CodonTable,
-        transcript: TranscriptSeq | None
-    ) -> tuple[Seq, list[PatternVariant], list[AnnotVariant]]:
+        transcript_bg: TranscriptSeq | None,
+        transcript_ppe: TranscriptSeq | None
+    ) -> tuple[Seq, list[MutationType], list[PatternVariant], list[AnnotVariant]]:
 
         # Truncate targeton-specific tables
         clear_per_targeton_tables.execute(conn)
@@ -237,20 +267,36 @@ class Targeton:
         alt = self.alter(conn)
         conn.commit()
 
+        assert bool(transcript_bg) == bool(transcript_ppe)
+
+        # Categorise PPE's (synonymous, missense, or nonsense)
+        ppe_mut_types = [
+            self._process_ppe_codon(
+                codon_table,
+                transcript_bg,
+                transcript_ppe,
+                exon_index,
+                ppe_start,
+                codon_offset)
+            for exon_index, ppe_start, codon_offset
+            in select_ppes_with_offset(conn, self.seq.get_range())
+        ] if self.config.sgrna_ids and transcript_bg and transcript_ppe else []
+
         # Process custom variants
         self._process_custom_variants(conn, opt, alt)
 
         # Process pattern variants
         pattern_variants, annot_variants = self._process_pattern_variants(
-            conn, codon_table, transcript, alt)
+            conn, codon_table, transcript_ppe, alt)
 
-        return alt, pattern_variants, annot_variants
+        return alt, ppe_mut_types, pattern_variants, annot_variants
 
 
 def generate_metadata_table(
     conn: Connection,
     targeton: Targeton,
     alt: Seq,
+    ppe_mut_types: list[MutationType],
     config: SGEConfig,
     exp: ExperimentMeta,
     exp_cfg: ExperimentConfig,
@@ -261,7 +307,7 @@ def generate_metadata_table(
         meta_fn = f"{targeton_name}_meta.csv"
         meta_fp = config.get_output_file_path(meta_fn)
         options = config.get_options()
-        mt = MetaTable(config, exp, options, exp_cfg, targeton.seq, alt, annot)
+        mt = MetaTable(config, exp, options, exp_cfg, targeton.seq, alt, ppe_mut_types, annot)
         return mt.to_csv(conn, meta_fp)
     else:
         logging.warning(

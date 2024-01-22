@@ -27,8 +27,25 @@ from .seq import Seq
 from .seq_collection import SeqCollection
 from .strings.strand import Strand
 from .uint_range import UIntRange
+from .utils import get_cds_ext_3_length
 from .variant import Variant
 from .variant_group import VariantGroup
+
+
+def get_range_cds_exts(strand: Strand, exon: Exon, r: UIntRange) -> tuple[int, int]:
+    delta_5p = (
+        (r.start - exon.start) if strand.is_plus else
+        (exon.end - r.end)
+    )
+    assert delta_5p >= 0
+
+    cds_prefix_length = (exon.cds_prefix_length + (delta_5p % 3)) % 3
+    cds_suffix_length = get_cds_ext_3_length(cds_prefix_length, len(r))
+
+    return (
+        (cds_prefix_length, cds_suffix_length) if strand.is_plus else
+        (cds_suffix_length, cds_prefix_length)
+    )
 
 
 @dataclass(slots=True)
@@ -72,12 +89,12 @@ class TranscriptSeq(SeqCollection):
 
     def get_cds_seq(self, exon_index: int, r: UIntRange) -> CdsSeq:
         exon = self.get_exon(exon_index)
-        ds = r.start - exon.start
-        assert ds >= 0
 
-        # TODO: remember to check whether the frame is in the GTF vs the Valiant convention
-        #  (probably GTF since the loader was rewritten)
-        before, after = exon.get_5p_3p_extensions(self.strand)
+        if r not in exon:
+            raise ValueError("CDS range can't span more than one exon!")
+
+        before, after = get_range_cds_exts(self.strand, exon, r)
+
         return self.get_as_cds_seq(
             self.get_exon_seq_index(exon_index), r, before=before, after=after)
 

@@ -399,3 +399,19 @@ def insert_targeton_custom_variants(
                 value=1)
             cur.execute(query, tuple(chain.from_iterable(
                 r.to_tuple() for r in const_regions)))
+
+
+sql_select_ppes_with_offset = """
+select
+    exon_index,
+    ppe_start,
+    codon_offset
+from v_exon_codon_ppes
+where ppe_start >= ? and ppe_start <= ?
+order by ppe_start
+"""
+
+
+def select_ppes_with_offset(conn: Connection, r: UIntRange) -> list[tuple[int, int, int]]:
+    with cursor(conn) as cur:
+        return cur.execute(sql_select_ppes_with_offset, r.to_tuple()).fetchall()

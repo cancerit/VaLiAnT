@@ -21,6 +21,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .seq import Seq
+from .strings.codon import Codon
 from .strings.dna_str import DnaStr
 from .uint_range import UIntRange
 from .utils import get_codon_offset_complement
@@ -33,6 +34,14 @@ class CdsSeq(Seq):
 
     def __post_init__(self) -> None:
         assert self.ext_length % 3 == 0
+
+    def as_codon(self) -> Codon:
+        assert (
+            len(self) == 3 and
+            not self.cds_prefix and
+            not self.cds_suffix
+        )
+        return Codon(self.s)
 
     @property
     def cds_prefix_length(self) -> int:
