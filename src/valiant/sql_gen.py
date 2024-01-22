@@ -49,6 +49,18 @@ def get_multi_range_check(n: int, start_only: bool = False) -> str:
     return sql_or([sql_in_range(start_only)] * n)
 
 
+def sql_str(s: str) -> str:
+    return f"'{s}'"
+
+
+def sql_eq_or_in_str_list(field: str, a: list[str]) -> str:
+    assert a
+    return (
+        f"{field} = {sql_str(a[0])}" if len(a) == 1 else
+        f"{field} in ({','.join(map(sql_str, a))})"
+    )
+
+
 class SqlQuery(str):
 
     @classmethod

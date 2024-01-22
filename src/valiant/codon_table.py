@@ -98,6 +98,14 @@ class CodonTable:
         # Assumption: aa_to_codons has its values (codons) sorted by rank
         return self.get_codons(aa)[0]
 
+    def get_top_codons(self, exclude: set[TranslationSymbol] | None = None) -> list[Codon]:
+        exclude = exclude or set()
+        return sorted([
+            self.get_top_codon(aa)
+            for aa in self.aa_to_codons.keys()
+            if aa not in exclude
+        ])
+
     def translate(self, codon: Codon) -> TranslationSymbol:
         try:
             return self.codon_to_aa[codon]

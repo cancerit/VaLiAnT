@@ -91,37 +91,11 @@ create table pam_protection_edit_sgrna_ids (
     sgrna_id integer not null references sgrna_ids (id)
 ) without rowid;
 
-create table exon_codon_ppes (
-    exon_id integer not null references exons (id),
-    codon_index integer not null,
-    -- Assumption: at most one PPE per codon
-    ppe_id integer not null references pam_protection_edits (id),
-
-    primary key (exon_id, codon_index)
-);
-
-create view v_exon_codon_ppes as
-select
-    ecp.exon_id,
-    e.exon_index,
-    ecp.codon_index,
-    ecp.ppe_id,
-    ppe.start as ppe_start,
-    abs(ppe.start - e.first_codon_start) % 3 as codon_offset
-from exon_codon_ppes ecp
-left join v_exon_ext e on e.id = ecp.exon_id
-left join pam_protection_edits ppe on ppe.id = ecp.ppe_id;
-
-create view v_exon_ppes as
-select
-    e.exon_index,
-    ppe.start,
-    ppe.ref,
-    ppe.alt
-from pam_protection_edits ppe
-inner join exons e on
-    ppe.start >= e.start and
-    ppe.start <= e.end;
+create view v_ppe_sgrna_ids as
+select ppe.*, si.name as sgrna_id
+from pam_protection_edits as ppe
+left join pam_protection_edit_sgrna_ids ppesi on ppesi.var_ppe_id = ppe.id
+left join sgrna_ids si on si.id = ppesi.sgrna_id;
 
 -- Custom variants
 
@@ -140,9 +114,52 @@ create table custom_variants (
     alt text not null
 );
 
+create view v_custom_variants as
+select *, start + max(0, length(ref) - 1) as end
+from custom_variants;
+
 /*
 PER TARGETON
 */
+
+-- PAM protection edits
+
+create table targeton_pam_protection_edits (
+    id integer primary key references pam_protection_edits (id),
+    start integer not null
+);
+
+create table targeton_exon_codon_ppes (
+    exon_id integer not null references exons (id),
+    codon_index integer not null,
+    -- Assumption: at most one PPE per codon
+    ppe_id integer not null references pam_protection_edits (id),
+
+    primary key (exon_id, codon_index)
+);
+
+create view v_exon_codon_ppes as
+select
+    ecp.exon_id,
+    e.exon_index,
+    ecp.codon_index,
+    ecp.ppe_id,
+    ppe.start as ppe_start,
+    abs(ppe.start - e.first_codon_start) % 3 as codon_offset
+from targeton_exon_codon_ppes ecp
+left join v_exon_ext e on e.id = ecp.exon_id
+left join pam_protection_edits ppe on ppe.id = ecp.ppe_id;
+
+create view v_exon_ppes as
+select
+    e.exon_index,
+    ppe.start,
+    ppe.ref,
+    ppe.alt
+from pam_protection_edits ppe
+inner join exons e on
+    ppe.start >= e.start and
+    ppe.start <= e.end;
 
 -- Pattern variants
 
@@ -173,11 +190,6 @@ create table ref_pattern_variants (
     start integer not null,
     ref text not null,
     alt text not null
-);
-
-create table targeton_pam_protection_edits (
-    id integer primary key references pam_protection_edits (id),
-    start integer not null
 );
 
 create table targeton_custom_variants (

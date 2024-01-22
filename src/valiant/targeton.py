@@ -34,13 +34,15 @@ from .oligo_generation_info import OligoGenerationInfo
 from .oligo_seq import OligoSeq
 from .options import Options
 from .pattern_variant import PatternVariant
-from .queries import insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, insert_targeton_ppes, is_meta_table_empty, select_exons_in_range, select_ppes_in_range, select_bgs_in_range, clear_per_targeton_tables, select_custom_variants_in_range
+from .queries import insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, insert_targeton_ppes, is_meta_table_empty, select_exons_in_range, select_bgs_in_range, clear_per_targeton_tables, select_custom_variants_in_range, sql_select_ppes_in_range
 from .seq import Seq
 from .sge_config import SGEConfig
+from .sql_gen import SqlQuery, sql_and, sql_eq_or_in_str_list
 from .transcript_seq import TranscriptSeq
 from .uint_range import UIntRange
 from .variant import RegisteredVariant, Variant, VariantT
 from .variant_group import VariantGroup
+from .variant_select import VariantSelectStart
 
 
 GetVariantsInRangeCallable = Callable[[Connection, UIntRange], list[RegisteredVariant]]
@@ -102,17 +104,19 @@ class Targeton:
     seq: Seq
     config: TargetonConfig
 
-
     def _fetch_variant_group(self, conn: Connection, f: GetVariantsInRangeCallable) -> VariantGroup:
         return VariantGroup.from_variants(f(conn, self.seq.get_range()))
 
-    def apply_background_variants(self, conn: Connection) -> None:
-        vars = select_bgs_in_range(conn, self.seq.get_range())
-        pass
+    @property
+    def select_ppes_in_range(self) -> GetVariantsInRangeCallable:
 
-    def apply_ppes(self, conn: Connection) -> None:
-        vars = select_ppes_in_range(conn, self.seq.get_range())
-        pass
+        # Build query (add sgrna ID filter to positional filter)
+        query = SqlQuery(sql_and([
+            sql_select_ppes_in_range,
+            sql_eq_or_in_str_list('sgrna_id', list(self.config.sgrna_ids))
+        ]))
+
+        return VariantSelectStart(query).select_in_range
 
     def apply_custom_variants(self) -> None:
         """
@@ -131,10 +135,23 @@ class Targeton:
 
     def alter(self, conn: Connection) -> Seq:
         bg_vars = self._fetch_variant_group(conn, select_bgs_in_range)
-        ppe_vars = self._fetch_variant_group(conn, select_ppes_in_range)
 
+        # Apply background variants
         bg_seq, alt_bg_vars = bg_vars.apply(self.seq, ref_check=True)
-        ppe_seq, alt_ppe_vars = ppe_vars.apply(bg_seq, ref_check=False)
+
+        if self.config.sgrna_ids:
+
+            # Fetch PPE's
+            ppe_vars = self._fetch_variant_group(conn, self.select_ppes_in_range)
+
+            # TODO: need to correct PPE's by the offsets introduced by the background?
+            ppe_seq, alt_ppe_vars = ppe_vars.apply(bg_seq, ref_check=False)
+
+        else:
+
+            # No PPE's
+            ppe_seq = bg_seq
+            alt_ppe_vars = []
 
         # TODO: push the corrected PPE's to database
         insert_targeton_ppes(conn, alt_ppe_vars)

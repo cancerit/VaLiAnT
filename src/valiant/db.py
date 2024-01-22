@@ -36,13 +36,17 @@ class DbTableName(str, Enum):
     V_META = 'v_meta'
     MUTATIONS = 'mutations'
     TARGETON_CUSTOM_VARIANTS = 'targeton_custom_variants'
+    V_CUSTOM_VARIANTS = 'v_custom_variants'
+    V_PPE_SGRNA_IDS = 'v_ppe_sgrna_ids'
+    TARGETON_EXON_CODON_PPES = 'targeton_exon_codon_ppes'
 
 
 PER_TARGETON_TABLES: set[DbTableName] = {
     DbTableName.MUTATIONS,
     DbTableName.PATTERN_VARIANTS,
     DbTableName.TARGETON_PAM_PROTECTION_EDITS,
-    DbTableName.TARGETON_CUSTOM_VARIANTS
+    DbTableName.TARGETON_CUSTOM_VARIANTS,
+    DbTableName.TARGETON_EXON_CODON_PPES
 }
 
 

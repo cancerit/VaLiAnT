@@ -22,7 +22,7 @@ from sqlite3 import Connection, Cursor
 from .annot_variant import AnnotVariant
 from .custom_variant import CustomVariant
 from .db import PER_TARGETON_TABLES, cursor, DbTableName, DbFieldName
-from .exon import Exon, RegisteredExon
+from .exon import Exon
 from .oligo_seq import OligoSeq
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
@@ -32,7 +32,7 @@ from .uint_range import UIntRange
 from .utils import get_enum_values, safe_group_by
 from .variant import RegisteredVariant, Variant
 from .variant_group import VariantGroup
-from .variant_select import VariantSelectStart
+from .variant_select import VariantSelectStart, VariantSelectStartEnd
 
 
 class NoRowId(Exception):
@@ -142,24 +142,27 @@ def _insert_returning_row_id(cur: Cursor, query: str, params: tuple) -> int:
     return row_id
 
 
+# TODO: consider the exons should have background-altered coordinates as well
 sql_insert_exon_codon_ppes = """
-insert into exon_codon_ppes (
+insert into targeton_exon_codon_ppes (
     ppe_id,
     exon_id,
     codon_index
 )
 select
-    p.id,
+    tppe.id,
     e.id, (
-        abs(p.start - e.first_codon_start) / 3
+        abs(tppe.start - e.first_codon_start) / 3
     ) as codon_index
-from pam_protection_edits p
+from targeton_pam_protection_edits tppe
+left join pam_protection_edits ppe on ppe.id = tppe.id
 left join v_exon_ext e on
-    p.start >= e.start and
-    p.start <= e.end;
+    tppe.start >= e.start and
+    tppe.start <= e.end;
 """
 
 
+# TODO: this shoud NOT assign the exon ID's (those may change per targeton and depend on background!)
 def insert_pam_protection_edits(conn: Connection, vars: list[PamVariant]) -> None:
     def get_sgrna_id(c: Cursor, name: str) -> int:
 
@@ -192,9 +195,6 @@ def insert_pam_protection_edits(conn: Connection, vars: list[PamVariant]) -> Non
             cur.execute(
                 sql_insert_ppe_sgrna_ids,
                 (var_id, sgrna_name_ids[v.sgrna_id]))
-
-        # Assign exon ID's and codon indices to the PPE's
-        cur.execute(sql_insert_exon_codon_ppes)
 
 
 sql_select_exon_ppes = """
@@ -330,16 +330,16 @@ clear_per_targeton_tables = SqlScript.from_queries(
     map(SqlQuery.get_delete, PER_TARGETON_TABLES))
 
 
-select_ppes_in_range = VariantSelectStart.from_table(
-    DbTableName.PAM_PROTECTION_EDITS).select_in_range
+sql_select_ppes_in_range = VariantSelectStart.from_table(
+    DbTableName.V_PPE_SGRNA_IDS).query
 
 
 select_bgs_in_range = VariantSelectStart.from_table(
     DbTableName.BACKGROUND_VARIANTS).select_in_range
 
 
-select_custom_variants_in_range = VariantSelectStart.from_table(
-    DbTableName.CUSTOM_VARIANTS).select_in_range
+select_custom_variants_in_range = VariantSelectStartEnd.from_table(
+    DbTableName.V_CUSTOM_VARIANTS).select_in_range
 
 
 sql_insert_targeton_ppes = SqlQuery.get_insert_values(
@@ -355,6 +355,9 @@ def insert_targeton_ppes(conn: Connection, variants: list[RegisteredVariant]) ->
             (v.id, v.pos)
             for v in variants
         ])
+
+        # Assign exon ID's and codon indices to the PPE's
+        cur.execute(sql_insert_exon_codon_ppes)
 
 
 def is_table_empty(conn: Connection, t: DbTableName) -> bool:

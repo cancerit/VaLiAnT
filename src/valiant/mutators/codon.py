@@ -24,6 +24,7 @@ from ..cds_seq import CdsSeq
 from ..codon_table import CodonTable
 from ..constants import STOP
 from ..mutator_type import MutatorType
+from ..seq import Seq
 from ..strings.codon import Codon
 from ..strings.dna_str import DnaStr
 from ..strings.translation_symbol import TranslationSymbol
@@ -37,11 +38,15 @@ ala = TranslationSymbol('A')
 stop = TranslationSymbol(STOP)
 
 
+def get_codon_refs(seq: CdsSeq, m: BaseMutator) -> list[Seq]:
+    return m.get_refs(seq, r=seq.get_inner_cds_range())
+
+
 def get_codon_replacements(seq: CdsSeq, m: BaseMutator, value: Codon | None) -> list[Variant]:
     alt = DnaStr(value or '')
     return [
         get_variant_from_ref(ref, alt)
-        for ref in m.get_refs(seq, r=seq.get_inner_cds_range())
+        for ref in get_codon_refs(seq, m)
         if alt != ref.s
     ]
 
@@ -87,17 +92,12 @@ class StopMutator(BaseReplaceCodonMutator):
 class AminoAcidMutator(CodonMutator):
     TYPE = MutatorType.AA
 
-    def get_alt_aa_codons(self, codon_table: CodonTable, codon: Codon) -> list[str]:
-        return [
-            alt_codon
-            for alt_codon in codon_table.get_codons(
-                codon_table.translate(codon))
-            if alt_codon != codon
-        ]
+    def get_alt_aa_codons(self, codon_table: CodonTable, codon: Codon) -> list[Codon]:
+        return codon_table.get_top_codons({stop, codon_table.translate(codon)})
 
     def _get_variants(self, codon_table: CodonTable, seq: CdsSeq) -> list[Variant]:
         return [
             get_variant_from_ref(ref, DnaStr(alt_codon))
-            for ref in self.get_refs(seq)
+            for ref in get_codon_refs(seq, self)
             for alt_codon in self.get_alt_aa_codons(codon_table, Codon(ref.s))
         ]
