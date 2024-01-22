@@ -142,26 +142,6 @@ def _insert_returning_row_id(cur: Cursor, query: str, params: tuple) -> int:
     return row_id
 
 
-# TODO: consider the exons should have background-altered coordinates as well
-sql_insert_exon_codon_ppes = """
-insert into targeton_exon_codon_ppes (
-    ppe_id,
-    exon_id,
-    codon_index
-)
-select
-    tppe.id,
-    e.id, (
-        abs(tppe.start - e.first_codon_start) / 3
-    ) as codon_index
-from targeton_pam_protection_edits tppe
-left join pam_protection_edits ppe on ppe.id = tppe.id
-left join v_exon_ext e on
-    tppe.start >= e.start and
-    tppe.start <= e.end;
-"""
-
-
 # TODO: this shoud NOT assign the exon ID's (those may change per targeton and depend on background!)
 def insert_pam_protection_edits(conn: Connection, vars: list[PamVariant]) -> None:
     def get_sgrna_id(c: Cursor, name: str) -> int:
@@ -350,6 +330,26 @@ sql_insert_targeton_ppes = SqlQuery.get_insert_values(
         DbFieldName.ID,
         DbFieldName.START
     ])
+
+
+# TODO: consider the exons should have background-altered coordinates as well
+sql_insert_exon_codon_ppes = """
+insert into targeton_exon_codon_ppes (
+    ppe_id,
+    exon_id,
+    codon_index
+)
+select
+    tppe.id,
+    e.id, (
+        abs(tppe.start - e.first_codon_start) / 3
+    ) as codon_index
+from targeton_pam_protection_edits tppe
+left join pam_protection_edits ppe on ppe.id = tppe.id
+left join v_exon_ext e on
+    tppe.start >= e.start and
+    tppe.start <= e.end;
+"""
 
 
 def insert_targeton_ppes(conn: Connection, variants: list[RegisteredVariant]) -> None:
