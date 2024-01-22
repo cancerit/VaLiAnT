@@ -24,11 +24,10 @@ from ..cds_seq import CdsSeq
 from ..int_pattern_builder import pt_codon
 from ..mutator_type import MutatorType
 from ..seq import Seq
-from ..strings.dna_str import DnaStr
 from ..variant import Variant
 
 
-# TODO: add slots back when CPython fixes 90562
+# TODO: add slots back when CPython fixes 90562
 #  https://github.com/python/cpython/issues/90562
 @dataclass(frozen=True, slots=False, init=False)
 class DeletionMutator(BaseMutator):

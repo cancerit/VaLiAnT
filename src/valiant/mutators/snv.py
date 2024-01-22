@@ -31,7 +31,7 @@ from . import BaseCdsMutator
 pt_nt = IntPatternBuilder(0, 1)
 
 
-# TODO: add slots back when CPython fixes 90562
+# TODO: add slots back when CPython fixes 90562
 #  https://github.com/python/cpython/issues/90562
 @dataclass(frozen=True, slots=False, init=False)
 class SnvMutator(BaseCdsMutator):

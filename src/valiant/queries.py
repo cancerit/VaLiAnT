@@ -235,8 +235,6 @@ where start >= ? and start <= ? and alt_ref_delta != 0
 """
 
 
-
-
 insert_pattern_variant_fields = [
     DbFieldName.POS_A,
     DbFieldName.REF_A,
