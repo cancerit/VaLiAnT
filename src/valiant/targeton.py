@@ -37,7 +37,7 @@ from .oligo_generation_info import OligoGenerationInfo
 from .oligo_seq import OligoSeq
 from .options import Options
 from .pattern_variant import PatternVariant
-from .queries import insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, insert_targeton_ppes, is_meta_table_empty, select_background_variants, select_exons_in_range, clear_per_targeton_tables, select_custom_variants_in_range, select_ppes_with_offset, sql_select_ppes_in_range
+from .queries import insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, insert_targeton_ppes, is_meta_table_empty, select_background_variants, select_exons_in_range, clear_per_targeton_tables, select_custom_variants_in_range, select_ppe_bg_codon_overlaps, select_ppes_with_offset, sql_select_ppes_in_range
 from .seq import Seq
 from .sge_config import SGEConfig
 from .sql_gen import SqlQuery, sql_and, sql_eq_or_in_str_list
@@ -150,7 +150,7 @@ class Targeton:
     seq: Seq
     config: TargetonConfig
 
-    def _fetch_variant_group(self, conn: Connection, f: GetVariantsInRangeCallable) -> VariantGroup:
+    def _fetch_variant_group(self, conn: Connection, f: GetVariantsInRangeCallable) -> VariantGroup[RegisteredVariant]:
         return VariantGroup.from_variants(f(conn, self.seq.get_range()))
 
     @property
@@ -201,7 +201,7 @@ class Targeton:
 
         return bg_vars
 
-    def alter(self, conn: Connection, bg_vars: list[RegisteredBackgroundVariant]) -> Seq:
+    def alter(self, conn: Connection, contig: str, bg_vars: list[RegisteredBackgroundVariant]) -> Seq:
 
         # Truncate targeton-specific tables
         clear_per_targeton_tables.execute(conn)
@@ -218,14 +218,21 @@ class Targeton:
             # TODO: need to correct PPE's by the offsets introduced by the background?
             ppe_seq, alt_ppe_vars = ppe_vars.apply(bg_seq, ref_check=False)
 
+            # Register the coordinate-corrected PPE's on the database
+            insert_targeton_ppes(conn, alt_ppe_vars)
+
+            # Test background variants against the PPE's for codon overlaps
+            ppe_bg_overlap_positions = select_ppe_bg_codon_overlaps(conn)
+            if ppe_bg_overlap_positions:
+                for pos in ppe_bg_overlap_positions:
+                    logging.warning(f"A PAM protection edit at {contig}:{pos} overlaps a background variant in a coding region!")
+                raise InvalidBackgroundVariant("Invalid background: PAM protection edits overlapping background variants in a coding region!")
+
         else:
 
             # No PPE's
             ppe_seq = bg_seq
             alt_ppe_vars = []
-
-        # TODO: push the corrected PPE's to database
-        insert_targeton_ppes(conn, alt_ppe_vars)
 
         return ppe_seq
 

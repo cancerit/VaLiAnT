@@ -443,3 +443,23 @@ def select_background_variants(conn: Connection, r: UIntRange) -> list[Registere
             for r in cur.execute(
                 sql_select_background_variants, r.to_tuple()).fetchall()
         ]
+
+
+sql_select_ppe_bg_codon_overlaps = """
+select distinct p.ppe_start
+from v_exon_codon_ppes p
+left join v_background_variants b on
+    p.ppe_start >= b.start and
+    p.ppe_start <= b.ref_end
+where
+    p.exon_index is not null and
+    b.id is not null
+"""
+
+
+def select_ppe_bg_codon_overlaps(conn: Connection) -> list[int]:
+    with cursor(conn) as cur:
+        return [
+            r[0]
+            for r in cur.execute(sql_select_ppe_bg_codon_overlaps).fetchall()
+        ]

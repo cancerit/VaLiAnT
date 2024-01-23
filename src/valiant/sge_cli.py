@@ -222,10 +222,11 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             try:
                 targeton_bg_vars = targeton.fetch_background_variants(
                     conn, exp.contig, codon_table, transcript, options)
-            except InvalidBackgroundVariant:
-                sys.exit(1)
+                alt = targeton.alter(conn, exp.contig, targeton_bg_vars)
 
-            alt = targeton.alter(conn, targeton_bg_vars)
+            except InvalidBackgroundVariant as ex:
+                logging.critical(ex.args[0])
+                sys.exit(1)
 
             if transcript_bg:
 
