@@ -103,7 +103,26 @@ class MetaTable:
         fh.write(self.CSV_HEADER)
         fh.write('\n')
 
-    def to_csv(self, conn: Connection, fp: str) -> OligoGenerationInfo:
+    def to_csv(self, conn: Connection, targeton_name: str) -> OligoGenerationInfo:
+        def get_path(suffix: str, ext: str) -> str:
+            return self.cfg.get_output_file_path(f"{targeton_name}_{suffix}.{ext}")
+
+        def get_csv_path(suffix: str) -> str:
+            return get_path(suffix, 'csv')
+
+        def get_vcf_path(suffix: str) -> str:
+            return get_path(suffix, 'vcf')
+
+        # Generate file names
+        unique_fp = get_csv_path('unique')
+        meta_fp = get_csv_path('meta')
+        meta_excl_fp = get_csv_path('meta_excluded')
+        vcf_ref_fp = get_vcf_path('ref')
+        vcf_pam_fp = get_vcf_path('pam')
+        # TODO: extra VCF for background?
+
+        unique_oligos: dict[str, str] = {}
+
         species = self.cfg.species
         assembly = self.cfg.assembly
         revc = bool_to_int_str(self.opt.revcomp_minus_strand)
@@ -145,11 +164,11 @@ class MetaTable:
             rc = REVCOMP_OLIGO_NAME_SUFFIX if is_rc else ''
             return f"{tr_frag}_{contig}:{var_frag}_{src}{rc}"
 
-        with open(fp, 'w') as fh:
-            self._write_header(fh)
+        with open(meta_fp, 'w') as meta_fh:
+            self._write_header(meta_fh)
 
             def wf(s: str | None) -> None:
-                _write_field(fh, s)
+                _write_field(meta_fh, s)
 
             with cursor(conn) as cur:
                 it = cur.execute(sql_select_meta)
@@ -208,6 +227,10 @@ class MetaTable:
                         continue
 
                     info.in_range += 1
+
+                    # Populate unique collection
+                    if oligo not in unique_oligos:
+                        unique_oligos[oligo] = oligo_name
 
                     # Write fields
 
@@ -299,7 +322,19 @@ class MetaTable:
                     wf(mave_nt_ref)
 
                     # 30. vcf_var_in_const
-                    fh.write(str(mr.in_const))
+                    meta_fh.write(str(mr.in_const))
 
+                    meta_fh.write('\n')
+
+        if unique_oligos:
+
+            # Write unique sequences
+            with open(unique_fp, 'w') as fh:
+                fh.write('oligo_name,mseq\n')
+                for seq, name in unique_oligos.items():
+                    fh.write(name)
+                    fh.write(',')
+                    fh.write(seq)
                     fh.write('\n')
+
         return info

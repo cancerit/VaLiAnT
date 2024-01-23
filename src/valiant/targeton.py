@@ -363,11 +363,9 @@ def generate_metadata_table(
 ) -> OligoGenerationInfo:
     targeton_name = targeton.config.name
     if not is_meta_table_empty(conn):
-        meta_fn = f"{targeton_name}_meta.csv"
-        meta_fp = config.get_output_file_path(meta_fn)
         options = config.get_options()
         mt = MetaTable(config, exp, options, exp_cfg, targeton.seq, alt, ppe_mut_types, annot)
-        return mt.to_csv(conn, meta_fp)
+        return mt.to_csv(conn, targeton_name)
     else:
         logging.warning(
             "No mutations for targeton '%s'!", targeton_name)
