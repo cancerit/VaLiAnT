@@ -27,6 +27,7 @@ from .annotation import Annotation
 from .background_variants import InvalidBackgroundVariant, RegisteredBackgroundVariant
 from .codon_table import CodonTable
 from .enums import MutationType
+from .exon import get_codon_range, get_codon_range_from_offset
 from .experiment_meta import ExperimentMeta
 from .loaders.experiment import ExperimentConfig
 from .loaders.targeton_config import TargetonConfig
@@ -40,6 +41,7 @@ from .queries import insert_annot_pattern_variants, insert_pattern_variants, ins
 from .seq import Seq
 from .sge_config import SGEConfig
 from .sql_gen import SqlQuery, sql_and, sql_eq_or_in_str_list
+from .strings.codon import Codon
 from .strings.strand import Strand
 from .transcript_seq import TranscriptSeq
 from .uint_range import UIntRange
@@ -57,25 +59,45 @@ class InvalidTargetonRegion(Exception):
         self.msg = f"Invalid targeton region: {msg}!"
 
 
+def is_variant_frame_shifting(variant: RegisteredVariant) -> bool:
+    return variant.alt_ref_delta != 0
+
+
 def is_variant_nonsynonymous(
+    strand: Strand,
     codon_table: CodonTable,
     transcript: TranscriptSeq,
     variant: RegisteredBackgroundVariant
 ) -> bool:
-    if not variant.in_cds:
-        # TODO: warn if indel
-        if variant.alt_ref_delta != 0:
-            logging.warning("Background indel in non-coding region may impact splicing and SGE screen outcome!")
-        return False
+    assert variant.in_cds
 
-    if variant.alt_ref_delta != 0:
+    if is_variant_frame_shifting(variant):
         return True
 
+    if bool(variant.start_exon_index) != bool(variant.end_exon_index):
+        logging.warning("[LIMITATION] Background variant spanning coding and non-coding regions, affecting more than a single codon: may or may not be synonymous (assuming it is by default)!")
+        return False
+
+    if variant.start_exon_index != variant.end_exon_index:
+        logging.warning("[LIMITATION] Background variant spanning more than one exon: may or may not be synonymous (assuming it is by default)!")
+        return False
+
+    assert variant.start_exon_index
+    assert variant.start_codon_index
+    assert variant.end_codon_index
+
+    exon_index = variant.start_exon_index
+    alt = transcript.alter_exon(exon_index, variant)
+    exon = transcript.get_exon(exon_index)
+    for codon_index in range(variant.start_codon_index, variant.end_codon_index + 1):
+        ref_codon = Codon(transcript.get_codon(exon_index, codon_index).s)
+        origin = exon.get_first_codon_start(strand)
+        alt_codon = Codon(alt.ext_substr(
+            get_codon_range(strand, origin, codon_index), rel=False))
+        if codon_table.get_aa_change(ref_codon, alt_codon) == MutationType.SYNONYMOUS:
+            return True
+
     return False
-
-
-def is_variant_frame_shifting(variant: RegisteredVariant):
-    return variant.alt_ref_delta != 0
 
 
 def get_targeton_region_exon_id(conn: Connection, r: UIntRange) -> int | None:
@@ -123,16 +145,6 @@ def get_pattern_variants_from_region(
     return vars, annot_vars
 
 
-def get_codon_range(strand: Strand, pos: int, codon_offset: int) -> UIntRange:
-    if strand.is_plus:
-        start = pos - codon_offset
-        end = start + 2
-    else:
-        end = pos + codon_offset
-        start = end - 2
-    return UIntRange(start, end)
-
-
 @dataclass(slots=True)
 class Targeton:
     seq: Seq
@@ -170,7 +182,7 @@ class Targeton:
         for v in bg_vars:
             if v.in_cds:
                 assert transcript
-                if is_variant_nonsynonymous(codon_table, transcript, v):
+                if is_variant_nonsynonymous(self.config.strand, codon_table, transcript, v):
                     any_non_syn = True
                     # TODO: reassess for multiples of three
                     fs = is_variant_frame_shifting(v)
@@ -194,7 +206,6 @@ class Targeton:
         # Truncate targeton-specific tables
         clear_per_targeton_tables.execute(conn)
         conn.commit()
-
 
         # Apply background variants
         bg_seq, alt_bg_vars = VariantGroup.from_variants(bg_vars).apply(self.seq, ref_check=True)
@@ -290,7 +301,7 @@ class Targeton:
         ppe_start: int,
         codon_offset: int
     ) -> MutationType:
-        rng = get_codon_range(self.config.strand, ppe_start, codon_offset)
+        rng = get_codon_range_from_offset(self.config.strand, ppe_start, codon_offset)
         assert len(rng) == 3
 
         codon_ref = transcript_bg.get_cds_seq(exon_index, rng).as_codon()

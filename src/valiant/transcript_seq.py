@@ -23,6 +23,7 @@ from dataclasses import dataclass, replace
 from .cds_seq import CdsSeq
 from .codon_table import CodonTable
 from .exon import Exon
+from .oligo_seq import alter_seq
 from .seq import Seq
 from .seq_collection import SeqCollection
 from .strings.codon import Codon
@@ -133,3 +134,11 @@ class TranscriptSeq(SeqCollection):
 
         # TODO: alter the exon ranges as well after applying background variants
         return replace(self, seqs=alt_seqs)
+
+    def get_exon_seq(self, exon_index: int) -> CdsSeq:
+        return self.get_cds_seq(exon_index, self.get_exon(exon_index))
+
+    def alter_exon(self, exon_index: int, variant: Variant) -> CdsSeq:
+        ref = self.get_exon_seq(exon_index)
+        alt = alter_seq(ref, variant)
+        return replace(ref, s=alt.s)

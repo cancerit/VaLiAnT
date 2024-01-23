@@ -25,6 +25,27 @@ from .uint_range import UIntRange
 from .utils import get_cds_ext_3_length, get_codon_offset_complement
 
 
+def get_codon_range(strand: Strand, origin: int, codon_index: int) -> UIntRange:
+    codon_start_offset = 3 * codon_index
+    if strand.is_plus:
+        start = origin + codon_start_offset
+        end = start + 2
+    else:
+        end = origin - codon_start_offset
+        start = end - 2
+    return UIntRange(start, end)
+
+
+def get_codon_range_from_offset(strand: Strand, pos: int, codon_offset: int) -> UIntRange:
+    if strand.is_plus:
+        start = pos - codon_offset
+        end = start + 2
+    else:
+        end = pos + codon_offset
+        start = end - 2
+    return UIntRange(start, end)
+
+
 @dataclass(slots=True, frozen=True)
 class Exon(UIntRange):
     index: int
@@ -74,14 +95,7 @@ class Exon(UIntRange):
 
     def get_codon(self, strand: Strand, codon_index: int) -> UIntRange:
         origin = self.get_first_codon_start(strand)
-        codon_start_offset = 3 * codon_index
-        if strand.is_plus:
-            start = origin + codon_start_offset
-            end = start + 2
-        else:
-            end = origin - codon_start_offset
-            start = end - 2
-        return UIntRange(start, end)
+        return get_codon_range(strand, origin, codon_index)
 
     def get_codon_offset(self, strand: str, pos: int) -> int:
         # TODO: verify frame convention
