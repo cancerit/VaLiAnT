@@ -24,6 +24,7 @@ from typing import Callable, Iterable
 
 from .annot_variant import AnnotVariant
 from .annotation import Annotation
+from .background_variants import InvalidBackgroundVariant, RegisteredBackgroundVariant
 from .codon_table import CodonTable
 from .enums import MutationType
 from .experiment_meta import ExperimentMeta
@@ -35,7 +36,7 @@ from .oligo_generation_info import OligoGenerationInfo
 from .oligo_seq import OligoSeq
 from .options import Options
 from .pattern_variant import PatternVariant
-from .queries import insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, insert_targeton_ppes, is_meta_table_empty, select_exons_in_range, select_bgs_in_range, clear_per_targeton_tables, select_custom_variants_in_range, select_ppes_with_offset, sql_select_ppes_in_range
+from .queries import insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, insert_targeton_ppes, is_meta_table_empty, select_background_variants, select_exons_in_range, clear_per_targeton_tables, select_custom_variants_in_range, select_ppes_with_offset, sql_select_ppes_in_range
 from .seq import Seq
 from .sge_config import SGEConfig
 from .sql_gen import SqlQuery, sql_and, sql_eq_or_in_str_list
@@ -54,6 +55,27 @@ class InvalidTargetonRegion(Exception):
     def __init__(self, msg: str) -> None:
         super().__init__()
         self.msg = f"Invalid targeton region: {msg}!"
+
+
+def is_variant_nonsynonymous(
+    codon_table: CodonTable,
+    transcript: TranscriptSeq,
+    variant: RegisteredBackgroundVariant
+) -> bool:
+    if not variant.in_cds:
+        # TODO: warn if indel
+        if variant.alt_ref_delta != 0:
+            logging.warning("Background indel in non-coding region may impact splicing and SGE screen outcome!")
+        return False
+
+    if variant.alt_ref_delta != 0:
+        return True
+
+    return False
+
+
+def is_variant_frame_shifting(variant: RegisteredVariant):
+    return variant.alt_ref_delta != 0
 
 
 def get_targeton_region_exon_id(conn: Connection, r: UIntRange) -> int | None:
@@ -138,23 +160,44 @@ class Targeton:
         """
         pass
 
-    def apply_pattern_variants(self) -> None:
-        pass
+    def fetch_background_variants(self, conn: Connection, contig: str, codon_table: CodonTable, transcript: TranscriptSeq | None, opt: Options) -> list[RegisteredBackgroundVariant]:
+        bg_vars = select_background_variants(conn, self.seq.get_range())
 
-    def apply_mutations(self) -> None:
-        self.apply_custom_variants()
-        self.apply_pattern_variants()
+        any_frame_shift = False
+        any_non_syn = False
+        print(opt)
 
-    def alter(self, conn: Connection) -> Seq:
+        for v in bg_vars:
+            if v.in_cds:
+                assert transcript
+                if is_variant_nonsynonymous(codon_table, transcript, v):
+                    any_non_syn = True
+                    # TODO: reassess for multiples of three
+                    fs = is_variant_frame_shifting(v)
+                    if fs:
+                        any_frame_shift = True
+                    logging.warning(v.get_non_syn_warn_message(contig, fs))
+
+            elif v.alt_ref_delta != 0:
+                logging.warning("Background indel in non-coding region may impact splicing and SGE screen outcome!")
+
+        if any_non_syn and not opt.allow_non_syn:
+            raise InvalidBackgroundVariant("Invalid background: non-synonymous variants!")
+
+        if any_frame_shift and not opt.allow_frame_shift:
+            raise InvalidBackgroundVariant("Invalid background: frame-shifting variants!")
+
+        return bg_vars
+
+    def alter(self, conn: Connection, bg_vars: list[RegisteredBackgroundVariant]) -> Seq:
 
         # Truncate targeton-specific tables
         clear_per_targeton_tables.execute(conn)
         conn.commit()
 
-        bg_vars = self._fetch_variant_group(conn, select_bgs_in_range)
 
         # Apply background variants
-        bg_seq, alt_bg_vars = bg_vars.apply(self.seq, ref_check=True)
+        bg_seq, alt_bg_vars = VariantGroup.from_variants(bg_vars).apply(self.seq, ref_check=True)
 
         if self.config.sgrna_ids:
 

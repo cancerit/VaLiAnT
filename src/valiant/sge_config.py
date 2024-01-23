@@ -51,7 +51,9 @@ class SGEConfig(BaseConfig):
         return Options(
             revcomp_minus_strand=self.revcomp_minus_strand,
             oligo_max_length=self.max_length,
-            oligo_min_length=self.min_length)
+            oligo_min_length=self.min_length,
+            allow_non_syn=self.force_bg_ns,
+            allow_frame_shift=self.force_bg_fs)
 
     def is_valid(self) -> bool:
         success = super().is_valid()

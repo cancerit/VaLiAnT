@@ -35,7 +35,7 @@ class InvalidVariantRef(Exception):
 def check_ref(ref_seq: Seq, variant: Variant) -> None:
     """Check whether the variant REF matches the reference sequence"""
 
-    exp_ref = ref_seq.substr(variant.ref_range)
+    exp_ref = ref_seq.substr(variant.ref_range, rel=False)
     if variant.ref != exp_ref:
         raise InvalidVariantRef(
             f"Invalid variant at {variant.pos}: "

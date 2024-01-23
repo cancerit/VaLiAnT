@@ -72,6 +72,17 @@ class Exon(UIntRange):
             [first]
         )
 
+    def get_codon(self, strand: Strand, codon_index: int) -> UIntRange:
+        origin = self.get_first_codon_start(strand)
+        codon_start_offset = 3 * codon_index
+        if strand.is_plus:
+            start = origin + codon_start_offset
+            end = start + 2
+        else:
+            end = origin - codon_start_offset
+            start = end - 2
+        return UIntRange(start, end)
+
     def get_codon_offset(self, strand: str, pos: int) -> int:
         # TODO: verify frame convention
         return pos - self.start + (

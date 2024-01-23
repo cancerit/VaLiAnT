@@ -20,6 +20,7 @@ from itertools import chain
 from sqlite3 import Connection, Cursor
 
 from .annot_variant import AnnotVariant
+from .background_variants import RegisteredBackgroundVariant
 from .custom_variant import CustomVariant
 from .db import PER_TARGETON_TABLES, cursor, DbTableName, DbFieldName
 from .exon import Exon
@@ -418,3 +419,27 @@ order by ppe_start
 def select_ppes_with_offset(conn: Connection, r: UIntRange) -> list[tuple[int, int, int]]:
     with cursor(conn) as cur:
         return cur.execute(sql_select_ppes_with_offset, r.to_tuple()).fetchall()
+
+
+sql_select_background_variants = """
+select
+    start,
+    ref,
+    alt,
+    id,
+    start_exon_index,
+    start_codon_index,
+    end_exon_index,
+    end_codon_index
+from v_background_variant_codons
+where start >= ? and start <= ?
+"""
+
+
+def select_background_variants(conn: Connection, r: UIntRange) -> list[RegisteredBackgroundVariant]:
+    with cursor(conn) as cur:
+        return [
+            RegisteredBackgroundVariant(*r)
+            for r in cur.execute(
+                sql_select_background_variants, r.to_tuple()).fetchall()
+        ]

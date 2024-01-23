@@ -54,9 +54,13 @@ create table background_variants (
 );
 
 create view v_background_variants as
-select *, alt_len - ref_len as alt_ref_delta
+select
+    *,
+    alt_len - ref_len as alt_ref_delta,
+    start + max(0, ref_len - 1) as ref_end
 from (
     select
+        id,
         start,
         ref,
         alt,
@@ -64,6 +68,33 @@ from (
         length(alt) as alt_len
     from background_variants
 );
+
+create view v_background_variant_codons as
+select
+    t.*,
+    start_delta / 3 as start_codon_index,
+    start_delta % 3 as start_codon_offset,
+    end_delta / 3 as end_codon_index,
+    end_delta % 3 as end_codon_offset
+from (
+    select
+        b.*,
+        -- Start codon
+        es.exon_index as start_exon_index,
+        es.last_codon_index as start_last_codon_index,
+        abs(b.start - es.first_codon_start) as start_delta,
+        -- End codon
+        ee.exon_index as end_exon_index,
+        ee.last_codon_index as end_last_codon_index,
+        abs(b.ref_end - ee.first_codon_start) as end_delta
+    from v_background_variants b
+    left join v_exon_ext es on
+        b.start >= es.start and
+        b.start <= es.end
+    left join v_exon_ext ee on
+        b.ref_end >= ee.start and
+        b.ref_end <= ee.end
+) t;
 
 create table targeton_background_variants (
     targeton_id integer not null primary key references targetons (id),

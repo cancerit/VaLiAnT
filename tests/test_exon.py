@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
+# Copyright (C) 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,18 +16,25 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from dataclasses import dataclass
+import pytest
 
-from .strings.strand import Strand
+from valiant.exon import Exon
+from valiant.strings.strand import Strand
+from valiant.uint_range import UIntRange
 
 
-@dataclass(slots=True)
-class Options:
-    revcomp_minus_strand: bool
-    oligo_max_length: int
-    oligo_min_length: int
-    allow_frame_shift: bool
-    allow_non_syn: bool
+plus = Strand('+')
+minus = Strand('-')
 
-    def should_rc(self, strand: Strand) -> bool:
-        return self.revcomp_minus_strand and strand.is_minus
+
+@pytest.mark.parametrize('strand,codon_index,exp', [
+    (plus, 0, UIntRange(10, 12)),
+    (minus, 0, UIntRange(14, 16)),
+    (plus, 1, UIntRange(13, 15)),
+    (minus, 1, UIntRange(11, 13)),
+    # Partial exon
+    (plus, 2, UIntRange(16, 18))
+])
+def test_exon_get_codon(strand, codon_index, exp):
+    exon = Exon(10, 16, 0, 0)
+    assert exon.get_codon(strand, codon_index) == exp

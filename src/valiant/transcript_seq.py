@@ -25,6 +25,7 @@ from .codon_table import CodonTable
 from .exon import Exon
 from .seq import Seq
 from .seq_collection import SeqCollection
+from .strings.codon import Codon
 from .strings.strand import Strand
 from .uint_range import UIntRange
 from .utils import get_cds_ext_3_length
@@ -86,6 +87,13 @@ class TranscriptSeq(SeqCollection):
 
     def get_codon_offset(self, exon_index: int, pos: int) -> int:
         return self.get_exon(exon_index).get_codon_offset(self.strand, pos)
+
+    def get_codon(self, exon_index: int, codon_index: int) -> Seq:
+        exon = self.get_exon(exon_index)
+        codon_range = exon.get_codon(self.strand, codon_index)
+        cds_seq = self.get_cds_seq(exon_index, codon_range)
+        assert not cds_seq.cds_prefix and not cds_seq.cds_suffix
+        return Seq(cds_seq.start, Codon(cds_seq.s))
 
     def get_cds_seq(self, exon_index: int, r: UIntRange) -> CdsSeq:
         exon = self.get_exon(exon_index)

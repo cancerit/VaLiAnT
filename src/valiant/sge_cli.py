@@ -18,11 +18,13 @@
 
 import logging
 from sqlite3 import Connection
+import sys
 
 import click
 from pysam.libcfaidx import FastaFile
 
 from .annotation import Annotation
+from .background_variants import InvalidBackgroundVariant
 from .common_cli import common_params, existing_file, finalise, load_codon_table
 from .constants import OUTPUT_CONFIG_FILE_NAME
 from .contig_filter import ContigFilter
@@ -216,7 +218,14 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         stats = OligoGenerationInfo()
         for t in exp.targeton_configs:
             targeton = Targeton(targetons[t.ref.start], t)
-            alt = targeton.alter(conn)
+
+            try:
+                targeton_bg_vars = targeton.fetch_background_variants(
+                    conn, exp.contig, codon_table, transcript, options)
+            except InvalidBackgroundVariant:
+                sys.exit(1)
+
+            alt = targeton.alter(conn, targeton_bg_vars)
 
             if transcript_bg:
 
