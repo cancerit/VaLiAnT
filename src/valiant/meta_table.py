@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from collections import defaultdict
 from dataclasses import dataclass
 from sqlite3 import Connection
 from typing import ClassVar
@@ -121,7 +122,8 @@ class MetaTable:
         vcf_pam_fp = get_vcf_path('pam')
         # TODO: extra VCF for background?
 
-        unique_oligos: dict[str, str] = {}
+        # Map: oligo sequence -> oligo names
+        unique_oligos = defaultdict(list)
 
         species = self.cfg.species
         assembly = self.cfg.assembly
@@ -229,8 +231,7 @@ class MetaTable:
                     info.in_range += 1
 
                     # Populate unique collection
-                    if oligo not in unique_oligos:
-                        unique_oligos[oligo] = oligo_name
+                    unique_oligos[oligo].append(oligo_name)
 
                     # Write fields
 
@@ -331,8 +332,9 @@ class MetaTable:
             # Write unique sequences
             with open(unique_fp, 'w') as fh:
                 fh.write('oligo_name,mseq\n')
-                for seq, name in unique_oligos.items():
-                    fh.write(name)
+                for seq, names in unique_oligos.items():
+                    names.sort()
+                    fh.write(names[0])
                     fh.write(',')
                     fh.write(seq)
                     fh.write('\n')
