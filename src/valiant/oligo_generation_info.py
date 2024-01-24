@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -34,6 +34,10 @@ class OligoGenerationInfo:
     @property
     def long_oligo_n(self) -> int:
         return self.too_long
+
+    @property
+    def out_of_range_n(self) -> int:
+        return self.short_oligo_n + self.long_oligo_n
 
     def __init__(self) -> None:
         self.too_short = 0

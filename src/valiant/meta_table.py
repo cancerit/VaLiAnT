@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2023 Genome Research Ltd
+# Copyright (C) 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -18,6 +18,7 @@
 
 from collections import defaultdict
 from dataclasses import dataclass
+import os
 from sqlite3 import Connection
 from typing import ClassVar
 
@@ -166,13 +167,19 @@ class MetaTable:
             rc = REVCOMP_OLIGO_NAME_SUFFIX if is_rc else ''
             return f"{tr_frag}_{contig}:{var_frag}_{src}{rc}"
 
-        with open(meta_fp, 'w') as meta_fh:
+        with (
+            open(meta_fp, 'w') as meta_fh,
+            open(meta_excl_fp, 'w') as meta_excl_fh
+        ):
             self._write_header(meta_fh)
+            self._write_header(meta_excl_fh)
 
             def wf(s: str | None) -> None:
-                _write_field(meta_fh, s)
+                _write_field(fh, s)
 
             with cursor(conn) as cur:
+                n = cur.execute("select count(*) from v_meta").fetchone()[0]
+                print(f"count: {n}")
                 it = cur.execute(sql_select_meta)
                 while r := it.fetchone():
                     mr = MetaRow(*r)
@@ -200,6 +207,9 @@ class MetaTable:
                     pam_var = Variant(v.pos, DnaStr(pam_ref), DnaStr(mr.alt))
                     oligo_name = get_oligo_name(src, pam_var)
 
+                    if mr.mutator in {'aa', 'ala', 'stop'}:
+                        mr.mutation_type = ''
+
                     if mr.overlaps_codon:
                         pam_range = mr.pam_ref_range
                         if pam_range.start != v.pos or pam_range.end != v.ref_end:
@@ -222,16 +232,18 @@ class MetaTable:
 
                     if oligo_length < self.opt.oligo_min_length:
                         info.too_short += 1
-                        continue
+                        fh = meta_excl_fh
 
-                    if oligo_length > self.opt.oligo_max_length:
+                    elif oligo_length > self.opt.oligo_max_length:
                         info.too_long += 1
-                        continue
+                        fh = meta_excl_fh
 
-                    info.in_range += 1
+                    else:
+                        info.in_range += 1
+                        fh = meta_fh
 
-                    # Populate unique collection
-                    unique_oligos[oligo].append(oligo_name)
+                        # Populate unique collection
+                        unique_oligos[oligo].append(oligo_name)
 
                     # Write fields
 
@@ -323,9 +335,12 @@ class MetaTable:
                     wf(mave_nt_ref)
 
                     # 30. vcf_var_in_const
-                    meta_fh.write(str(mr.in_const))
+                    fh.write(str(mr.in_const))
 
-                    meta_fh.write('\n')
+                    fh.write('\n')
+
+        if info.out_of_range_n == 0:
+            os.unlink(meta_excl_fp)
 
         if unique_oligos:
 
