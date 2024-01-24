@@ -217,8 +217,6 @@ class MetaTable:
                 _write_field(fh, s)
 
             with cursor(conn) as cur:
-                n = cur.execute("select count(*) from v_meta").fetchone()[0]
-                print(f"count: {n}")
                 it = cur.execute(sql_select_meta)
                 while r := it.fetchone():
                     mr = MetaRow(*r)
