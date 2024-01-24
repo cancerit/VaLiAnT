@@ -34,8 +34,8 @@ FilterVar = Callable[[VarT], bool]
 
 
 @contextmanager
-def open_vcf(fp: str) -> Generator[VariantFile, None, None]:
-    with closing(VariantFile(fp)) as vcf:
+def open_vcf(fp: str, **kwargs) -> Generator[VariantFile, None, None]:
+    with closing(VariantFile(fp, **kwargs)) as vcf:
         yield vcf
 
 

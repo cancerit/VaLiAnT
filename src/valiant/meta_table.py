@@ -22,6 +22,8 @@ import os
 from sqlite3 import Connection
 from typing import ClassVar
 
+from pysam import VariantFile
+
 from .annotation import Annotation
 from .constants import REVCOMP_OLIGO_NAME_SUFFIX
 from .db import cursor
@@ -38,6 +40,7 @@ from .strings.dna_str import DnaStr
 from .strings.strand import Strand
 from .utils import bool_to_int_str, reverse_complement
 from .variant import Variant
+from .vcf_writer import open_vcf_write
 
 
 META_CSV_FIELDS = [
@@ -167,9 +170,43 @@ class MetaTable:
             rc = REVCOMP_OLIGO_NAME_SUFFIX if is_rc else ''
             return f"{tr_frag}_{contig}:{var_frag}_{src}{rc}"
 
+        def vcf_write(
+            vcf: VariantFile,
+            start: int,
+            end: int,
+            ref: str,
+            alt: str,
+            mutator: str,
+            oligo_name: str,
+            vcf_alias: str | None,
+            vcf_var_id: str | None,
+            sge_ref: str | None = None
+        ) -> None:
+
+            # Populate INFO field
+            vcf_info = {
+                'SGE_SRC': mutator,
+                'SGE_OLIGO': oligo_name
+            }
+            if vcf_alias:
+                vcf_info['SGE_VCF_ALIAS'] = vcf_alias
+                vcf_info['SGE_VCF_VAR_ID'] = vcf_var_id or ''
+            if sge_ref:
+                vcf_info['SGE_REF'] = sge_ref
+
+            # Write record to file
+            vcf.write(vcf.new_record(
+                alleles=(ref, alt),
+                contig=contig,
+                start=start,
+                stop=end,
+                info=vcf_info))
+
         with (
             open(meta_fp, 'w') as meta_fh,
-            open(meta_excl_fp, 'w') as meta_excl_fh
+            open(meta_excl_fp, 'w') as meta_excl_fh,
+            open_vcf_write(vcf_ref_fp, contig) as vcf_ref_fh,
+            open_vcf_write(vcf_pam_fp, contig) as vcf_pam_fh
         ):
             self._write_header(meta_fh)
             self._write_header(meta_excl_fh)
@@ -210,6 +247,8 @@ class MetaTable:
                     if mr.mutator in {'aa', 'ala', 'stop'}:
                         mr.mutation_type = ''
 
+                    pam_alt = mr.alt
+
                     if mr.overlaps_codon:
                         pam_range = mr.pam_ref_range
                         if pam_range.start != v.pos or pam_range.end != v.ref_end:
@@ -245,7 +284,40 @@ class MetaTable:
                         # Populate unique collection
                         unique_oligos[oligo].append(oligo_name)
 
-                    # Write fields
+                        vcf_start = mr.pos - 1
+                        vcf_end = mr.end - 1
+
+                        # TODO: correct insertion and deletion:
+                        #  position, REF and ALT prefix
+
+                        # Write REF VCF record
+                        vcf_write(
+                            vcf_ref_fh,
+                            vcf_start,
+                            vcf_end,
+                            ref_ref or 'N',
+                            mr.alt or 'N',
+                            mr.mutator,
+                            oligo_name,
+                            mr.vcf_alias,
+                            mr.vcf_var_id)
+
+                        # Write PAM VCF record
+                        # TODO: correct position?
+                        vcf_write(
+                            vcf_pam_fh,
+                            vcf_start,
+                            vcf_end,
+                            pam_ref or 'N',
+                            pam_alt or 'N',
+                            mr.mutator,
+                            oligo_name,
+                            mr.vcf_alias,
+                            mr.vcf_var_id,
+                            sge_ref=ref_ref)
+
+                    # Write metadata table fields
+                    #  (either to the default or to the excluded file)
 
                     # 1. oligo_name
                     wf(oligo_name)
