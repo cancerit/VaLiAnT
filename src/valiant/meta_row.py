@@ -33,6 +33,7 @@ select
     alt_aa,
     vcf_var_id,
     vcf_alias,
+    vcf_nt,
     mutator,
     in_const,
     oligo,
@@ -58,6 +59,7 @@ class MetaRow:
     alt_aa: str
     vcf_var_id: str
     vcf_alias: str
+    vcf_nt: str
     mutator: str
     in_const: int
     oligo: str

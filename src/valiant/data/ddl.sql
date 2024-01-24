@@ -260,6 +260,7 @@ select
     aa_alt as alt_aa,
     null as vcf_var_id,
     null as vcf_alias,
+    '' as vcf_nt, -- temporary!
     mutator,
     0 as in_const,
     oligo,
@@ -275,6 +276,7 @@ select
     null as alt_aa,
     cv.var_id as vcf_var_id,
     cvc.name as vcf_alias,
+    vcf_nt,
     'custom' as mutator,
     tcv.in_const,
     tcv.oligo,
@@ -305,6 +307,7 @@ select
     s.alt_aa,
     s.vcf_var_id,
     s.vcf_alias,
+    s.vcf_nt,
     s.mutator,
     s.in_const,
     s.oligo,
