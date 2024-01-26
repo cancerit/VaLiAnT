@@ -112,7 +112,7 @@ class TranscriptSeq(SeqCollection):
 
     def get_as_cds_seq(self, i: int, r: UIntRange, before: int = 0, after: int = 0) -> CdsSeq:
         a, b, c = self.split_substr(i, r, before=before, after=after)
-        return CdsSeq(r.start, b, a, c)
+        return CdsSeq(r.start, b, cds_prefix=a, cds_suffix=c)
 
     def alter(self, exon_ppes: dict[int, VariantGroup[Variant]]) -> TranscriptSeq:
         # TODO: apply background variants as well

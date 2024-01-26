@@ -29,8 +29,8 @@ from .utils import get_codon_offset_complement
 
 @dataclass(slots=False)
 class CdsSeq(Seq):
-    cds_prefix: DnaStr
-    cds_suffix: DnaStr
+    cds_prefix: DnaStr = DnaStr.empty()
+    cds_suffix: DnaStr = DnaStr.empty()
 
     def __post_init__(self) -> None:
         assert self.ext_length % 3 == 0

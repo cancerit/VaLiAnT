@@ -23,6 +23,7 @@ from typing import Sized
 
 from .int_pattern_builder import IntPatternBuilder
 from .strings.dna_str import DnaStr
+from .strings.nucleotide import Nucleotide
 from .uint_range import UIntRange
 from .utils import get_end
 
@@ -31,6 +32,11 @@ from .utils import get_end
 class Seq(Sized):
     start: int
     s: DnaStr
+
+    # Nucleotide immediately preceding the sequence, if any, set to inform
+    #  the generation of REF and ALT of indels according to the VCF convention,
+    #  which does not support null values as alleles.
+    prev_nt: Nucleotide | None = None
 
     def __len__(self) -> int:
         return len(self.s)
@@ -45,6 +51,16 @@ class Seq(Sized):
 
     def get_range(self) -> UIntRange:
         return UIntRange(self.start, self.end)
+
+    def get_nt(self, pos: int) -> Nucleotide:
+        if pos < 1:
+            raise ValueError(f"Invalid genomic position {pos}!")
+        if pos < self.start:
+            if pos == self.start - 1 and self.prev_nt:
+                return self.prev_nt
+        elif pos <= self.end:
+            return Nucleotide(self.s[self.get_rel_pos(pos)])
+        raise IndexError(f"Position {pos} not found in sequence ({self.start}-{self.end})!")
 
     @classmethod
     def from_str(cls, start: int, s: str) -> Seq:
@@ -70,7 +86,7 @@ class Seq(Sized):
     def insert_substr(self, pos: int, alt: str, rel: bool = True) -> DnaStr:
         return self.s.insert_substr(pos if rel else self.get_rel_pos(pos), alt)
 
-    def alter(self, r: UIntRange, is_insertion: bool, alt: str) -> Seq:
+    def alter(self, r: UIntRange, is_insertion: bool, alt: str):
         assert not is_insertion or len(r) == 1
         s = (
             self.replace_substr(r, alt, rel=False) if not is_insertion else
@@ -78,7 +94,7 @@ class Seq(Sized):
         )
         return replace(self, s=s)
 
-    def clone(self) -> Seq:
+    def clone(self):
         return replace(self)
 
     def subseq(self, r: UIntRange, rel: bool = True) -> Seq:

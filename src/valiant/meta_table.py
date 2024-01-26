@@ -22,12 +22,10 @@ import os
 from sqlite3 import Connection
 from typing import ClassVar
 
-from pysam import VariantFile
-
 from .annotation import Annotation
 from .constants import REVCOMP_OLIGO_NAME_SUFFIX
 from .db import cursor
-from .enums import MutationType, SrcType
+from .enums import MutationType, SrcType, VariantType
 from .experiment_meta import ExperimentMeta
 from .loaders.experiment import ExperimentConfig
 from .mave_hgvs import get_mave_nt
@@ -40,7 +38,7 @@ from .strings.dna_str import DnaStr
 from .strings.strand import Strand
 from .utils import bool_to_int_str, reverse_complement
 from .variant import Variant
-from .vcf_writer import open_vcf_write
+from .vcf_writer import Allele, VcfVariant, open_vcf_write, write_vcf_record
 
 
 META_CSV_FIELDS = [
@@ -154,6 +152,10 @@ class MetaTable:
 
         info = OligoGenerationInfo()
 
+        assert self.seq.prev_nt
+        # TODO: correct if the altered sequence has global background variants applied upstream
+        assert self.alt_seq.prev_nt
+
         def get_full_oligo(frag: str) -> str:
             """Add the adaptors to the oligonucleotide sequence"""
 
@@ -170,40 +172,6 @@ class MetaTable:
             rc = REVCOMP_OLIGO_NAME_SUFFIX if is_rc else ''
             return f"{tr_frag}_{contig}:{var_frag}_{src}{rc}"
 
-        def vcf_write(
-            vcf: VariantFile,
-            start: int,
-            end: int,
-            ref: str,
-            alt: str,
-            mutator: str,
-            oligo_name: str,
-            vcf_alias: str | None,
-            vcf_var_id: str | None,
-            sge_ref: str | None = None
-        ) -> None:
-
-            # Populate INFO field
-            vcf_info = {
-                'SGE_SRC': mutator,
-                'SGE_OLIGO': oligo_name
-            }
-            if sge_ref and sge_ref != ref:
-                vcf_info['SGE_REF'] = sge_ref
-            if vcf_alias and vcf_var_id:
-                # TODO: this is for compatibility purposes (BUG in v. 3.*?)
-                vcf_info['SGE_VCF_ALIAS'] = vcf_alias
-            if vcf_var_id:
-                vcf_info['SGE_VCF_VAR_ID'] = vcf_var_id
-
-            # Write record to file
-            vcf.write(vcf.new_record(
-                alleles=(ref, alt),
-                contig=contig,
-                start=start,
-                stop=end,
-                info=vcf_info))
-
         with (
             open(meta_fp, 'w') as meta_fh,
             open(meta_excl_fp, 'w') as meta_excl_fh,
@@ -217,8 +185,6 @@ class MetaTable:
                 _write_field(fh, s)
 
             with cursor(conn) as cur:
-                n = cur.execute("select count(*) from v_meta").fetchone()[0]
-                print(f"count: {n}")
                 it = cur.execute(sql_select_meta)
                 while r := it.fetchone():
                     mr = MetaRow(*r)
@@ -249,14 +215,44 @@ class MetaTable:
                     if mr.mutator in {'aa', 'ala', 'stop'}:
                         mr.mutation_type = ''
 
-                    pam_alt = mr.alt
-                    pam_codon_ref = pam_ref
-                    codon_ref = ref_ref
                     pam_ref_start = v.pos
 
-                    add_vcf_nt = bool(mr.vcf_nt)
+                    # Default SGE_REF (assuming no PPE interaction)
+                    ref_ref_all = Allele(ref_ref)
+                    sge_ref_all = ref_ref_all.clone()
+                    pam_ref_all = Allele(pam_ref)
+                    ref_alt_all = Allele(mr.alt)
+                    pam_alt_all = ref_alt_all.clone()
+
+                    add_vcf_nt = v.type != VariantType.SUBSTITUTION
+
+                    # This will only be set for custom variants, by definition being from reference
+                    ref_nt: str | None = mr.vcf_nt or None
+                    alt_nt: str | None = ref_nt
+
+                    if add_vcf_nt:
+                        # TODO: ponder...
+                        ref_ref_all.nt = ref_nt
+                        sge_ref_all.nt = ref_nt
+                        pam_ref_all.nt = ref_nt
+                        ref_alt_all.nt = ref_nt
+                        pam_alt_all.nt = ref_nt
+
+                    if (
+                        add_vcf_nt and
+                        not ref_nt and
+                        mr.mutator != 'custom'
+                    ):
+                        ref_nt = self.seq.get_nt(v.pos - 1)
+                        alt_nt = self.alt_seq.get_nt(v.pos - 1)
+                        sge_ref_all.nt = ref_nt
+                        ref_ref_all.nt = ref_nt
+                        pam_ref_all.nt = alt_nt
+                        ref_alt_all.nt = alt_nt
+                        pam_alt_all.nt = alt_nt
 
                     if mr.overlaps_codon:
+                        # This range may exceed the span of a codon if so does the mutation
                         pam_range = mr.pam_ref_range
                         if pam_range.start != v.pos or pam_range.end != v.ref_end:
 
@@ -271,12 +267,15 @@ class MetaTable:
                                 pam_range.offset_end(v.alt_ref_delta), rel=False)
                             pam_ref_start = pam_range.start
 
-                            if add_vcf_nt:
-                                # Only add the prefix nucleotide if it is not included in the PAM codon
-                                # TODO: handle the position 1 corner case
-                                add_vcf_nt = pam_ref_start >= v.pos - 1
+                            sge_ref_all.s = codon_ref
+                            pam_ref_all.s = pam_codon_ref
+                            pam_alt_all.s = pam_alt
 
-                            assert len(pam_codon_ref) <= 3
+                            if pam_ref_start <= v.pos - 1:
+                                sge_ref_all.nt = None
+                                pam_ref_all.nt = None
+                                pam_alt_all.nt = None
+
                             mave_nt = get_mave_hgvs(pam_range.start, pam_codon_ref, alt=pam_alt)
 
                     # Evaluate oligonucleotide length
@@ -298,64 +297,37 @@ class MetaTable:
                         # Populate unique collection
                         unique_oligos[oligo].append(oligo_name)
 
-                        vcf_ref_start = mr.pos - 1
-                        vcf_ref_end = mr.end - 1
-                        vcf_ref_ref = ref_ref or ''
-                        vcf_ref_alt = mr.alt or ''
-                        vcf_pam_ref = pam_codon_ref or ''
-                        vcf_pam_alt = pam_alt or ''
-                        vcf_pam_sge_ref = codon_ref or ''
-                        vcf_pam_start = pam_ref_start - 1
-                        vcf_pam_end = vcf_pam_start + max(0, len(pam_codon_ref) - 1)
+                        vcf_ref = VcfVariant.from_partial(
+                            mr.pos - 1,
+                            ref_ref_all,
+                            ref_alt_all,
+                            end=mr.end - 1)
 
-                        if mr.vcf_nt:
-                            # TODO: handle position 1 corner case
-                            vcf_ref_start -= 1
-                            # TODO: verify whether the END should be corrected as well
-                            vcf_ref_ref = mr.vcf_nt + vcf_ref_ref
-                            vcf_ref_alt = mr.vcf_nt + vcf_ref_alt
-                            if add_vcf_nt:
-                                vcf_pam_start -= 1
-                                vcf_pam_ref = mr.vcf_nt + vcf_pam_ref
-                                vcf_pam_alt = mr.vcf_nt + vcf_pam_alt
-                                vcf_pam_sge_ref = mr.vcf_nt + vcf_pam_sge_ref
-
-                        # TODO: temporary to avoid null alleles!
-                        if mr.mutator != 'custom':
-                            vcf_ref_ref = vcf_ref_ref or 'N'
-                            vcf_ref_alt = vcf_ref_alt or 'N'
-                            vcf_pam_ref = vcf_pam_ref or 'N'
-                            vcf_pam_alt = vcf_pam_alt or 'N'
-                            vcf_pam_sge_ref = vcf_pam_sge_ref or 'N'
-
-                        # TODO: correct insertion and deletion:
-                        #  position, REF and ALT prefix
+                        vcf_pam = VcfVariant.from_partial(
+                            pam_ref_start - 1,
+                            pam_ref_all,
+                            pam_alt_all,
+                            sge_ref=sge_ref_all)
 
                         # Write REF VCF record
-                        vcf_write(
+                        write_vcf_record(
                             vcf_ref_fh,
-                            vcf_ref_start,
-                            vcf_ref_end,
-                            vcf_ref_ref,
-                            vcf_ref_alt,
+                            contig,
+                            vcf_ref,
                             mr.mutator,
                             oligo_name,
                             mr.vcf_alias,
                             mr.vcf_var_id)
 
                         # Write PAM VCF record
-                        # TODO: correct position?
-                        vcf_write(
+                        write_vcf_record(
                             vcf_pam_fh,
-                            vcf_pam_start,
-                            vcf_pam_end,
-                            vcf_pam_ref,
-                            vcf_pam_alt,
+                            contig,
+                            vcf_pam,
                             mr.mutator,
                             oligo_name,
                             mr.vcf_alias,
-                            mr.vcf_var_id,
-                            sge_ref=vcf_pam_sge_ref)
+                            mr.vcf_var_id)
 
                     # Write metadata table fields
                     #  (either to the default or to the excluded file)

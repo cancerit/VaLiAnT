@@ -41,26 +41,39 @@ from .queries import insert_custom_variant_collection, insert_exons, insert_back
 from .seq import Seq
 from .sge_config import SGEConfig
 from .strings.dna_str import DnaStr
+from .strings.nucleotide import Nucleotide
 from .targeton import Targeton, generate_metadata_table
 from .transcript_seq import TranscriptSeq
 from .uint_range import UIntRange
 from .utils import get_ddl_path
 
 
-def fetch_sequence(fa: FastaFile, contig: str, r: UIntRange) -> Seq:
-    # TODO: verify coordinate convention and need to extend for the purposes of VCF generation
-    logging.debug("Fetching reference sequence at %s:%d-%d." %
-                  (contig, r.start, r.end))
-    return Seq(r.start, DnaStr(
-        fa.fetch(reference=contig, start=r.start - 1, end=r.end).upper()))
+def fetch_sequence(fa: FastaFile, contig: str, r: UIntRange, set_prev_nt: bool = False) -> Seq:
+    # TODO: verify coordinate convention
+    logging.debug("Fetching reference sequence at %s:%d-%d." % (contig, r.start, r.end))
+
+    def fetch_seq(start_: int) -> str:
+        return fa.fetch(reference=contig, start=start_, end=r.end).upper()
+
+    if set_prev_nt and r.start > 1:
+
+        # Fetch the sequence and the nucleotide immediately preceding it, if any
+        ext_seq = fetch_seq(r.start - 2)
+        seq, prev_nt = ext_seq[1:], Nucleotide(ext_seq[0])
+
+    else:
+        seq, prev_nt = fetch_seq(r.start - 1), None
+
+    return Seq(r.start, DnaStr(seq), prev_nt=prev_nt)
 
 
-def load_sequences(fa: FastaFile, contig: str, ranges: list[UIntRange]) -> list[Seq]:
+def load_sequences(fa: FastaFile, contig: str, ranges: list[UIntRange], set_prev_nt: bool = False) -> list[Seq]:
     logging.debug("Fetching %d reference sequences..." % len(ranges))
-    return [
-        fetch_sequence(fa, contig, r)
-        for r in ranges
-    ]
+
+    def fetch_seq(r: UIntRange) -> Seq:
+        return fetch_sequence(fa, contig, r, set_prev_nt=set_prev_nt)
+
+    return list(map(fetch_seq, ranges))
 
 
 def load_custom_variants(conn: Connection, vcf_manifest_fp: str, contig: str, targeton_ranges: list[UIntRange]) -> None:
@@ -173,7 +186,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
     # Get FASTA file
     with open_fasta(config.ref_fasta_fp) as fa:
         # TODO: load all sequences at once
-        targeton_ref_seqs = load_sequences(fa, exp.contig, targeton_ranges)
+        targeton_ref_seqs = load_sequences(fa, exp.contig, targeton_ranges, set_prev_nt=True)
         if annot:
             cds_ref_seqs = load_sequences(fa, exp.contig, annot.cds.ranges)
             transcript = TranscriptSeq.from_exons(exp.strand, cds_ref_seqs, annot.cds.ranges)
@@ -243,6 +256,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             stats.update(targeton_stats)
 
     finalise(config, stats)
+
     # Write JSON configuration to file
     config.write(config.get_output_file_path(OUTPUT_CONFIG_FILE_NAME))
 
