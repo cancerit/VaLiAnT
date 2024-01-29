@@ -37,7 +37,8 @@ from .loaders.gtf import GtfLoader
 from .loaders.vcf_manifest import VcfManifest
 from .oligo_generation_info import OligoGenerationInfo
 from .pam_variant import PamVariant
-from .queries import insert_custom_variant_collection, insert_exons, insert_background_variants, insert_pam_protection_edits, select_exon_ppes
+from .queries import clear_per_targeton_tables, insert_custom_variant_collection, insert_exons, \
+    insert_background_variants, insert_pam_protection_edits, select_exon_ppes
 from .seq import Seq
 from .sge_config import SGEConfig
 from .strings.dna_str import DnaStr
@@ -230,12 +231,20 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
         stats = OligoGenerationInfo()
         for t in exp.targeton_configs:
+
+            # Truncate targeton-specific tables
+            clear_per_targeton_tables.execute(conn)
+            conn.commit()
+
             targeton = Targeton(targetons[t.ref.start], t)
+            gpo = None
 
             try:
                 targeton_bg_vars = targeton.fetch_background_variants(
                     conn, exp.contig, codon_table, transcript, options)
-                alt = targeton.alter(conn, exp.contig, targeton_bg_vars)
+
+                # BEWARE: targeton-specific database tables must be truncated before running this
+                alt, gpo = targeton.alter(conn, exp.contig, targeton_bg_vars)
 
             except InvalidBackgroundVariant as ex:
                 logging.critical(ex.args[0])
@@ -248,11 +257,11 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
                 transcript_ppe = transcript_bg.alter(exon_ppes)
 
             ppe_mut_types, _, _ = targeton.process(
-                conn, options, codon_table, alt, transcript_bg, transcript_ppe)
+                conn, gpo, codon_table, alt, transcript_bg, transcript_ppe)
 
             # Write metadata files
             targeton_stats = generate_metadata_table(
-                conn, targeton, alt, ppe_mut_types, config, exp_config, exp, annot)
+                conn, targeton, alt, ppe_mut_types, gpo, config, exp_config, exp, annot)
             stats.update(targeton_stats)
 
     finalise(config, stats)

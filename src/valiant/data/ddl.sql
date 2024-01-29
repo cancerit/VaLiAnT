@@ -202,6 +202,9 @@ create table alt_pattern_variants (
     id integer primary key,
     mutator text not null,
 
+    -- Original reference
+    pos_r integer not null,
+
     -- Altered reference
     pos_a integer not null,
     ref_a text not null,
@@ -253,14 +256,15 @@ create table mutations (
 
 create view v_meta_pattern as
 select
-    pos_a as ref_start,  -- pos_r?
+    pos_r as original_start,  -- to be computed
+    pos_a as ref_start,
     ref_a as ref,
     alt_a as alt,
     aa_ref as ref_aa,
     aa_alt as alt_aa,
     null as vcf_var_id,
     null as vcf_alias,
-    '' as vcf_nt, -- temporary!
+    '' as vcf_nt,  -- to be computed
     mutator,
     0 as in_const,
     oligo,
@@ -269,7 +273,8 @@ from alt_pattern_variants;
 
 create view v_meta_custom as
 select
-    cv.start as ref_start,
+    cv.start as original_start,
+    tcv.start as ref_start,
     cv.ref,
     cv.alt,
     null as ref_aa,
@@ -299,6 +304,7 @@ with t_pos_sgrna_ids as (
         si.id = ppesi.sgrna_id
 )
 select
+    s.original_start,
     s.ref_start,
     s.ref_end,
     s.ref,

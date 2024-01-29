@@ -27,6 +27,7 @@ from .constants import REVCOMP_OLIGO_NAME_SUFFIX
 from .db import cursor
 from .enums import MutationType, SrcType, VariantType
 from .experiment_meta import ExperimentMeta
+from .genomic_position_offsets import GenomicPositionOffsets
 from .loaders.experiment import ExperimentConfig
 from .mave_hgvs import get_mave_nt
 from .meta_row import MetaRow, sql_select_meta
@@ -96,6 +97,7 @@ class MetaTable:
     cfg: SGEConfig
     exp: ExperimentMeta
     opt: Options
+    gpo: GenomicPositionOffsets | None
     exp_cfg: ExperimentConfig
     seq: Seq
     alt_seq: Seq
@@ -161,10 +163,10 @@ class MetaTable:
 
             return f"{self.cfg.adaptor_5}{frag}{self.cfg.adaptor_3}"
 
-        def get_mave_hgvs(pos: int, ref: str, alt: str | None = None) -> str:
+        def get_mave_hgvs(pos: int, t: VariantType, ref: str, alt: str | None = None) -> str:
             """Compile the MAVE-HGVS string"""
 
-            return get_mave_nt(pos, ref_range.start, v.type, ref, alt or mr.alt)
+            return get_mave_nt(pos, ref_range.start, t, ref, alt or mr.alt)
 
         def get_oligo_name(src: str, v: Variant) -> str:
             tr_frag = get_transcript_frag(gene_id, transcript_id)
@@ -188,34 +190,35 @@ class MetaTable:
                 it = cur.execute(sql_select_meta)
                 while r := it.fetchone():
                     mr = MetaRow(*r)
-                    v = mr.to_variant()
+                    ref_var = mr.to_ref_variant()
+                    alt_var = mr.to_alt_variant()
+                    var_type = ref_var.type
 
                     oligo_no_adapt = mr.oligo
                     if is_rc:
                         oligo_no_adapt = reverse_complement(oligo_no_adapt)
                     oligo = get_full_oligo(oligo_no_adapt)
 
-                    # TODO: correct position for background offsetting
-                    ref_pos = v.pos
-
                     if mr.ref:
-                        ref_ref = self.seq.substr(v.ref_range, rel=False)
-                        pam_ref = self.alt_seq.substr(mr.ref_range, rel=False)
+                        ref_ref = self.seq.substr(ref_var.ref_range, rel=False)
+                        pam_ref = self.alt_seq.substr(mr.alt_ref_range, rel=False)
                     else:
                         ref_ref = ''
                         pam_ref = ''
 
-                    mave_nt_ref = get_mave_hgvs(ref_pos, ref_ref)
-                    mave_nt = get_mave_hgvs(v.pos, pam_ref)
+                    mave_pos = ref_var.pos
+                    mave_nt_ref = get_mave_hgvs(mave_pos, var_type, ref_ref)
+                    mave_nt = get_mave_hgvs(mave_pos, var_type, pam_ref)  # ALT position instead?
 
                     src = mr.vcf_alias or mr.mutator
-                    pam_var = Variant(v.pos, DnaStr(pam_ref), DnaStr(mr.alt))
+                    pam_var = Variant(ref_var.pos, DnaStr(pam_ref), DnaStr(mr.alt))
                     oligo_name = get_oligo_name(src, pam_var)
 
+                    # TODO: consider dropping (just for backwards compatibility)
                     if mr.mutator in {'aa', 'ala', 'stop'}:
                         mr.mutation_type = ''
 
-                    pam_ref_start = v.pos
+                    pam_ref_start = ref_var.pos
 
                     # Default SGE_REF (assuming no PPE interaction)
                     ref_ref_all = Allele(ref_ref)
@@ -224,14 +227,13 @@ class MetaTable:
                     ref_alt_all = Allele(mr.alt)
                     pam_alt_all = ref_alt_all.clone()
 
-                    add_vcf_nt = v.type != VariantType.SUBSTITUTION
+                    add_vcf_nt = var_type != VariantType.SUBSTITUTION
 
                     # This will only be set for custom variants, by definition being from reference
                     ref_nt: str | None = mr.vcf_nt or None
                     alt_nt: str | None = ref_nt
 
                     if add_vcf_nt:
-                        # TODO: ponder...
                         ref_ref_all.nt = ref_nt
                         sge_ref_all.nt = ref_nt
                         pam_ref_all.nt = ref_nt
@@ -243,8 +245,8 @@ class MetaTable:
                         not ref_nt and
                         mr.mutator != 'custom'
                     ):
-                        ref_nt = self.seq.get_nt(v.pos - 1)
-                        alt_nt = self.alt_seq.get_nt(v.pos - 1)
+                        ref_nt = self.seq.get_nt(ref_var.pos - 1)
+                        alt_nt = self.alt_seq.get_nt(alt_var.pos - 1)
                         sge_ref_all.nt = ref_nt
                         ref_ref_all.nt = ref_nt
                         pam_ref_all.nt = alt_nt
@@ -254,7 +256,7 @@ class MetaTable:
                     if mr.overlaps_codon:
                         # This range may exceed the span of a codon if so does the mutation
                         pam_range = mr.pam_ref_range
-                        if pam_range.start != v.pos or pam_range.end != v.ref_end:
+                        if pam_range.start != alt_var.pos or pam_range.end != alt_var.ref_end:
 
                             # Correct REF and start position in PAM protected codons
                             pam_codon_ref = self.alt_seq.substr(pam_range, rel=False)
@@ -264,19 +266,25 @@ class MetaTable:
                             #  unless it is corrected earlier on (once per targeton)
                             oligo_seq = Seq(ref_range.start, DnaStr(mr.oligo))
                             pam_alt = oligo_seq.substr(
-                                pam_range.offset_end(v.alt_ref_delta), rel=False)
-                            pam_ref_start = pam_range.start
+                                pam_range.offset_end(alt_var.alt_ref_delta), rel=False)
 
                             sge_ref_all.s = codon_ref
                             pam_ref_all.s = pam_codon_ref
                             pam_alt_all.s = pam_alt
 
-                            if pam_ref_start <= v.pos - 1:
+                            if pam_range.start <= alt_var.pos - 1:
                                 sge_ref_all.nt = None
                                 pam_ref_all.nt = None
                                 pam_alt_all.nt = None
 
-                            mave_nt = get_mave_hgvs(pam_range.start, pam_codon_ref, alt=pam_alt)
+                            # Lift over to reference
+                            pam_ref_start = (
+                                self.gpo.alt_to_ref_position(pam_range.start) if self.gpo else
+                                pam_range.start
+                            )
+
+                            mave_nt = get_mave_hgvs(
+                                pam_ref_start, var_type, pam_codon_ref, alt=pam_alt)
 
                     # Evaluate oligonucleotide length
 
@@ -297,11 +305,11 @@ class MetaTable:
                         # Populate unique collection
                         unique_oligos[oligo].append(oligo_name)
 
+                        # TODO: verify it is fine to drop the stored end position
                         vcf_ref = VcfVariant.from_partial(
-                            mr.pos - 1,
+                            ref_var.pos - 1,
                             ref_ref_all,
-                            ref_alt_all,
-                            end=mr.end - 1)
+                            ref_alt_all)
 
                         vcf_pam = VcfVariant.from_partial(
                             pam_ref_start - 1,
@@ -378,13 +386,13 @@ class MetaTable:
                     wf(mr.vcf_var_id)
 
                     # 16. mut_position
-                    wf(str(mr.pos))
+                    wf(str(ref_var.pos))
 
                     # 17. ref
                     wf(pam_ref)
 
                     # 18. new
-                    wf(v.alt)
+                    wf(ref_var.alt)
 
                     # 19. ref_aa
                     wf(mr.ref_aa)

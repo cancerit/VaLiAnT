@@ -25,6 +25,7 @@ from .variant import Variant
 
 sql_select_meta = """
 select
+    original_start,
     ref_start,
     ref_end,
     ref,
@@ -51,7 +52,8 @@ from v_meta
 
 @dataclass(slots=True)
 class MetaRow:
-    pos: int
+    ref_pos: int
+    alt_pos: int
     end: int
     ref: str
     alt: str
@@ -72,12 +74,18 @@ class MetaRow:
     end_ppe_start: int | None
     sgrna_ids: str
 
-    def to_variant(self) -> Variant:
-        return Variant(self.pos, DnaStr(self.ref), DnaStr(self.alt))
+    def _to_variant(self, pos: int) -> Variant:
+        return Variant(pos, DnaStr(self.ref), DnaStr(self.alt))
+
+    def to_ref_variant(self) -> Variant:
+        return self._to_variant(self.ref_pos)
+
+    def to_alt_variant(self) -> Variant:
+        return self._to_variant(self.alt_pos)
 
     @property
-    def ref_range(self) -> UIntRange:
-        return UIntRange(self.pos, self.end)
+    def alt_ref_range(self) -> UIntRange:
+        return UIntRange(self.alt_pos, self.end)
 
     @property
     def overlaps_codon(self) -> bool:
@@ -89,8 +97,8 @@ class MetaRow:
     @property
     def pam_ref_start(self) -> int:
         if self.start_ppe_start is None:
-            return self.pos
-        return min(self.pos, self.start_ppe_start)
+            return self.alt_pos
+        return min(self.alt_pos, self.start_ppe_start)
 
     @property
     def pam_ref_end(self) -> int:

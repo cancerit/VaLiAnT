@@ -29,6 +29,7 @@ from .codon_table import CodonTable
 from .enums import MutationType
 from .exon import get_codon_range, get_codon_range_from_offset
 from .experiment_meta import ExperimentMeta
+from .genomic_position_offsets import GenomicPositionOffsets
 from .loaders.experiment import ExperimentConfig
 from .loaders.targeton_config import TargetonConfig
 from .meta_table import MetaTable
@@ -150,9 +151,6 @@ class Targeton:
     seq: Seq
     config: TargetonConfig
 
-    def _fetch_variant_group(self, conn: Connection, f: GetVariantsInRangeCallable) -> VariantGroup[RegisteredVariant]:
-        return VariantGroup.from_variants(f(conn, self.seq.get_range()))
-
     @property
     def select_ppes_in_range(self) -> GetVariantsInRangeCallable:
 
@@ -164,20 +162,11 @@ class Targeton:
 
         return VariantSelectStart(query).select_in_range
 
-    def apply_custom_variants(self) -> None:
-        """
-        1. read all custom variants in range (background-corrected)
-        2. mark those that occur in the custom regions, if any
-        3. generate the oligonucleotide sequences?
-        """
-        pass
-
     def fetch_background_variants(self, conn: Connection, contig: str, codon_table: CodonTable, transcript: TranscriptSeq | None, opt: Options) -> list[RegisteredBackgroundVariant]:
         bg_vars = select_background_variants(conn, self.seq.get_range())
 
         any_frame_shift = False
         any_non_syn = False
-        print(opt)
 
         for v in bg_vars:
             if v.in_cds:
@@ -201,25 +190,34 @@ class Targeton:
 
         return bg_vars
 
-    def alter(self, conn: Connection, contig: str, bg_vars: list[RegisteredBackgroundVariant]) -> Seq:
-
-        # Truncate targeton-specific tables
-        clear_per_targeton_tables.execute(conn)
-        conn.commit()
+    def alter(self, conn: Connection, contig: str, bg_vars: list[RegisteredBackgroundVariant]) -> tuple[Seq, GenomicPositionOffsets | None]:
 
         # Apply background variants
-        bg_seq, alt_bg_vars = VariantGroup.from_variants(bg_vars).apply(self.seq, ref_check=True)
+        if bg_vars:
+            bg_seq, _ = VariantGroup.from_variants(bg_vars).apply(self.seq, ref_check=True)
+            gpo = GenomicPositionOffsets.from_variants(self.seq.start, len(self.seq), bg_vars)
+        else:
+            bg_seq = self.seq
+            gpo = None
+
+        # Compute the genomic position offsets
+        # TODO: because the background variants may be upstream, the targeton start position itself may need shifting!
+        #   (This may result in negative offsets, unlikely to function properly...)
 
         if self.config.sgrna_ids:
 
             # Fetch PPE's
-            ppe_vars = self._fetch_variant_group(conn, self.select_ppes_in_range)
+            ppe_vars = self.select_ppes_in_range(conn, self.seq.get_range())
 
-            # TODO: need to correct PPE's by the offsets introduced by the background?
-            ppe_seq, alt_ppe_vars = ppe_vars.apply(bg_seq, ref_check=False)
+            # Lift PPE's positions from reference to altered
+            alt_ppe_vars = VariantGroup.from_variants(
+                list(map(gpo.ref_to_alt_variant, ppe_vars)) if gpo else
+                ppe_vars)
+
+            ppe_seq, _ = alt_ppe_vars.apply(bg_seq, ref_check=False)
 
             # Register the coordinate-corrected PPE's on the database
-            insert_targeton_ppes(conn, alt_ppe_vars)
+            insert_targeton_ppes(conn, alt_ppe_vars.variants)
 
             # Test background variants against the PPE's for codon overlaps
             ppe_bg_overlap_positions = select_ppe_bg_codon_overlaps(conn)
@@ -232,9 +230,8 @@ class Targeton:
 
             # No PPE's
             ppe_seq = bg_seq
-            alt_ppe_vars = []
 
-        return ppe_seq
+        return ppe_seq, gpo
 
     def _process_region(
         self,
@@ -257,14 +254,15 @@ class Targeton:
             for r, m in self.config.get_mutable_regions()
         ]
 
-    def _get_oligo(self, alt: Seq, x: Variant) -> OligoSeq:
-        return OligoSeq.from_ref(alt, x)
+    def _get_oligo(self, alt: Seq, x: Variant, ref_start: int | None = None) -> OligoSeq:
+        return OligoSeq.from_ref(alt, x, ref_start=ref_start)
 
-    def _process_custom_variants(self, conn: Connection, opt: Options, alt: Seq) -> None:
+    def _process_custom_variants(self, conn: Connection, gpo: GenomicPositionOffsets | None, alt: Seq) -> None:
         custom_vars = select_custom_variants_in_range(conn, self.seq.get_range())
 
         def get_oligo(x: Variant) -> OligoSeq:
-            return self._get_oligo(alt, x)
+            # Lift custom variant positions from reference to altered
+            return self._get_oligo(alt, gpo.ref_to_alt_variant(x) if gpo else x)
 
         # Register the filtered custom variants
         insert_targeton_custom_variants(
@@ -276,6 +274,7 @@ class Targeton:
         self,
         conn: Connection,
         codon_table: CodonTable,
+        gpo: GenomicPositionOffsets | None,
         transcript: TranscriptSeq | None,
         alt: Seq
     ) -> tuple[list[PatternVariant], list[AnnotVariant]]:
@@ -292,7 +291,8 @@ class Targeton:
             annot_variants.extend(annot_vars)
 
         def get_oligo(x: Variant) -> OligoSeq:
-            return self._get_oligo(alt, x)
+            ref_start = gpo.alt_to_ref_position(x.pos) if gpo else x.pos
+            return self._get_oligo(alt, x, ref_start=ref_start)
 
         insert_pattern_variants(conn, list(map(get_oligo, pattern_variants)))
         insert_annot_pattern_variants(conn, list(map(get_oligo, annot_variants)))
@@ -319,7 +319,7 @@ class Targeton:
     def process(
         self,
         conn: Connection,
-        opt: Options,
+        gpo: GenomicPositionOffsets | None,
         codon_table: CodonTable,
         alt: Seq,
         transcript_bg: TranscriptSeq | None,
@@ -342,11 +342,11 @@ class Targeton:
         ] if self.config.sgrna_ids and transcript_bg and transcript_ppe else []
 
         # Process custom variants
-        self._process_custom_variants(conn, opt, alt)
+        self._process_custom_variants(conn, gpo, alt)
 
         # Process pattern variants
         pattern_variants, annot_variants = self._process_pattern_variants(
-            conn, codon_table, transcript_ppe, alt)
+            conn, codon_table, gpo, transcript_ppe, alt)
 
         return ppe_mut_types, pattern_variants, annot_variants
 
@@ -356,6 +356,7 @@ def generate_metadata_table(
     targeton: Targeton,
     alt: Seq,
     ppe_mut_types: list[MutationType],
+    gpo: GenomicPositionOffsets | None,
     config: SGEConfig,
     exp: ExperimentMeta,
     exp_cfg: ExperimentConfig,
@@ -364,7 +365,7 @@ def generate_metadata_table(
     targeton_name = targeton.config.name
     if not is_meta_table_empty(conn):
         options = config.get_options()
-        mt = MetaTable(config, exp, options, exp_cfg, targeton.seq, alt, ppe_mut_types, annot)
+        mt = MetaTable(config, exp, options, gpo, exp_cfg, targeton.seq, alt, ppe_mut_types, annot)
         return mt.to_csv(conn, targeton_name)
     else:
         logging.warning(

@@ -30,7 +30,7 @@ class UIntRange(Sized, Container):
 
     def __post_init__(self) -> None:
         if self.start < 0 or self.end < self.start:
-            raise ValueError("Invalid range!")
+            raise ValueError(f"Invalid range [{self.start}, {self.end}]!")
 
     def __len__(self) -> int:
         return self.end - self.start + 1

@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -19,7 +19,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import NoReturn, TypeVar
+from typing import Iterable, NoReturn, TypeVar
 
 from .constants import NT_SNVS
 from .enums import VariantType
@@ -121,8 +121,11 @@ class Variant:
 
         return cls(start, DnaStr.empty(), alt)
 
-    def offset(self, offset: int) -> Variant:
-        return replace(self, pos=self.pos + offset)
+    def clone(self, pos: int | None = None):
+        return replace(self, pos=pos if pos is not None else self.pos)
+
+    def offset(self, offset: int):
+        return self.clone(pos=self.pos + offset)
 
     def get_oligo_name_frag(self) -> str:
         pos_frag = (
@@ -147,3 +150,7 @@ class RegisteredVariant(Variant):
 
 
 VariantT = TypeVar('VariantT', bound=Variant)
+
+
+def sort_variants(variants: Iterable[VariantT]) -> list[VariantT]:
+    return sorted(variants, key=lambda x: x.pos)

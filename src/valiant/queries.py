@@ -222,6 +222,7 @@ where start >= ? and start <= ? and alt_ref_delta != 0
 
 
 insert_pattern_variant_fields = [
+    DbFieldName.POS_R,
     DbFieldName.POS_A,
     DbFieldName.REF_A,
     DbFieldName.ALT_A,
@@ -231,7 +232,7 @@ insert_pattern_variant_fields = [
 
 
 sql_insert_pattern_variants = SqlQuery.get_insert_values(
-    DbTableName.PATTERN_VARIANTS, insert_pattern_variant_fields)
+    DbTableName.ALT_PATTERN_VARIANTS, insert_pattern_variant_fields)
 
 
 def insert_pattern_variants(
@@ -241,6 +242,7 @@ def insert_pattern_variants(
     with cursor(conn) as cur:
         cur.executemany(sql_insert_pattern_variants, [
             (
+                oligo.ref_start,
                 oligo.variant.pos,
                 oligo.variant.ref,
                 oligo.variant.alt,
@@ -252,7 +254,7 @@ def insert_pattern_variants(
 
 
 sql_insert_annot_pattern_variants = SqlQuery.get_insert_values(
-    DbTableName.PATTERN_VARIANTS, [
+    DbTableName.ALT_PATTERN_VARIANTS, [
         *insert_pattern_variant_fields,
         DbFieldName.CODON_REF_A,
         DbFieldName.CODON_ALT_A,
@@ -266,6 +268,7 @@ def insert_annot_pattern_variants(conn: Connection, vars: list[OligoSeq[AnnotVar
     with cursor(conn) as cur:
         cur.executemany(sql_insert_annot_pattern_variants, [
             (
+                oligo.ref_start,
                 oligo.variant.pos,
                 oligo.variant.ref,
                 oligo.variant.alt,

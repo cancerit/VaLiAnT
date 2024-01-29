@@ -35,11 +35,12 @@ def alter_seq(seq: Seq, variant: Variant) -> Seq:
 class OligoSeq(Sized, Generic[VariantT]):
     variant: VariantT
     seq: DnaStr
+    ref_start: int | None = None
 
     def __len__(self) -> int:
         return len(self.seq)
 
     @classmethod
-    def from_ref(cls, seq: Seq, var: VariantT, rc: bool = False) -> OligoSeq:
+    def from_ref(cls, seq: Seq, var: VariantT, ref_start: int | None = None, rc: bool = False) -> OligoSeq:
         s = alter_seq(seq, var).s
-        return cls(var, s.revc if rc else s)
+        return cls(var, s.revc if rc else s, ref_start=ref_start)

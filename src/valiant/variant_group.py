@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from collections.abc import Sized
 from dataclasses import dataclass
-from typing import Generic
+from typing import Generic, Iterable
 
 from .oligo_seq import alter_seq
 from .seq import Seq
@@ -47,7 +47,7 @@ class VariantGroup(Sized, Generic[VariantT]):
     variants: list[VariantT]
 
     @classmethod
-    def from_variants(cls, variants: list[VariantT]):
+    def from_variants(cls, variants: Iterable[VariantT]):
         return cls(sorted(variants, key=lambda x: x.pos))
 
     def __len__(self) -> int:
