@@ -20,12 +20,12 @@ from __future__ import annotations
 
 from collections.abc import Sized
 from dataclasses import dataclass
-from typing import Generic, Iterable
+from typing import Generator, Generic, Iterable
 
 from .oligo_seq import alter_seq
 from .seq import Seq
 from .uint_range import UIntRange
-from .variant import Variant, VariantT
+from .variant import Variant, VariantT, compute_genomic_offset
 
 
 class InvalidVariantRef(Exception):
@@ -62,6 +62,15 @@ class VariantGroup(Sized, Generic[VariantT]):
         for variant in self.variants:
             alt_seq = alter_seq(alt_seq, variant)
         return alt_seq
+
+    def iter_alt_variants(self, alt_offset: int | None = None) -> Generator[VariantT, None, None]:
+        alt_offset = alt_offset or 0
+        for variant in self.variants:
+            yield variant.offset(alt_offset)
+            alt_offset += variant.alt_ref_delta
+
+    def get_alt_length(self, ref_length: int) -> int:
+        return ref_length + compute_genomic_offset(self.variants)
 
     def apply(self, ref_seq: Seq, ref_check: bool = False) -> tuple[Seq, list[VariantT]]:
         alt_seq: Seq = ref_seq.clone()
