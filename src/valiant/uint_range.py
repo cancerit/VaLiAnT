@@ -66,6 +66,8 @@ class UIntRange(Sized, Container):
 
     @classmethod
     def from_length(cls, start: int, length: int) -> UIntRange:
+        if length < 1:
+            raise ValueError("Invalid range length: not strictly positive!")
         return cls(start, start + length - 1)
 
     @classmethod
