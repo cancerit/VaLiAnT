@@ -17,25 +17,29 @@
 #############################
 
 import logging
-from sqlite3 import Connection
 import sys
+from sqlite3 import Connection
 
 import click
 from pysam.libcfaidx import FastaFile
 
 from .annotation import Annotation
 from .background_variants import InvalidBackgroundVariant
+from .codon_table import CodonTable
 from .common_cli import common_params, existing_file, finalise, load_codon_table
 from .constants import OUTPUT_CONFIG_FILE_NAME
 from .contig_filter import ContigFilter
 from .custom_variant import CustomVariant
 from .db import get_db_conn, cursor
 from .experiment_meta import ExperimentMeta
+from .genomic_position_offsets import GenomicPositionOffsets
+from .loaders.bed import BedLoader
 from .loaders.experiment import ExperimentConfig
 from .loaders.fasta import open_fasta
 from .loaders.gtf import GtfLoader
 from .loaders.vcf_manifest import VcfManifest
 from .oligo_generation_info import OligoGenerationInfo
+from .options import Options
 from .pam_variant import PamVariant
 from .queries import clear_per_targeton_tables, insert_custom_variant_collection, insert_exons, \
     insert_background_variants, insert_pam_protection_edits, select_exon_ppes
@@ -104,7 +108,13 @@ def load_custom_variants(conn: Connection, vcf_manifest_fp: str, contig: str, ta
     logging.debug("Collected %d custom variants." % total_custom_variants)
 
 
-def load_background_variants(conn: Connection, vcf_fp: str, contig: str, ranges: list[UIntRange]) -> None:
+def load_background_variants(
+    conn: Connection,
+    vcf_fp: str,
+    mask_fp: str | None,
+    contig: str,
+    ranges: list[UIntRange]
+) -> int:
 
     # Set positional filter
     contig_ft = ContigFilter.from_ranges(contig, ranges)
@@ -113,8 +123,24 @@ def load_background_variants(conn: Connection, vcf_fp: str, contig: str, ranges:
     bg_vars = CustomVariant.load_vcf(vcf_fp, contig_ft)
     logging.debug("Collected %d background variants." % len(bg_vars))
 
+    if mask_fp:
+
+        # Load background variant mask (ranges to exclude)
+        bg_mask = BedLoader(contig).load(mask_fp)
+
+        if bg_mask:
+
+            # Filter out background variants based on the mask
+            # TODO (performance): perform on the database
+            bg_vars = [
+                x for x in bg_vars
+                if not any(x.pos in r for r in bg_mask)
+            ]
+
     # Push the variants to the database
     insert_background_variants(conn, bg_vars)
+
+    return len(bg_vars)
 
 
 def load_pam_variants(conn: Connection, vcf_fp: str, contig: str, ranges: list[UIntRange]) -> None:
@@ -131,9 +157,14 @@ def load_pam_variants(conn: Connection, vcf_fp: str, contig: str, ranges: list[U
 
 
 def init_database(conn: Connection) -> None:
+
+    # Load DDL
     with open(get_ddl_path()) as fh:
-        with cursor(conn) as cur:
-            cur.executescript(fh.read())
+        ddl = fh.read()
+
+    # Create tables and views
+    with cursor(conn) as cur:
+        cur.executescript(ddl)
 
 
 def get_background_context_range(targeton_ranges, annot: Annotation | None) -> UIntRange:
@@ -149,6 +180,51 @@ def get_background_context_range(targeton_ranges, annot: Annotation | None) -> U
     else:
         bg_ctx = UIntRange(t_min, t_max)
     return bg_ctx
+
+
+def process_targeton(
+    conn: Connection,
+    codon_table: CodonTable,
+    exp: ExperimentConfig,
+    exp_config: ExperimentMeta,
+    options: Options,
+    annot: Annotation | None,
+    transcript: TranscriptSeq | None,
+    transcript_bg: TranscriptSeq | None,
+    config: SGEConfig,
+    targeton: Targeton
+) -> OligoGenerationInfo:
+
+    # Truncate targeton-specific tables
+    clear_per_targeton_tables.execute(conn)
+    conn.commit()
+
+    gpo = None
+
+    try:
+        targeton_bg_vars = targeton.fetch_background_variants(
+            conn, exp.contig, codon_table, transcript, options)
+
+        # BEWARE: targeton-specific database tables must be truncated before running this
+        alt, bg_seq, gpo = targeton.alter(conn, exp.contig, targeton_bg_vars)
+
+    except InvalidBackgroundVariant as ex:
+        logging.critical(ex.args[0])
+        sys.exit(1)
+
+    transcript_ppe: TranscriptSeq | None = None
+    if transcript_bg:
+
+        # Apply PPE's
+        exon_ppes = select_exon_ppes(conn, sgrna_ids=targeton.config.sgrna_ids)
+        transcript_ppe = transcript_bg.alter(exon_ppes)
+
+    ppe_mut_types, _, _ = targeton.process(
+        conn, gpo, codon_table, alt, transcript_bg, transcript_ppe)
+
+    # Write metadata files
+    return generate_metadata_table(
+        conn, targeton, alt, ppe_mut_types, gpo, config, exp_config, exp, annot)
 
 
 def run_sge(config: SGEConfig, sequences_only: bool) -> None:
@@ -186,10 +262,9 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
     # Get FASTA file
     with open_fasta(config.ref_fasta_fp) as fa:
-        # TODO: load all sequences at once
         targeton_ref_seqs = load_sequences(fa, exp.contig, targeton_ranges, set_prev_nt=True)
         if annot:
-            cds_ref_seqs = load_sequences(fa, exp.contig, annot.cds.ranges)
+            cds_ref_seqs = load_sequences(fa, exp.contig, annot.cds.ranges)  # type: ignore
             transcript = TranscriptSeq.from_exons(exp.strand, cds_ref_seqs, annot.cds.ranges)
             if not transcript.begins_with_start_codon:
                 logging.warning("The CDS does not begin with the start codon!")
@@ -198,32 +273,47 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
         s.start: s
         for s in targeton_ref_seqs
     }
+    bg_ctx: UIntRange | None = None
+    gpo: GenomicPositionOffsets | None = None
+
     with get_db_conn() as conn:
         init_database(conn)
 
         if annot:
 
             # Load CDS annotation
+            # TODO: never insert them in their original form...?
+            # TODO: if per-targeton background variant masking filters out frame-shifting variants,
+            #  what offsets should be used...? Should that be illegal or flagged?
+            #  Decouple the offsets for mutations from those for the purposes of CDS annotation...?
+            #  That may already be possible or the case, since the CDS is computed when building the mutation
+            #  and separately evaluated on the database... though possibly unsafe to implement thus...
             insert_exons(conn, exp.strand, annot.cds.ranges)
 
         # Load background variants (targetons & exons)
+        bg_var_count = 0
         if config.bg_fp:
             # TODO: extend to support multiple contigs
             bg_ctx = get_background_context_range(targeton_ranges, annot)
 
-            load_background_variants(conn, config.bg_fp, exp.contig, [bg_ctx])
+            bg_var_count = load_background_variants(conn, config.bg_fp, config.mask_bg_fp, exp.contig, [bg_ctx])
 
         if config.pam_fp:
             load_pam_variants(conn, config.pam_fp, exp.contig, targeton_ranges)
 
         if transcript:
-            # TODO: filter background variants as well
-            transcript_bg = transcript
+            if bg_var_count > 0:
+                # TODO: compute global GPO here
+                # TODO: group background variants by exon
+                transcript_bg = transcript.apply_background_variants(gpo, {})
 
-            if not transcript.begins_with_start_codon:
-                logging.warning(
-                    "The CDS does not begin with the start codon "
-                    "(after PAM and background variant application)!")
+                if not transcript.begins_with_start_codon:
+                    logging.warning(
+                        "The CDS does not begin with the start codon "
+                        "(after PAM and background variant application)!")
+
+            else:
+                transcript_bg = transcript
 
         # Load custom variants (targetons)
         if config.vcf_fp:
@@ -231,37 +321,21 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
         stats = OligoGenerationInfo()
         for t in exp.targeton_configs:
-
-            # Truncate targeton-specific tables
-            clear_per_targeton_tables.execute(conn)
-            conn.commit()
-
+            # TODO: shift the start and end positions of the targeton
+            # TODO: recheck decisions with regards to correcting the spans of the regions
             targeton = Targeton(targetons[t.ref.start], t)
-            gpo = None
-
-            try:
-                targeton_bg_vars = targeton.fetch_background_variants(
-                    conn, exp.contig, codon_table, transcript, options)
-
-                # BEWARE: targeton-specific database tables must be truncated before running this
-                alt, gpo = targeton.alter(conn, exp.contig, targeton_bg_vars)
-
-            except InvalidBackgroundVariant as ex:
-                logging.critical(ex.args[0])
-                sys.exit(1)
-
-            if transcript_bg:
-
-                # Apply PPE's
-                exon_ppes = select_exon_ppes(conn, sgrna_ids=t.sgrna_ids)
-                transcript_ppe = transcript_bg.alter(exon_ppes)
-
-            ppe_mut_types, _, _ = targeton.process(
-                conn, gpo, codon_table, alt, transcript_bg, transcript_ppe)
-
-            # Write metadata files
-            targeton_stats = generate_metadata_table(
-                conn, targeton, alt, ppe_mut_types, gpo, config, exp_config, exp, annot)
+            # TODO: pass the global GPO to the targeton
+            targeton_stats = process_targeton(
+                conn,
+                codon_table,
+                exp,
+                exp_config,
+                options,
+                annot,
+                transcript,
+                transcript_bg,
+                config,
+                targeton)
             stats.update(targeton_stats)
 
     finalise(config, stats)
@@ -274,6 +348,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 @common_params
 @click.option('--gff', 'gff_fp', type=existing_file, help="Annotation GFF file path")
 @click.option('--bg', 'bg_fp', type=existing_file, help="Background variant VCF file path")
+@click.option('--bg-mask', 'mask_bg_fp', type=existing_file, help="Background variant excluded ranges BED file path")
 @click.option('--pam', 'pam_fp', type=existing_file, help="PAM protection VCF file path")
 @click.option('--vcf', 'vcf_fp', type=existing_file, help="Custom variant VCF manifest file path")
 @click.option(
@@ -319,6 +394,7 @@ def sge(
     # Background variants
     force_bg_ns: bool,
     force_bg_fs: bool,
+    mask_bg_fp: str | None,
 
     # Actions
     sequences_only: bool,
@@ -356,5 +432,6 @@ def sge(
             gff_fp=gff_fp,
             bg_fp=bg_fp,
             pam_fp=pam_fp,
-            vcf_fp=vcf_fp),
+            vcf_fp=vcf_fp,
+            mask_bg_fp=mask_bg_fp),
         sequences_only)

@@ -94,8 +94,8 @@ class Seq(Sized):
         )
         return replace(self, s=s)
 
-    def clone(self):
-        return replace(self)
+    def clone(self, **kwargs):
+        return replace(self, **kwargs)
 
     def subseq(self, r: UIntRange, rel: bool = True) -> Seq:
         return Seq(r.start, self.substr(r, rel=rel))

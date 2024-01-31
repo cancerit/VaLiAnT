@@ -23,6 +23,7 @@ from dataclasses import dataclass, replace
 from .cds_seq import CdsSeq
 from .codon_table import CodonTable
 from .exon import Exon
+from .genomic_position_offsets import GenomicPositionOffsets
 from .oligo_seq import alter_seq
 from .seq import Seq
 from .seq_collection import SeqCollection
@@ -114,18 +115,54 @@ class TranscriptSeq(SeqCollection):
         a, b, c = self.split_substr(i, r, before=before, after=after)
         return CdsSeq(r.start, b, cds_prefix=a, cds_suffix=c)
 
-    def alter(self, exon_ppes: dict[int, VariantGroup[Variant]]) -> TranscriptSeq:
-        # TODO: apply background variants as well
+    def apply_background_variants(self, gpo: GenomicPositionOffsets, exon_bgs: dict[int, VariantGroup]):
+        def alter_exon(seq_index: int) -> Seq:
+            exon_index = self.get_exon_index_from_seq_index(seq_index)
+            seq = self.seqs[seq_index]
+
+            if exon_index not in exon_bgs:
+                return seq
+
+            # Apply background variants
+            bg_seq, _ = exon_bgs[exon_index].apply(seq, ref_check=True)
+
+            # Correct the start position based on upstream background variants
+            return bg_seq.clone(start=gpo.ref_to_alt_position(bg_seq.start))
+
+        alt_seqs = [
+            alter_exon(i)
+            for i in range(len(self.seqs))
+        ]
+
+        # TODO: alter the exon ranges as well after applying background variants
+        return replace(self, seqs=alt_seqs)
+
+    def alter(
+        self,
+        exon_bgs: dict[int, VariantGroup] | None = None,
+        exon_ppes: dict[int, VariantGroup[Variant]] | None = None
+    ):
+        if not exon_bgs and not exon_ppes:
+            return replace(self)
 
         def alter_exon(seq_index: int) -> Seq:
             exon_index = self.get_exon_index_from_seq_index(seq_index)
             seq = self.seqs[seq_index]
 
-            return (
-                exon_ppes[exon_index].apply_no_offset(
-                    self.seqs[seq_index]) if exon_index in exon_ppes else
-                seq
-            )
+            if not exon_bgs or exon_index not in exon_bgs:
+                return seq
+
+            # Apply background variants
+            bg_seq, _ = exon_bgs[exon_index].apply(seq, ref_check=True)
+
+            if not exon_ppes or exon_index not in exon_ppes:
+                return bg_seq
+
+            # TODO: consider the case where the entire exon is eliminated
+
+            # Apply PPE's
+            # TODO: use PPE positions corrected for the background!
+            return exon_ppes[exon_index].apply_no_offset(bg_seq)
 
         alt_seqs = [
             alter_exon(i)

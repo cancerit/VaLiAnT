@@ -190,7 +190,7 @@ class Targeton:
 
         return bg_vars
 
-    def alter(self, conn: Connection, contig: str, bg_vars: list[RegisteredBackgroundVariant]) -> tuple[Seq, GenomicPositionOffsets | None]:
+    def alter(self, conn: Connection, contig: str, bg_vars: list[RegisteredBackgroundVariant]) -> tuple[Seq, Seq, GenomicPositionOffsets | None]:
 
         # Apply background variants
         if bg_vars:
@@ -231,7 +231,7 @@ class Targeton:
             # No PPE's
             ppe_seq = bg_seq
 
-        return ppe_seq, gpo
+        return ppe_seq, bg_seq, gpo
 
     def _process_region(
         self,

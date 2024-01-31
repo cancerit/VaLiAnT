@@ -37,6 +37,7 @@ class SGEConfig(BaseConfig):
     # Background variants
     force_bg_ns: bool = Field(alias='forceBackgroundNonSynonymous', default=False)
     force_bg_fs: bool = Field(alias='forceBackgroundFrameShifting', default=False)
+    mask_bg_fp: str | None = Field(alias='maskBackground', default=None)
 
     @property
     def input_file_paths(self) -> list[str]:
