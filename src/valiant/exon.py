@@ -97,15 +97,15 @@ class Exon(UIntRange):
         origin = self.get_first_codon_start(strand)
         return get_codon_range(strand, origin, codon_index)
 
-    def get_codon_offset(self, strand: str, pos: int) -> int:
+    def get_codon_offset(self, strand: Strand, pos: int) -> int:
         # TODO: verify frame convention
         return pos - self.start + (
-            self.cds_prefix_length if strand == '+' else
+            self.cds_prefix_length if strand.is_plus else
             self.cds_suffix_length
         )
 
-    def get_5p_3p_extensions(self, strand: str) -> tuple[int, int]:
+    def get_5p_3p_extensions(self, strand: Strand) -> tuple[int, int]:
         return (
-            (self.cds_prefix_length, self.cds_suffix_length) if strand == '+' else
+            (self.cds_prefix_length, self.cds_suffix_length) if strand.is_plus else
             (self.cds_suffix_length, self.cds_prefix_length)
         )
