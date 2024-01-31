@@ -145,12 +145,28 @@ class Variant:
 
 
 @dataclass(slots=True)
+class VariantWithContig(Variant):
+    contig: str
+
+
+@dataclass(slots=True)
 class RegisteredVariant(Variant):
     id: int
 
 
 VariantT = TypeVar('VariantT', bound=Variant)
+VariantWithContigT = TypeVar('VariantWithContigT', bound=VariantWithContig)
 
 
 def sort_variants(variants: Iterable[VariantT]) -> list[VariantT]:
     return sorted(variants, key=lambda x: x.pos)
+
+
+def compute_genomic_offset(variants: list[VariantT]) -> int:
+    """Given a list of variants, get the offset they would introduce if applied"""
+
+    # TODO: check for overlapping variants (best done upstream, when filtering the full list via PyRanges)
+    return sum(
+        variant.alt_ref_delta
+        for variant in variants
+    )

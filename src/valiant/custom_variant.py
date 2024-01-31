@@ -28,7 +28,7 @@ from .enums import VariantType, VariantClassification
 from .loaders.vcf import load_vcf
 from .strings.dna_str import DnaStr
 from .strings.nucleotide import Nucleotide
-from .variant import Variant
+from .variant import Variant, VariantWithContig
 from .vcf_variant import VcfVariant
 
 
@@ -50,9 +50,8 @@ def correct_vcf_start(start: int, var_type: VariantType) -> int:
     return start
 
 
-@dataclass
-class CustomVariant(Variant):
-    contig: str
+@dataclass(slots=True)
+class CustomVariant(VariantWithContig):
     id: str | None
     vcf_nt: str | None
     var_type: VariantType

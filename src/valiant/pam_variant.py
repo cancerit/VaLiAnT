@@ -23,9 +23,8 @@ from dataclasses import dataclass
 from pysam import VariantRecord
 
 from .contig_filter import ContigFilter
-from .enums import VariantType
 from .loaders.vcf import load_vcf
-from .variant import Variant
+from .variant import VariantWithContig
 
 from .custom_variant import CustomVariant
 
@@ -33,9 +32,12 @@ from .custom_variant import CustomVariant
 VCF_SGRNA_ID_INFO = 'SGRNA'
 
 
+class InvalidPamVariant(Exception):
+    pass
+
+
 @dataclass
-class PamVariant(Variant):
-    contig: str
+class PamVariant(VariantWithContig):
     sgrna_id: str
 
     def __post_init__(self) -> None:
@@ -47,7 +49,7 @@ class PamVariant(Variant):
         try:
             sgrna_id = r.info[VCF_SGRNA_ID_INFO].strip()
         except KeyError:
-            raise ValueError("PAM protection edit with no sgRNA ID!")
+            raise InvalidPamVariant("PAM protection edit with no sgRNA ID!")
         return cls(var.pos, var.ref, var.alt, var.contig, sgrna_id)
 
     @classmethod

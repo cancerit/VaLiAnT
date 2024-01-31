@@ -24,13 +24,13 @@ from typing import Callable, Generator, TypeVar
 from pysam import VariantRecord, VariantFile
 
 from ..contig_filter import ContigFilter
+from ..variant import VariantWithContigT
 
-VarT = TypeVar('VarT')
 
 VcfId = str | None
 GetVcfId = Callable[[VariantRecord], VcfId]
-GetVcfVar = Callable[[VcfId, VariantRecord], VarT]
-FilterVar = Callable[[VarT], bool]
+GetVcfVar = Callable[[VcfId, VariantRecord], VariantWithContigT]
+FilterVar = Callable[[VariantWithContigT], bool]
 
 
 @contextmanager
@@ -54,7 +54,7 @@ def load_vcf(
     parse_f: GetVcfVar,
     filter_f: FilterVar | None = None,
     vcf_id_tag: str | None = None
-) -> list[VarT]:
+) -> list[VariantWithContigT]:
 
     if not vcf_id_tag:
         logging.info("No INFO tag specified as variant identifier for VCF file '%s', falling back to the ID field." % fp)
@@ -62,14 +62,14 @@ def load_vcf(
     # Set the function to extract the record identifier
     get_id_f = partial(get_var_id_from_info, vcf_id_tag) if vcf_id_tag else get_var_id_from_id
 
-    def vcf_record_to_variant(r: VariantRecord) -> VarT:
+    def vcf_record_to_variant(r: VariantRecord) -> VariantWithContigT:
         return parse_f(get_id_f(r), r)
 
     def filter_record(r: VariantRecord) -> bool:
         # Evaluate the contig
         return r.contig in ft.contigs
 
-    def filter_variant(v: VarT) -> bool:
+    def filter_variant(v: VariantWithContigT) -> bool:
         # Evaluate the corrected position for insertions and deletions
         # TODO: consider if it's worth evaluating the end position as well
         if v.pos not in ft.contigs[v.contig]:
