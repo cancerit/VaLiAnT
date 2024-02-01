@@ -16,6 +16,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from array import array
 from dataclasses import dataclass, field
 from typing import Callable, Generic, Iterable
 
@@ -25,10 +26,17 @@ from .variant import VariantT, sort_variants
 from .variant_group import VariantGroup
 
 
-def get_mask(length: int, value: int = 0) -> list[int]:
-    # TODO (performance): use an array instead
+def _get_zeros(t: str, length: int) -> array:
+    k = array(t).itemsize
+    return array(t, bytes(k * length))
 
-    return [value] * length
+
+def get_u8_array(n: int) -> array:
+    return _get_zeros('B', n)
+
+
+def get_u32_array(n: int) -> array:
+    return _get_zeros('I', n)
 
 
 @dataclass(slots=True)
@@ -53,7 +61,7 @@ def _filter_variants_by_range(
     return sort_variants(a) if sort else a
 
 
-def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable[VariantT]) -> tuple[list[int], list[int]]:
+def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable[VariantT]) -> tuple[array, array]:
     """
     Generate an array of position offsets to convert relative positions in ALT to
     reference positions
@@ -61,8 +69,8 @@ def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable
     The variants are assumed to be in range and sorted by position.
     """
 
-    alt_offsets = get_mask(alt_length)
-    ins_mask = get_mask(alt_length)
+    alt_offsets = get_u32_array(alt_length)
+    ins_mask = get_u8_array(alt_length)
     alt_offset: int = 0
     for variant in alt_variants:
 
@@ -79,7 +87,8 @@ def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable
 
             # Set all downstream offsets (assumes the variants to be sorted by position)
             offset = ref_offset + variant.alt_len
-            alt_offsets[offset:] = [alt_offset] * (alt_length - offset)
+            for i in range(offset, alt_length):
+                alt_offsets[i] = alt_offset
 
     return alt_offsets, ins_mask
 
@@ -99,8 +108,8 @@ def _compute_ref_offsets(ref_variants: list[VariantT]) -> list[PosOffset]:
     return pos_offset
 
 
-def _build_variant_mask(origin: int, length: int, variants: Iterable[VariantT], cond: Callable[[VariantT], bool]) -> list[int]:
-    mask = get_mask(length)
+def _build_variant_mask(origin: int, length: int, variants: Iterable[VariantT], cond: Callable[[VariantT], bool]) -> array:
+    mask = get_u8_array(length)
 
     for variant in variants:
 
@@ -115,7 +124,7 @@ def _build_variant_mask(origin: int, length: int, variants: Iterable[VariantT], 
     return mask
 
 
-def _compute_ref_del_mask(ref_start: int, ref_length: int, ref_variants: list[VariantT]) -> list[int]:
+def _compute_ref_del_mask(ref_start: int, ref_length: int, ref_variants: list[VariantT]) -> array:
     return _build_variant_mask(
         ref_start, ref_length, ref_variants, lambda x: x.alt_ref_delta < 0)
 
@@ -131,11 +140,11 @@ class GenomicPositionOffsets(Generic[VariantT]):
 
     # REF -> ALT
     _pos_offsets: list[PosOffset] = field(init=False)
-    _ref_del_mask: list[int] = field(init=False)
+    _ref_del_mask: array = field(init=False)
 
     # ALT -> REF
-    _ins_offsets: list[int] = field(init=False)
-    _alt_ins_mask: list[int] = field(init=False)
+    _ins_offsets: array = field(init=False)
+    _alt_ins_mask: array = field(init=False)
 
     @property
     def alt_length(self) -> int:
@@ -169,11 +178,11 @@ class GenomicPositionOffsets(Generic[VariantT]):
         self._pos_offsets = self._compute_ref_offsets()
         self._ins_offsets, self._alt_ins_mask = self._compute_ins_offsets()
 
-    def _compute_del_mask(self) -> list[int]:
+    def _compute_del_mask(self) -> array:
         return _compute_ref_del_mask(
             self.ref_start, self.ref_length, self.variants_in_range.variants)
 
-    def _compute_ins_offsets(self) -> tuple[list[int], list[int]]:
+    def _compute_ins_offsets(self) -> tuple[array, array]:
         return _compute_alt_offsets(
             self.ref_start, self._alt_length, self.variants_in_range.iter_alt_variants())
 

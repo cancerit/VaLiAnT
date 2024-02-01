@@ -16,6 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from array import array
+
 import pytest
 
 from valiant.strings.dna_str import DnaStr
@@ -50,7 +52,7 @@ def test_compute_alt_offsets():
     # Compute ALT offsets and insertion mask
     alt_offsets, ins_mask = _compute_alt_offsets(ref_start, alt_length, variants_in_range)
     assert len(alt_offsets) == alt_length
-    assert alt_offsets == [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6]
+    assert alt_offsets == array('I', [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6])
     assert len(ins_mask) == alt_length
 
 
