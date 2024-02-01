@@ -198,7 +198,7 @@ class GenomicPositionOffsets(Generic[VariantT]):
         return 0
 
     def validate_alt_position(self, alt_pos: int) -> None:
-        if alt_pos < self.ref_start or self.alt_end is None or alt_pos <= self.alt_end:
+        if alt_pos < self.ref_start or self.alt_end is None or alt_pos > self.alt_end:
             raise ValueError(f"Invalid ALT position {alt_pos}: out of bounds!")
 
     def validate_alt_range(self, r: UIntRange) -> None:
@@ -206,11 +206,14 @@ class GenomicPositionOffsets(Generic[VariantT]):
         if not t or r not in t:
             raise ValueError(f"Invalid ALT range {r}: out of bounds!")
 
+    def _pos_to_offset(self, pos: int) -> int:
+        return pos - self.ref_start
+
     def alt_pos_exists_in_ref(self, alt_pos: int) -> bool:
-        return self._alt_ins_mask[alt_pos] == 0
+        return self._alt_ins_mask[self._pos_to_offset(alt_pos)] == 0
 
     def ref_pos_exists_in_alt(self, ref_pos: int) -> bool:
-        return self._ref_del_mask[ref_pos] == 0
+        return self._ref_del_mask[self._pos_to_offset(ref_pos)] == 0
 
     def _alt_to_ref_position(self, alt_pos: int) -> int:
         """
@@ -219,7 +222,7 @@ class GenomicPositionOffsets(Generic[VariantT]):
         Unsafe, no boundary or insertion mask test.
         """
 
-        return alt_pos - self._ins_offsets[alt_pos - self.ref_start]
+        return alt_pos - self._ins_offsets[self._pos_to_offset(alt_pos)]
 
     def alt_to_ref_position(self, alt_pos: int) -> int | None:
         """Lift a position from ALT to REF"""
