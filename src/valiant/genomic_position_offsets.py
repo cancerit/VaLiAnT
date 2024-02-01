@@ -18,25 +18,48 @@
 
 from array import array
 from dataclasses import dataclass, field
+from enum import IntEnum
 from typing import Callable, Generic, Iterable
 
 from .uint_range import UIntRange
-from .utils import get_end
+from .utils import get_end, get_zero_array
 from .variant import VariantT, sort_variants
 from .variant_group import VariantGroup
 
 
-def _get_zeros(t: str, length: int) -> array:
-    k = array(t).itemsize
-    return array(t, bytes(k * length))
-
-
 def get_u8_array(n: int) -> array:
-    return _get_zeros('B', n)
+    return get_zero_array('B', n)
 
 
 def get_u32_array(n: int) -> array:
-    return _get_zeros('I', n)
+    return get_zero_array('I', n)
+
+
+def get_prev_index(a: array, i: int, value: int) -> int | None:
+    j = i - 1
+    while j >= 0:
+        if a[j] == value:
+            return j
+        j -= 1
+    return None
+
+
+def get_next_index(a: array, i: int, value: int) -> int | None:
+    try:
+        return a.index(value, i + 1)
+    except ValueError:
+        return None
+
+
+class SearchType(IntEnum):
+    BEFORE = 0
+    AFTER = 1
+
+
+SEARCH_F: dict[SearchType, Callable[[array, int, int], int | None]] = {
+    SearchType.BEFORE: get_prev_index,
+    SearchType.AFTER: get_next_index
+}
 
 
 @dataclass(slots=True)
@@ -195,16 +218,18 @@ class GenomicPositionOffsets(Generic[VariantT]):
             ref_start, ref_length, variants, sort=True))
         return cls(ref_start, ref_length, variants_in_range)
 
+    def _ref_to_alt_offset(self, ref_pos: int) -> int:
+        # TODO: optimise search in sorted list
+        for p in self._pos_offsets:
+            if ref_pos >= p.pos:
+                return p.offset
+        return 0
+
     def get_offset(self, pos: int) -> int:
         if not self._pos_offsets or pos < self._pos_offsets[0].pos:
             return 0
 
-        # TODO: optimise search in sorted list
-        for p in self._pos_offsets:
-            if pos >= p.pos:
-                return p.offset
-
-        return 0
+        return self._ref_to_alt_offset(pos)
 
     def validate_alt_position(self, alt_pos: int) -> None:
         if alt_pos < self.ref_start or self.alt_end is None or alt_pos > self.alt_end:
@@ -217,6 +242,9 @@ class GenomicPositionOffsets(Generic[VariantT]):
 
     def _pos_to_offset(self, pos: int) -> int:
         return pos - self.ref_start
+
+    def _offset_to_pos(self, offset: int) -> int:
+        return self.ref_start + offset
 
     def alt_pos_exists_in_ref(self, alt_pos: int) -> bool:
         return self._alt_ins_mask[self._pos_to_offset(alt_pos)] == 0
@@ -254,10 +282,22 @@ class GenomicPositionOffsets(Generic[VariantT]):
             if self.alt_pos_exists_in_ref(alt_pos)
         ]
 
-    def ref_to_alt_position(self, ref_pos: int) -> int | None:
-        if not self.ref_pos_exists_in_alt(ref_pos):
+    def ref_to_alt_position(self, ref_pos: int, nearest: SearchType | None = None) -> int | None:
+        i = self._pos_to_offset(ref_pos)
+        mask = self._ref_del_mask
+
+        if mask[i] == 0:
+
+            # A corresponding position exists
+            return self._offset_to_pos(self._ref_to_alt_offset(ref_pos))
+
+        if nearest is None:
             return None
-        return ref_pos + self.get_offset(ref_pos)
+
+        f = SEARCH_F[nearest]
+
+        # Search for an existing position before or after the query
+        return f(mask, i, 0)
 
     def ref_to_alt_range(self, r: UIntRange) -> UIntRange:
         # TODO: consider whether there's a requirement for this
