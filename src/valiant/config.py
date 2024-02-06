@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field
 
 from .errors import InvalidConfig
 from .options import Options
-from .utils import is_adaptor_valid
+from .utils import get_default_codon_table_path, is_adaptor_valid
 
 
 class BaseConfig(BaseModel, abc.ABC):
@@ -77,6 +77,9 @@ class BaseConfig(BaseModel, abc.ABC):
     def is_valid(self) -> bool:
         success: bool = True
 
+        if not self.codon_table_fp:
+            logging.info("Codon table not specified, the default one will be used.")
+
         # Validate adaptors
         for adaptor in [self.adaptor_5, self.adaptor_3]:
             if not is_adaptor_valid(adaptor):
@@ -98,3 +101,6 @@ class BaseConfig(BaseModel, abc.ABC):
 
     def get_output_file_path(self, fp: str) -> str:
         return os.path.join(self.output_dir, fp)
+
+    def get_codon_table_file_path(self) -> str:
+        return self.codon_table_fp or get_default_codon_table_path()

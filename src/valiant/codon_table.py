@@ -22,7 +22,6 @@ from dataclasses import dataclass
 
 from .strings.codon import Codon
 from .codon_table_row import CodonTableRow
-from .constants import STOP
 from .enums import MutationType
 from .errors.codon_not_found import CodonNotFound
 from .strings.translation_symbol import TranslationSymbol

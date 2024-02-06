@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -22,15 +22,11 @@ from functools import wraps
 
 import click
 
-from .codon_table import CodonTable
-from .codon_table_loader import load_codon_table_rows
 from .config import BaseConfig
 from .constants import DEFAULT_OLIGO_MAX_LENGTH, DEFAULT_OLIGO_MIN_LENGTH, OUTPUT_CONFIG_FILE_NAME
 from .errors import InvalidConfig
 from .main_config import get_main_config_from_config
 from .oligo_generation_info import OligoGenerationInfo
-from .strings.strand import Strand
-from .utils import get_default_codon_table_path
 
 
 existing_file = click.Path(exists=True, file_okay=True, dir_okay=False)
@@ -80,15 +76,6 @@ def common_params(f):
     return wrapper
 
 
-def load_codon_table(config: BaseConfig, strand: Strand) -> CodonTable:
-    if not config.codon_table_fp:
-        logging.info(
-            "Codon table not specified, the default one will be used.")
-    return CodonTable.from_list(load_codon_table_rows(
-        config.codon_table_fp or get_default_codon_table_path()),
-        rc=strand.is_minus)
-
-
 def log_excluded_oligo_counts(config: BaseConfig, short_oligo_n: int, long_oligo_n: int) -> None:
 
     # Log number of oligonucleotides discarded due to insufficient length
@@ -116,6 +103,7 @@ def finalise(config: BaseConfig, stats: OligoGenerationInfo) -> None:
 
         # Generate full configuration
         main_config = get_main_config_from_config(config)
+        assert main_config
 
         # Write configuration to file
         main_config.write(config_fp)
