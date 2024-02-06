@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from array import array
 import os
 import pathlib
 import re
@@ -117,8 +116,3 @@ def get_end(start: int, length: int) -> int:
     """Get inclusive end position given start and length"""
 
     return start + clamp_non_negative(length - 1)
-
-
-def get_zero_array(t: str, length: int) -> array:
-    k = array(t).itemsize
-    return array(t, bytes(k * length))
