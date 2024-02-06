@@ -2,22 +2,6 @@
 EXPERIMENT-wide
 */
 
--- Targetons
-
-create table targetons (
-    id integer primary key,
-    start integer not null,
-    end integer not null,
-    chr text not null,
-    strand text not null,
-
-    check (
-        start >= 1 and
-        end >= start and
-        (strand in ('+', '-'))
-    )
-);
-
 -- Transcript exons
 
 create table exons (
