@@ -89,7 +89,7 @@ def clamp_var_stats_collection(vs: Iterable[VarStats], r: UIntRange) -> list[Var
 
     # Test for out of bounds at the start
     v = a[0]
-    if not v.ref_range in r:
+    if v.ref_range not in r:
         raise OutOfBoundsVar(v.pos, r)
 
     n = len(a)
@@ -103,7 +103,7 @@ def clamp_var_stats_collection(vs: Iterable[VarStats], r: UIntRange) -> list[Var
         v = a[-1]
 
         # Test for out of bounds at the end
-        if not v.ref_range in r:
+        if v.ref_range not in r:
             raise OutOfBoundsVar(v.pos, r)
 
     return a
