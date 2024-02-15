@@ -51,6 +51,10 @@ class Exon(UIntRange):
     index: int
     frame: int
 
+    @classmethod
+    def from_range(cls, r: UIntRange, index: int, frame: int) -> Exon:
+        return cls(r.start, r.end, index, frame)
+
     @property
     def cds_prefix_length(self) -> int:
         return self.compl_frame
@@ -64,6 +68,10 @@ class Exon(UIntRange):
         return get_codon_offset_complement(self.frame)
 
     @property
+    def next_exon_frame(self) -> int:
+        return self.cds_suffix_length
+
+    @property
     def number(self) -> int:
         return self.index
 
@@ -74,8 +82,9 @@ class Exon(UIntRange):
         )
 
     def get_codon_index_at(self, pos: int) -> int | None:
+        # TODO: make strand-aware?
         return (
-            ((pos - self.compl_frame) // 3) if pos in self else
+            ((pos - self.start - self.compl_frame) // 3) if pos in self else
             None
         )
 
@@ -93,9 +102,22 @@ class Exon(UIntRange):
             [first]
         )
 
+    def get_codon_at(self, strand: Strand, pos: int) -> UIntRange | None:
+        codon_index = self.get_codon_index_at(pos)
+        if codon_index is None:
+            return None
+        return self.get_codon(strand, codon_index)
+
     def get_codon(self, strand: Strand, codon_index: int) -> UIntRange:
+        """Get the range of positions of a codon (which may be partial)"""
+
         origin = self.get_first_codon_start(strand)
-        return get_codon_range(strand, origin, codon_index)
+        # Range as if the neighbouring exons were adjacent
+        r = get_codon_range(strand, origin, codon_index)
+        # Clamp to the range of the exon
+        s = r.intersect(self)
+        assert s and 1 <= len(s) <= 3
+        return s
 
     def get_codon_offset(self, strand: Strand, pos: int) -> int:
         # TODO: verify frame convention

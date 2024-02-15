@@ -26,6 +26,7 @@ from .csv import load_csv
 from ..annotation import Annotation
 from ..exon import Exon
 from ..strings.strand import Strand
+from ..transcript_info import TranscriptInfo
 from ..uint_range import UIntRange, UIntRangeSortedList
 
 
@@ -157,8 +158,12 @@ class GtfLoader:
 
         # Assign exon numbers and add final stop codon
         exons = cds_features_to_exons(self.strand, cds)
+        exons.sort()
 
         return Annotation(
-            self.contig, self.strand,
-            gene_id, transcript_id,
+            TranscriptInfo(
+                self.contig,
+                self.strand,
+                gene_id,
+                transcript_id),
             utr_ranges, exons)

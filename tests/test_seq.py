@@ -31,6 +31,6 @@ SEQ = 'ACGTACGT'
     (1, 3, 'CGT')
 ])
 def test_seq_substr(start, end, exp):
-    seq = Seq(0, DnaStr(SEQ))
+    seq = Seq(1, DnaStr(SEQ))
     r = UIntRange(start, end)
     assert seq.substr(r) == exp

@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2023, 2024 Genome Research Ltd
+# Copyright (C) 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,12 +16,33 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from dataclasses import dataclass
-
-from .strings.strand import Strand
+from array import array
 
 
-@dataclass(slots=True, frozen=True)
-class Locus:
-    contig: str
-    strand: Strand
+def get_zero_array(t: str, length: int) -> array:
+    k = array(t).itemsize
+    return array(t, bytes(k * length))
+
+
+def get_u8_array(n: int) -> array:
+    return get_zero_array('B', n)
+
+
+def get_u32_array(n: int) -> array:
+    return get_zero_array('I', n)
+
+
+def get_prev_index(a: array, i: int, value: int) -> int | None:
+    j = i - 1
+    while j >= 0:
+        if a[j] == value:
+            return j
+        j -= 1
+    return None
+
+
+def get_next_index(a: array, i: int, value: int) -> int | None:
+    try:
+        return a.index(value, i + 1)
+    except ValueError:
+        return None

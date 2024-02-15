@@ -20,7 +20,11 @@ from __future__ import annotations
 
 from collections.abc import Container
 from dataclasses import dataclass, replace
-from typing import Sized, Generic, TypeVar
+from itertools import chain
+from typing import Iterable, Sized, Generic, TypeVar
+
+
+UIntRangeT = TypeVar('UIntRangeT', bound='UIntRange')
 
 
 @dataclass(slots=True, frozen=True)
@@ -57,8 +61,14 @@ class UIntRange(Sized, Container):
     def offset_end(self, offset: int):
         return replace(self, end=self.end + offset)
 
+    def overlaps(self, other: UIntRange) -> bool:
+        return (
+            (other.start in self or other.end in self) or
+            self in other
+        )
+
     def intersect(self, r: UIntRange) -> UIntRange | None:
-        if r not in self:
+        if not self.overlaps(r):
             return None
         start = max(self.start, r.start)
         end = min(self.end, r.end)
@@ -73,6 +83,13 @@ class UIntRange(Sized, Container):
     @classmethod
     def from_pos(cls, pos: int) -> UIntRange:
         return UIntRange(pos, pos)
+
+    @classmethod
+    def span(cls, ranges: Iterable[UIntRangeT]) -> UIntRange:
+        return cls(
+            min(r.start for r in ranges),
+            max(r.end for r in ranges)
+        )
 
     def to_slice(self, offset: int = 0) -> slice:
         return slice(self.start - offset, self.end - offset + 1)
@@ -91,19 +108,71 @@ class UIntRange(Sized, Container):
         assert n > 0
         return UIntRange(self.end + 1, self.end + n)
 
+    def get_until(self, pos: int) -> UIntRange:
+        assert pos in self
+        return replace(self, end=pos)
 
-UIntRangeT = TypeVar('UIntRangeT', bound=UIntRange)
+    def get_from(self, pos: int) -> UIntRange:
+        assert pos in self
+        return replace(self, start=pos)
 
 
-@dataclass(slots=True)
-class UIntRangeSortedList(Container, Generic[UIntRangeT]):
-    ranges: list[UIntRangeT]
+class UIntRangeSortedList(list, Generic[UIntRangeT]):
 
-    def __post_init__(self) -> None:
-        self.ranges.sort()
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.sort()
 
     def __contains__(self, x) -> bool:
         return any(
             r.start <= x <= r.end
-            for r in self.ranges
+            for r in self
         )
+
+    def get_before(self, i: int, r: UIntRange, before: int) -> list[int]:
+        assert i >= 0 and before >= 0
+
+        if before == 0:
+            return []
+
+        seq = self[i]
+        ds = r.start - seq.start
+        if before <= ds:
+
+            # Local extension
+            return list(range(r.start - before, r.start))
+
+        else:
+
+            # Distal & local extension
+            assert i > 0
+            prev_seq = self[i - 1]
+
+            return list(chain(
+                range(prev_seq.end - before + ds + 1, prev_seq.end + 1),
+                range(seq.start, seq.start + ds)
+            ))
+
+    def get_after(self, i: int, r: UIntRange, after: int) -> list[int]:
+        assert i >= 0 and after >= 0
+
+        if after == 0:
+            return []
+
+        seq = self[i]
+        ds = seq.end - r.end
+        if after <= ds:
+
+            # Local extension
+            return list(range(r.end + 1, r.end + after + 1))
+
+        else:
+
+            # Distal extension
+            assert i < len(self) - 1
+            next_seq = self[i + 1]
+
+            return list(chain(
+                range(seq.end - ds + 1, seq.end + 1) if ds > 0 else [],
+                range(next_seq.start, next_seq.start + after - ds)
+            ))

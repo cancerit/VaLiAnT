@@ -38,11 +38,26 @@ def sql_or(args, parens: bool = False) -> str:
     return _sql_boolean_op('or', args, parens=parens)
 
 
-def sql_in_range(start_only: bool) -> str:
-    return sql_and([
-        DbFieldName.START.ge(),
-        DbFieldName.END.le() if not start_only else DbFieldName.START.le()
-    ])
+def sql_in_range(
+    start_only: bool,
+    either: bool = False,
+    start_field: DbFieldName = DbFieldName.START,
+    end_field: DbFieldName = DbFieldName.END
+) -> str:
+    assert not (start_only and either)
+
+    return (
+        # Either start or end, or both in range
+        sql_or([
+            sql_and([start_field.ge(), start_field.le()]),
+            sql_and([end_field.ge(), end_field.le()])
+        ]) if either else
+        # Both start and end in range
+        sql_and([
+            start_field.ge(),
+            end_field.le() if not start_only else start_field.le()
+        ])
+    )
 
 
 def get_multi_range_check(n: int, start_only: bool = False) -> str:
@@ -123,7 +138,14 @@ class SqlQuery(str):
         return cls(query)
 
     @classmethod
-    def get_select_in_range(cls, t: DbTableName, fields: list[DbFieldName], start_only: bool = False) -> SqlQuery:
+    def get_select_in_range(
+        cls,
+        t: DbTableName,
+        fields: list[DbFieldName],
+        either: bool = False,
+        end_field: DbFieldName | None = None,
+        start_only: bool = False
+    ) -> SqlQuery:
         """
         Select the fields provided where start and end are within a range
 
@@ -132,7 +154,8 @@ class SqlQuery(str):
         E.g.: select start, ref, alt from variants where start >= ? and end <= ?
         """
 
-        return cls.get_select(t, fields, where=sql_in_range(start_only))
+        return cls.get_select(t, fields, where=sql_in_range(
+            start_only, either=either, end_field=end_field or DbFieldName.END))
 
     @classmethod
     def get_select_name(cls, t: DbTableName) -> SqlQuery:

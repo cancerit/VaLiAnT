@@ -72,8 +72,8 @@ def load_vcf(
     def filter_variant(v: VariantWithContigT) -> bool:
         # Evaluate the corrected position for insertions and deletions
         # TODO: consider if it's worth evaluating the end position as well
-        if v.pos not in ft.contigs[v.contig]:
-            return False
+        # if v.pos not in ft.contigs[v.contig]:
+        #     return False
         return filter_f(v) if filter_f is not None else True
 
     # TODO: if indexed, fetch by chromosome?

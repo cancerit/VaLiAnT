@@ -16,32 +16,12 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 
-from .exon import Exon
-from .transcript_info import TranscriptInfo
-from .uint_range import UIntRange, UIntRangeSortedList
+from .locus import Locus
 
 
-@dataclass(slots=True)
-class Annotation:
-    transcript_info: TranscriptInfo
-
-    # Features
-    utr: UIntRangeSortedList[UIntRange]
-    cds: UIntRangeSortedList[Exon]
-
-    @property
-    def cds_start(self) -> int:
-        # Assumption: CDS ranges are sorted by position
-        return self.cds[0].start
-
-    @property
-    def cds_end(self) -> int:
-        # Assumption: CDS ranges are sorted by position
-        return self.cds[-1].end
-
-    def __post_init__(self) -> None:
-        assert self.cds_start < self.cds_end
+@dataclass(slots=True, frozen=True)
+class TranscriptInfo(Locus):
+    gene_id: str | None
+    transcript_id: str | None

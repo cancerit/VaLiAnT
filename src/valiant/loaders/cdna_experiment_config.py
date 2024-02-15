@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2023, 2024 Genome Research Ltd
+# Copyright (C) 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -20,28 +20,28 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .exon import Exon
-from .transcript_info import TranscriptInfo
-from .uint_range import UIntRange, UIntRangeSortedList
+from .cdna_targeton_config import CDNATargetonConfig, CSV_HEADER
+from .csv import load_csv
 
 
 @dataclass(slots=True)
-class Annotation:
-    transcript_info: TranscriptInfo
+class CDNAExperimentConfig:
+    targeton_configs: list[CDNATargetonConfig]
 
-    # Features
-    utr: UIntRangeSortedList[UIntRange]
-    cds: UIntRangeSortedList[Exon]
+    @classmethod
+    def load(cls, fp: str):
+        return cls([
+            CDNATargetonConfig.from_list(r)
+            for r in load_csv(fp, columns=CSV_HEADER, delimiter='\t')
+        ])
 
-    @property
-    def cds_start(self) -> int:
-        # Assumption: CDS ranges are sorted by position
-        return self.cds[0].start
-
-    @property
-    def cds_end(self) -> int:
-        # Assumption: CDS ranges are sorted by position
-        return self.cds[-1].end
+    def __len__(self) -> int:
+        return len(self.targeton_configs)
 
     def __post_init__(self) -> None:
-        assert self.cds_start < self.cds_end
+        if not self.targeton_configs:
+            raise ValueError("Invalid experiment configuration: no targetons!")
+
+    @property
+    def sequence_ids(self) -> frozenset[str]:
+        return frozenset(t.seq_id for t in self.targeton_configs)

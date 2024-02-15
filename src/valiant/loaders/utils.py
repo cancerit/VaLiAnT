@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -24,10 +24,12 @@ from typing import Type
 
 from charset_normalizer import detect
 
+from valiant.uint_range import UIntRange
 
-def detect_encoding(fp: str) -> str:
+
+def detect_encoding(fp: str):
     with open(fp, 'rb') as rfh:
-        encoding: str = detect(rfh.read(10000))['encoding']
+        encoding = detect(rfh.read(10000))['encoding']
     logging.debug("File '%s' encoding: %s." % (fp, encoding))
     return encoding
 
@@ -47,3 +49,11 @@ def parse_list(s: str, delimiter: str = ',', n: int | None = None) -> list[str]:
 
 def get_int_enum(name: str, fields: list[str]) -> Type[IntEnum]:
     return IntEnum(name, [f.upper() for f in fields], start=0)
+
+
+def parse_uint_range(start: str, end: str) -> UIntRange:
+    return UIntRange(int(start), int(end))
+
+
+def parse_uint_range_from_list(a: list[str], start_field: int, end_field: int) -> UIntRange:
+    return parse_uint_range(a[start_field], a[end_field])

@@ -38,6 +38,9 @@ CODON_TABLE_FN = 'default_codon_table.csv'
 # Output configuration file name
 OUTPUT_CONFIG_FILE_NAME = 'config.json'
 
+# Output SGE sequences file name
+OUTPUT_REF_SEQUENCES = 'ref_sequences.csv'
+
 # Default parameters
 DEFAULT_OLIGO_MAX_LENGTH = 300
 DEFAULT_OLIGO_MIN_LENGTH = 1

@@ -26,10 +26,13 @@ class CDNAConfig(BaseConfig):
     annot_fp: str | None = Field(alias='annotationFilePath')
 
     def get_options(self) -> Options:
+        # TODO: subclass instead
         return Options(
             revcomp_minus_strand=False,
             oligo_max_length=self.max_length,
-            oligo_min_length=self.min_length)
+            oligo_min_length=self.min_length,
+            allow_frame_shift=False,
+            allow_non_syn=False)
 
     @property
     def input_file_paths(self) -> list[str]:

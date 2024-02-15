@@ -19,16 +19,6 @@
 from enum import Enum, IntEnum
 
 
-class DbTable(Enum):
-    """Database table names"""
-
-    TARGETONS = 'targetons'
-    EXONS = 'exons'
-    BE = 'be'
-    PPE = 'ppe'
-    CUSTOM_MUTS = 'custom'
-
-
 class MutationType(Enum):
     SYNONYMOUS = 'syn'
     MISSENSE = 'mis'

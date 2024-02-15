@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2023 Genome Research Ltd
+# Copyright (C) 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -37,6 +37,10 @@ class Seq(Sized):
     #  the generation of REF and ALT of indels according to the VCF convention,
     #  which does not support null values as alleles.
     prev_nt: Nucleotide | None = None
+
+    def __post_init__(self) -> None:
+        if self.start < 1:
+            raise ValueError("Invalid sequence start!")
 
     def __len__(self) -> int:
         return len(self.s)
@@ -97,8 +101,9 @@ class Seq(Sized):
     def clone(self, **kwargs):
         return replace(self, **kwargs)
 
-    def subseq(self, r: UIntRange, rel: bool = True) -> Seq:
-        return Seq(r.start, self.substr(r, rel=rel))
+    def subseq(self, r: UIntRange, rel: bool = True, prev_nt: bool = False) -> Seq:
+        nt = self.get_nt(r.start - 1) if prev_nt and r.start > 1 else None
+        return Seq(r.start, self.substr(r, rel=rel), prev_nt=nt)
 
     def subseq_window(self, pt: IntPatternBuilder, start: int = 0, length: int | None = None) -> list[Seq]:
         starts = pt.build(start, (length if length is not None else len(self)) - 1)
@@ -119,3 +124,6 @@ class Seq(Sized):
 
     def head(self, n: int) -> DnaStr:
         return self.s.head(n)
+
+    def get_at(self, positions: list[int]) -> DnaStr:
+        return self.s.get_at(list(map(self.get_offset, positions)))

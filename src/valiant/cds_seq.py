@@ -76,12 +76,12 @@ class CdsSeq(Seq):
         )
 
     @classmethod
-    def from_seq(cls, seq: Seq, cds_prefix: DnaStr, cds_suffix: DnaStr) -> CdsSeq:
+    def from_seq(cls, seq: Seq, cds_prefix: DnaStr | None = None, cds_suffix: DnaStr | None = None) -> CdsSeq:
         return cls(
             s=seq.s,
             start=seq.start,
-            cds_prefix=cds_prefix,
-            cds_suffix=cds_suffix)
+            cds_prefix=cds_prefix or DnaStr.empty(),
+            cds_suffix=cds_suffix or DnaStr.empty())
 
     @property
     def ext(self) -> DnaStr:

@@ -22,16 +22,17 @@ from sqlite3 import Connection, Cursor
 from .annot_variant import AnnotVariant
 from .background_variants import RegisteredBackgroundVariant
 from .custom_variant import CustomVariant
-from .db import PER_TARGETON_TABLES, cursor, DbTableName, DbFieldName
+from .db import PER_TARGETON_TABLES, VARIANT_FIELDS, cursor, DbTableName, DbFieldName, PER_CONTIG_TABLES
 from .exon import Exon
 from .oligo_seq import OligoSeq
 from .pam_variant import PamVariant
 from .pattern_variant import PatternVariant
 from .sql_gen import SqlQuery, SqlScript, get_multi_range_check, sql_eq_or_in_str_list
+from .strings.dna_str import DnaStr
 from .strings.strand import Strand
 from .uint_range import UIntRange
 from .utils import get_enum_values, safe_group_by
-from .variant import RegisteredVariant, Variant
+from .variant import RegisteredVariant, VarStats, Variant
 from .variant_group import VariantGroup
 from .variant_select import VariantSelectStart, VariantSelectStartEnd
 
@@ -197,13 +198,9 @@ def select_exon_ppes(conn: Connection, sgrna_ids: frozenset[str] | None = None) 
 
     with cursor(conn) as cur:
         res = cur.execute(query).fetchall()
-        print(cur.execute("select * from targeton_pam_protection_edits").fetchall())
 
     return {
-        x: VariantGroup.from_variants([
-            Variant(*t[1:])
-            for t in y
-        ])
+        x: VariantGroup([Variant(*t[1:]) for t in y])
         for x, y in safe_group_by(res, lambda r: r[0])
     }
 
@@ -313,6 +310,10 @@ def select_exons_in_range(conn: Connection, start: int, end: int) -> list[tuple[
         ]
 
 
+clear_per_contig_tables = SqlScript.from_queries(
+    map(SqlQuery.get_delete, PER_CONTIG_TABLES))
+
+
 clear_per_targeton_tables = SqlScript.from_queries(
     map(SqlQuery.get_delete, PER_TARGETON_TABLES))
 
@@ -336,7 +337,10 @@ sql_insert_targeton_ppes = SqlQuery.get_insert_values(
     ])
 
 
-# TODO: consider the exons should have background-altered coordinates as well
+# Consider the exons should have background-altered coordinates as well
+# TODO: evaluate implications of discarding PPE's in noncoding regions vs.
+#  making the exon ID and codon index nullable
+#  (see also the view that references this table)
 sql_insert_exon_codon_ppes = """
 insert into targeton_exon_codon_ppes (
     ppe_id,
@@ -352,7 +356,8 @@ from targeton_pam_protection_edits tppe
 left join pam_protection_edits ppe on ppe.id = tppe.id
 left join v_exon_ext e on
     tppe.start >= e.start and
-    tppe.start <= e.end;
+    tppe.start <= e.end
+where e.id is not null;
 """
 
 
@@ -370,11 +375,11 @@ def insert_targeton_ppes(conn: Connection, variants: list[RegisteredVariant]) ->
 def is_table_empty(conn: Connection, t: DbTableName) -> bool:
     query = f"select exists (select 1 from {t.value} limit 1)"
     with cursor(conn) as cur:
-        return cur.execute(query).fetchone() == 0
+        return cur.execute(query).fetchone()[0] == 0
 
 
 def is_meta_table_empty(conn: Connection) -> bool:
-    return is_table_empty(conn, DbTableName.MUTATIONS)
+    return is_table_empty(conn, DbTableName.V_META)
 
 
 sql_insert_targeton_custom_variants = SqlQuery.get_insert_values(
@@ -465,4 +470,50 @@ def select_ppe_bg_codon_overlaps(conn: Connection) -> list[int]:
         return [
             r[0]
             for r in cur.execute(sql_select_ppe_bg_codon_overlaps).fetchall()
+        ]
+
+
+sql_select_background_variant_stats = SqlQuery.get_select_in_range(
+    DbTableName.V_BACKGROUND_VARIANTS, [
+        DbFieldName.START,
+        DbFieldName.REF_LEN,
+        DbFieldName.ALT_LEN
+    ],
+    either=True,
+    end_field=DbFieldName.REF_END)
+
+
+def select_background_variant_stats(conn: Connection, r: UIntRange) -> list[VarStats]:
+    with cursor(conn) as cur:
+        return [
+            VarStats(*row)
+            for row in cur.execute(
+                sql_select_background_variant_stats,
+                (r.start, r.end, r.start, r.end))
+        ]
+
+
+def _get_select_ppes_by_sgrna_id(sgrna_ids: frozenset[str]) -> SqlQuery:
+    """
+    Generate a query to select PPE's by their sgRNA ID's
+
+    E.g. (formatting aside):
+        select start, ref, alt, id
+        from v_ppe_sgrna_ids
+        where sgrna_id in ('sgRNA_a','sgRNA_b')
+    """
+
+    return SqlQuery.get_select(
+        DbTableName.V_PPE_SGRNA_IDS,
+        VARIANT_FIELDS,
+        where=sql_eq_or_in_str_list(
+            'sgrna_id', list(sgrna_ids)))
+
+
+def select_ppes_by_sgrna_id(conn: Connection, sgrna_ids: frozenset[str]) -> list[RegisteredVariant]:
+    query = _get_select_ppes_by_sgrna_id(sgrna_ids)
+    with cursor(conn) as cur:
+        return [
+            RegisteredVariant(r[0], DnaStr(r[1]), DnaStr(r[2]), r[3])
+            for r in cur.execute(query)
         ]

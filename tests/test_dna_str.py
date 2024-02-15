@@ -41,3 +41,12 @@ def test_tail(n, exp):
 ])
 def test_head(n, exp):
     assert s.head(n) == exp
+
+
+@pytest.mark.parametrize('n,exp', [
+    ([0], 'A'),
+    ([1, 2], 'AC'),
+    ([3, 0, 2], 'CAC')
+])
+def test_get_at(n, exp):
+    assert s.get_at(n) == exp

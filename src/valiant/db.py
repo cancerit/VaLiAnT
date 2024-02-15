@@ -22,12 +22,15 @@ from enum import Enum
 from sqlite3 import Connection, Cursor
 from typing import Any, Generator
 
+from .utils import get_ddl_path
+
 
 class DbTableName(str, Enum):
     PAM_PROTECTION_EDITS = 'pam_protection_edits'
     TARGETON_PAM_PROTECTION_EDITS = 'targeton_pam_protection_edits'
     PAM_PROTECTION_EDIT_SGRNA_IDS = 'pam_protection_edit_sgrna_ids'
     BACKGROUND_VARIANTS = 'background_variants'
+    V_BACKGROUND_VARIANTS = 'v_background_variants'
     EXONS = 'exons'
     CUSTOM_VARIANTS = 'custom_variants'
     CUSTOM_VARIANT_COLLECTIONS = 'custom_variant_collections'
@@ -39,6 +42,16 @@ class DbTableName(str, Enum):
     V_CUSTOM_VARIANTS = 'v_custom_variants'
     V_PPE_SGRNA_IDS = 'v_ppe_sgrna_ids'
     TARGETON_EXON_CODON_PPES = 'targeton_exon_codon_ppes'
+
+
+# TODO: Verify the custom variant collections can be loaded independently...
+PER_CONTIG_TABLES: list[DbTableName] = [
+    DbTableName.PAM_PROTECTION_EDIT_SGRNA_IDS,
+    DbTableName.PAM_PROTECTION_EDITS,
+    DbTableName.BACKGROUND_VARIANTS,
+    DbTableName.CUSTOM_VARIANT_COLLECTIONS,
+    DbTableName.CUSTOM_VARIANTS
+]
 
 
 PER_TARGETON_TABLES: set[DbTableName] = {
@@ -53,6 +66,7 @@ PER_TARGETON_TABLES: set[DbTableName] = {
 class DbFieldName(str, Enum):
     START = 'start'
     END = 'end'
+    REF_END = 'ref_end'
     NAME = 'name'
     VAR_PPE_ID = 'var_ppe_id'
     SGRNA_ID = 'sgrna_id'
@@ -93,6 +107,9 @@ class DbFieldName(str, Enum):
     CDS_PREFIX_LENGTH = 'cds_prefix_length'
     CDS_SUFFIX_LENGTH = 'cds_suffix_length'
     FIRST_CODON_START = 'first_codon_start'
+    REF_LEN = 'ref_len'
+    ALT_LEN = 'alt_len'
+    ALT_REF_DELTA = 'alt_ref_delta'
 
     def _sql_op(self, op: str) -> str:
         return f"{self.value} {op} ?"
@@ -113,6 +130,17 @@ VARIANT_FIELDS = [
     DbFieldName.ALT,
     DbFieldName.ID
 ]
+
+
+def init_db(conn: Connection) -> None:
+
+    # Load DDL
+    with open(get_ddl_path()) as fh:
+        ddl = fh.read()
+
+    # Create tables and views
+    with cursor(conn) as cur:
+        cur.executescript(ddl)
 
 
 @contextmanager

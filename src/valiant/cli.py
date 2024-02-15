@@ -20,9 +20,12 @@ import errno
 import json
 import logging
 import os
-import click
 from typing import Optional
+
+import click
+
 from . import __version__
+from .cdna_cli import run_cdna, cdna
 from .common_cli import existing_file
 from .errors import InvalidConfig
 from .main_config import BaseMainConfig, CDNAMainConfig, MainConfigLoader, SGEMainConfig
@@ -90,7 +93,8 @@ def main(ctx: click.Context, config_fp: Optional[str]):
                 run_sge(config.params, False)
 
             elif isinstance(config, CDNAMainConfig):
-                raise NotImplementedError("cDNA mode not implemented!")
+                # raise NotImplementedError("cDNA mode not implemented!")
+                run_cdna(config.params)
 
             else:
                 logging.critical("Invalid configuration!")
@@ -104,3 +108,4 @@ def main(ctx: click.Context, config_fp: Optional[str]):
 
 
 main.add_command(sge)
+main.add_command(cdna)

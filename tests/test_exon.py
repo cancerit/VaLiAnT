@@ -33,7 +33,7 @@ minus = Strand('-')
     (plus, 1, UIntRange(13, 15)),
     (minus, 1, UIntRange(11, 13)),
     # Partial exon
-    (plus, 2, UIntRange(16, 18))
+    (plus, 2, UIntRange.from_pos(16))
 ])
 def test_exon_get_codon(strand, codon_index, exp):
     exon = Exon(10, 16, 0, 0)

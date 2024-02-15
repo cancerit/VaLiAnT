@@ -100,3 +100,12 @@ class DnaStr(str):
     @property
     def revc(self):
         return self.__class__(reverse_complement(self))
+
+    def get_at(self, indices: list[int]) -> DnaStr:
+        match len(indices):
+            case 0:
+                return DnaStr.empty()
+            case 1:
+                return DnaStr(self[indices[0]])
+            case _:
+                return DnaStr(''.join(self[i] for i in indices))

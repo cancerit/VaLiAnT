@@ -26,6 +26,7 @@ from typing import Callable, Iterable
 from .constants import DATA_PATH, CODON_TABLE_FN, DDL_FN
 from .uint_range import UIntRange
 
+
 dna_re = re.compile('^[ACGT]*$')
 dna_complement_tr_table = str.maketrans('ACGT', 'TGCA')
 
@@ -116,3 +117,10 @@ def get_end(start: int, length: int) -> int:
     """Get inclusive end position given start and length"""
 
     return start + clamp_non_negative(length - 1)
+
+
+def fmt_genomic_range(contig: str, r: UIntRange) -> str:
+    return (
+        f"{contig}:{r.start}-{r.end}" if len(r) > 1 else
+        f"{contig}:{r.start}"
+    )

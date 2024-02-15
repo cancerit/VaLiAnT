@@ -18,45 +18,53 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 
 from ..loaders.targeton_config import TargetonConfig, CSV_HEADER
-from ..strings.strand import Strand
 from ..uint_range import UIntRange
 from .csv import load_csv
 
 
+def load_targetons(fp: str) -> list[TargetonConfig]:
+    return [
+        TargetonConfig.from_list(r)
+        for r in load_csv(fp, columns=CSV_HEADER, delimiter='\t')
+    ]
+
+
 @dataclass(slots=True)
 class ExperimentConfig:
-    contig: str
-    strand: Strand
-    targeton_configs: list[TargetonConfig]
+    targeton_configs: dict[str, list[TargetonConfig]]
 
     @classmethod
-    def load(cls, fp: str) -> ExperimentConfig:
-        targetons = [
-            TargetonConfig.from_list(r)
-            for r in load_csv(fp, columns=CSV_HEADER, delimiter='\t')
-        ]
+    def from_configs(cls, targetons: list[TargetonConfig]) -> ExperimentConfig:
         if not targetons:
             raise ValueError("Invalid experiment configuration: no targetons!")
 
-        t = targetons[0]
-        return cls(t.contig, t.strand, targetons)
+        d = defaultdict(list)
+        for t in targetons:
+            d[t.contig].append(t)
 
-    @property
-    def ref_ranges(self) -> list[UIntRange]:
+        return cls(d)
+
+    @classmethod
+    def load(cls, fp: str) -> ExperimentConfig:
+        targetons = load_targetons(fp)
+        return cls.from_configs(targetons)
+
+    def get_contig_ref_ranges(self, contig: str) -> list[UIntRange]:
         """Unique reference ranges"""
 
-        return list(set(t.ref for t in self.targeton_configs))
+        return list(set(
+            t.ref
+            for t in self.targeton_configs[contig]
+        ))
 
     @property
     def sgrna_ids(self) -> frozenset[str]:
-        return frozenset().union(*[t.sgrna_ids for t in self.targeton_configs])
-
-    def __post_init__(self) -> None:
-        if any(
-            t.contig != self.contig or t.strand != self.strand
-            for t in self.targeton_configs
-        ):
-            raise ValueError("Multiple contig and/or different strands not supported!")
+        return frozenset().union(*[
+            t.sgrna_ids
+            for tl in self.targeton_configs.values()
+            for t in tl
+        ])

@@ -17,35 +17,42 @@
 #############################
 
 from valiant.seq import Seq
-from valiant.seq_collection import SeqCollection
 from valiant.strings.dna_str import DnaStr
-from valiant.uint_range import UIntRange
+from valiant.uint_range import UIntRange, UIntRangeSortedList
 
 
-sc = SeqCollection([
+sequences = [
     Seq(10, DnaStr('AC')),
     Seq(20, DnaStr('GGGGGG')),
     Seq(30, DnaStr('CA'))
+]
+
+sc = UIntRangeSortedList([
+    seq.get_range()
+    for seq in sequences
 ])
+
+
+seq = DnaStr(''.join(seq.s for seq in sequences))
 
 
 def test_seq_collection_get_before():
     r = UIntRange(22, 24)
     # Test within the sequence boundary
-    assert sc.get_before(1, r, 2) == DnaStr('GG')
+    assert sc.get_before(1, r, 2) == [20, 21]
     # Test across the sequence boundary
-    assert sc.get_before(1, r, 3) == DnaStr('CGG')
+    assert sc.get_before(1, r, 3) == [11, 20, 21]
     r = UIntRange(20, 24)
     # Test before the sequence boundary
-    assert sc.get_before(1, r, 2) == DnaStr('AC')
+    assert sc.get_before(1, r, 2) == [10, 11]
 
 
 def test_seq_collection_get_after():
     r = UIntRange(20, 23)
     # Test within the sequence boundary
-    assert sc.get_after(1, r, 2) == DnaStr('GG')
+    assert sc.get_after(1, r, 2) == [24, 25]
     # Test across the sequence boundary
-    assert sc.get_after(1, r, 3) == DnaStr('GGC')
+    assert sc.get_after(1, r, 3) == [24, 25, 30]
     r = UIntRange(24, 25)
     # Test after the sequence boundary
-    assert sc.get_after(1, r, 2) == DnaStr('CA')
+    assert sc.get_after(1, r, 2) == [30, 31]

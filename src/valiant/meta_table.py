@@ -16,27 +16,27 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+import os
 from collections import defaultdict
 from dataclasses import dataclass
-import os
+from functools import partial
 from sqlite3 import Connection
 from typing import ClassVar
 
-from .annotation import Annotation
+from .config import BaseConfig
 from .constants import REVCOMP_OLIGO_NAME_SUFFIX
 from .db import cursor
 from .enums import MutationType, SrcType, VariantType
 from .experiment_meta import ExperimentMeta
 from .genomic_position_offsets import GenomicPositionOffsets
-from .loaders.experiment import ExperimentConfig
 from .mave_hgvs import get_mave_nt
 from .meta_row import MetaRow, sql_select_meta
 from .oligo_generation_info import OligoGenerationInfo
 from .options import Options
 from .seq import Seq
-from .sge_config import SGEConfig
 from .strings.dna_str import DnaStr
 from .strings.strand import Strand
+from .transcript_info import TranscriptInfo
 from .utils import bool_to_int_str, reverse_complement
 from .variant import Variant
 from .vcf_writer import Allele, VcfVariant, open_vcf_write, write_vcf_record
@@ -89,20 +89,37 @@ def get_transcript_frag(gene_id: str | None, transcript_id: str | None) -> str:
     )
 
 
+def get_sge_oligo_name(gene_id: str | None, transcript_id: str | None, contig: str, is_rc: bool, src: str, v: Variant) -> str:
+    tr_frag = get_transcript_frag(gene_id, transcript_id)
+    var_frag = v.get_oligo_name_frag()
+    rc = REVCOMP_OLIGO_NAME_SUFFIX if is_rc else ''
+    return f"{tr_frag}_{contig}:{var_frag}_{src}{rc}"
+
+
+def get_cdna_oligo_name(gene_id: str | None, transcript_id: str | None, seq_id: str, src: str, v: Variant):
+    # BRCA1_NP_009225.1_sense_ENST00000357654.9.ENSG00000012048.23_1705_1707_AAA>AAC_aa
+    tr_frag = get_transcript_frag(gene_id, transcript_id)
+    var_frag = v.get_oligo_name_frag()
+    return f"{seq_id}_{tr_frag}_{var_frag}_{src}"
+
+
 @dataclass(slots=True)
 class MetaTable:
     CSV_HEADER: ClassVar[str] = ','.join(META_CSV_FIELDS)
 
-    # TODO: generalise for cDNA support
-    cfg: SGEConfig
+    src_type: SrcType
+    seq_id: str | None
+    cfg: BaseConfig
     exp: ExperimentMeta
     opt: Options
     gpo: GenomicPositionOffsets | None
-    exp_cfg: ExperimentConfig
+    # TODO: support cDNA
+    contig: str
+    strand: Strand
     seq: Seq
     alt_seq: Seq
     ppe_mut_types: list[MutationType]
-    annot: Annotation | None
+    transcript: TranscriptInfo | None
 
     def _write_header(self, fh) -> None:
         fh.write(self.CSV_HEADER)
@@ -132,31 +149,25 @@ class MetaTable:
         species = self.cfg.species
         assembly = self.cfg.assembly
         revc = bool_to_int_str(self.opt.revcomp_minus_strand)
-        contig = self.exp_cfg.contig
-        strand = self.exp_cfg.strand
+        contig = self.contig
         ref_seq = self.seq.s
         ref_range = self.seq.get_range()
         ref_start = str(ref_range.start)
         ref_end = str(ref_range.end)
-        pam_seq = self.alt_seq.s
-        pam_mut_annot = ';'.join([x.value for x in self.ppe_mut_types])
 
         gene_id = None
         transcript_id = None
-        if self.annot:
-            transcript_id = self.annot.transcript_id
-            gene_id = self.annot.gene_id
+        if self.transcript:
+            transcript_id = self.transcript.transcript_id
+            gene_id = self.transcript.gene_id
 
-        is_rc = self.opt.should_rc(Strand(strand))
-
-        # TODO: generalise for cDNA support
-        src_type = SrcType.REF.value
+        src_type = self.src_type.value
 
         info = OligoGenerationInfo()
 
-        assert self.seq.prev_nt
+        assert self.seq.prev_nt or self.seq.start == 1
         # TODO: correct if the altered sequence has global background variants applied upstream
-        assert self.alt_seq.prev_nt
+        assert self.alt_seq.prev_nt or self.alt_seq.start == 1
 
         def get_full_oligo(frag: str) -> str:
             """Add the adaptors to the oligonucleotide sequence"""
@@ -168,11 +179,26 @@ class MetaTable:
 
             return get_mave_nt(pos, ref_range.start, t, ref, alt or mr.alt)
 
-        def get_oligo_name(src: str, v: Variant) -> str:
-            tr_frag = get_transcript_frag(gene_id, transcript_id)
-            var_frag = v.get_oligo_name_frag()
-            rc = REVCOMP_OLIGO_NAME_SUFFIX if is_rc else ''
-            return f"{tr_frag}_{contig}:{var_frag}_{src}{rc}"
+        match self.src_type:
+            case SrcType.REF:
+                strand = self.strand
+                is_rc = self.opt.should_rc(Strand(strand))
+                get_oligo_name_f = partial(
+                    get_sge_oligo_name, gene_id, transcript_id, contig, is_rc)
+                # tr_frag = get_transcript_frag(gene_id, transcript_id)
+                # var_frag = v.get_oligo_name_frag()
+                # rc = REVCOMP_OLIGO_NAME_SUFFIX if is_rc else ''
+                # return f"{tr_frag}_{contig}:{var_frag}_{src}{rc}"
+                pam_seq = self.alt_seq.s
+                pam_mut_annot = ';'.join([x.value for x in self.ppe_mut_types])
+
+            case SrcType.CDNA:
+                assert self.seq_id
+                strand = ''
+                is_rc = False
+                get_oligo_name_f = partial(get_cdna_oligo_name, gene_id, transcript_id, self.seq_id)
+                pam_seq = None
+                pam_mut_annot = None
 
         with (
             open(meta_fp, 'w') as meta_fh,
@@ -212,7 +238,7 @@ class MetaTable:
 
                     src = mr.vcf_alias or mr.mutator
                     pam_var = Variant(ref_var.pos, DnaStr(pam_ref), DnaStr(mr.alt))
-                    oligo_name = get_oligo_name(src, pam_var)
+                    oligo_name = get_oligo_name_f(src, pam_var)
 
                     # TODO: consider dropping (just for backwards compatibility)
                     if mr.mutator in {'aa', 'ala', 'stop'}:
@@ -282,6 +308,7 @@ class MetaTable:
                                 self.gpo.alt_to_ref_position(pam_range.start) if self.gpo else
                                 pam_range.start
                             )
+                            assert pam_ref_start is not None
 
                             mave_nt = get_mave_hgvs(
                                 pam_ref_start, var_type, pam_codon_ref, alt=pam_alt)
@@ -305,37 +332,39 @@ class MetaTable:
                         # Populate unique collection
                         unique_oligos[oligo].append(oligo_name)
 
-                        # TODO: verify it is fine to drop the stored end position
-                        vcf_ref = VcfVariant.from_partial(
-                            ref_var.pos - 1,
-                            ref_ref_all,
-                            ref_alt_all)
+                        if self.src_type == SrcType.REF:
 
-                        vcf_pam = VcfVariant.from_partial(
-                            pam_ref_start - 1,
-                            pam_ref_all,
-                            pam_alt_all,
-                            sge_ref=sge_ref_all)
+                            # TODO: verify it is fine to drop the stored end position
+                            vcf_ref = VcfVariant.from_partial(
+                                ref_var.pos - 1,
+                                ref_ref_all,
+                                ref_alt_all)
 
-                        # Write REF VCF record
-                        write_vcf_record(
-                            vcf_ref_fh,
-                            contig,
-                            vcf_ref,
-                            mr.mutator,
-                            oligo_name,
-                            mr.vcf_alias,
-                            mr.vcf_var_id)
+                            vcf_pam = VcfVariant.from_partial(
+                                pam_ref_start - 1,
+                                pam_ref_all,
+                                pam_alt_all,
+                                sge_ref=sge_ref_all)
 
-                        # Write PAM VCF record
-                        write_vcf_record(
-                            vcf_pam_fh,
-                            contig,
-                            vcf_pam,
-                            mr.mutator,
-                            oligo_name,
-                            mr.vcf_alias,
-                            mr.vcf_var_id)
+                            # Write REF VCF record
+                            write_vcf_record(
+                                vcf_ref_fh,
+                                contig,
+                                vcf_ref,
+                                mr.mutator,
+                                oligo_name,
+                                mr.vcf_alias,
+                                mr.vcf_var_id)
+
+                            # Write PAM VCF record
+                            write_vcf_record(
+                                vcf_pam_fh,
+                                contig,
+                                vcf_pam,
+                                mr.mutator,
+                                oligo_name,
+                                mr.vcf_alias,
+                                mr.vcf_var_id)
 
                     # Write metadata table fields
                     #  (either to the default or to the excluded file)
@@ -434,6 +463,13 @@ class MetaTable:
 
         if info.out_of_range_n == 0:
             os.unlink(meta_excl_fp)
+
+        if info.in_range == 0:
+            os.unlink(meta_fp)
+
+        if info.in_range == 0 or self.src_type == SrcType.CDNA:
+            os.unlink(vcf_ref_fp)
+            os.unlink(vcf_pam_fp)
 
         if unique_oligos:
 

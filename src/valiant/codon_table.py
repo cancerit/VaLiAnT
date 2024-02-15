@@ -20,12 +20,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .strings.codon import Codon
 from .codon_table_row import CodonTableRow
 from .enums import MutationType
 from .errors.codon_not_found import CodonNotFound
+from .strings.codon import Codon
 from .strings.translation_symbol import TranslationSymbol
 from .utils import safe_group_by
+
 
 CodonToTransl = dict[Codon, TranslationSymbol]
 TranslToCodons = dict[TranslationSymbol, list[Codon]]
@@ -117,3 +118,6 @@ class CodonTable:
 
         # Compare the amino acids
         return aa_a.get_aa_change(aa_b)
+
+    def is_syn(self, ref: Codon, alt: Codon) -> bool:
+        return self.get_aa_change(ref, alt) == MutationType.SYNONYMOUS

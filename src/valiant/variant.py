@@ -19,7 +19,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from typing import Iterable, NoReturn, TypeVar
+from typing import NoReturn, TypeVar
 
 from .constants import NT_SNVS
 from .enums import VariantType
@@ -27,6 +27,7 @@ from .strings.dna_str import DnaStr
 from .strings.nucleotide import Nucleotide
 from .uint_range import UIntRange
 from .utils import get_end
+from .var_stats import VarStats
 
 
 # TODO: drop when frozen dataclasses with slots are fixed in CPython
@@ -73,6 +74,13 @@ class Variant:
     @property
     def ref_range(self) -> UIntRange:
         return UIntRange(self.pos, self.ref_end)
+
+    def is_in_range(self, r: UIntRange) -> bool:
+        return self.pos in r or self.ref_end in r
+
+    @property
+    def stats(self) -> VarStats:
+        return VarStats(self.pos, self.ref_len, self.alt_len)
 
     @property
     def type(self) -> VariantType:
@@ -153,13 +161,16 @@ class VariantWithContig(Variant):
 class RegisteredVariant(Variant):
     id: int
 
+    def to_variant(self) -> Variant:
+        return Variant(self.pos, self.ref, self.alt)
+
 
 VariantT = TypeVar('VariantT', bound=Variant)
 VariantWithContigT = TypeVar('VariantWithContigT', bound=VariantWithContig)
 
 
-def sort_variants(variants: Iterable[VariantT]) -> list[VariantT]:
-    return sorted(variants, key=lambda x: x.pos)
+def variant_sort_key(variant: Variant) -> int:
+    return variant.pos
 
 
 def compute_genomic_offset(variants: list[VariantT]) -> int:

@@ -19,13 +19,14 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
+from .base_targeton_config import BaseTargetonConfig, parse_mutators
 from ..strings.strand import Strand
 from ..uint_range import UIntRange
 from ..utils import get_not_none, is_in_opt_range
 from .mutator_config import MutatorConfig
-from .utils import parse_list, get_int_enum
+from .utils import parse_list, get_int_enum, parse_uint_range_from_list
 
 
 CSV_HEADER = [
@@ -48,11 +49,6 @@ TargetonConfigField = get_int_enum('TargetonConfigField', CSV_HEADER)
 mutator_group_pt = r'\((\s*[\w\-_]+\s*(?:,\s*[\w\-_]+)*)?\s*\)'
 mutator_vector_re = re.compile(
     r'\s*,\s*'.join([mutator_group_pt] * 3))
-
-
-def parse_mutators(s: str) -> list[MutatorConfig]:
-    mutator_codes = sorted(set(parse_list(s)))
-    return list(map(MutatorConfig.parse, mutator_codes))
 
 
 def parse_mutator_tuples(s: str) -> list[list[MutatorConfig]]:
@@ -79,12 +75,10 @@ def parse_ext_vector(s: str) -> tuple[int, int]:
     return region_1_length, region_3_length
 
 
-@dataclass(slots=True)
-class TargetonConfig:
+@dataclass(slots=False)
+class TargetonConfig(BaseTargetonConfig):
     contig: str
     strand: Strand
-    ref: UIntRange
-    region_2: UIntRange
     region_1_length: int
     region_3_length: int
     mutators: tuple[list[MutatorConfig], list[MutatorConfig], list[MutatorConfig]]
@@ -106,17 +100,24 @@ class TargetonConfig:
         if self.region_2.end + self.region_3_length > self.ref.end:
             raise ValueError("Invalid region 3 length: exceeding targeton range!")
 
+    def alter(self, ref_range: UIntRange, region_2_range: UIntRange) -> TargetonConfig:
+        return replace(self, ref=ref_range, region_2=region_2_range)
+
     @property
-    def name(self) -> str:
-        a: list[str] = [
+    def base_name(self) -> str:
+        return '_'.join([
             self.contig,
             str(self.ref.start),
             str(self.ref.end),
             self.strand.label
-        ]
-        if self.sgrna_ids:
-            a.extend(sorted(self.sgrna_ids))
-        return '_'.join(a)
+        ])
+
+    @property
+    def name(self) -> str:
+        if not self.sgrna_ids:
+            return self.base_name
+
+        return '_'.join([self.base_name, *sorted(self.sgrna_ids)])
 
     @classmethod
     def from_list(cls, a: list[str]) -> TargetonConfig:
@@ -129,13 +130,13 @@ class TargetonConfig:
         sgrna_vector = a[TargetonConfigField.SGRNA_VECTOR]  # type: ignore
         sgrna_ids = frozenset(parse_list(sgrna_vector))
 
-        def parse_uint_range(start_field: int, end_field: int) -> UIntRange:
-            return UIntRange(int(a[start_field]), int(a[end_field]))
+        def _parse_uint_range(start_field: int, end_field: int) -> UIntRange:
+            return parse_uint_range_from_list(a, start_field, end_field)
 
-        ref_range = parse_uint_range(
+        ref_range = _parse_uint_range(
             TargetonConfigField.REF_START,  # type: ignore
             TargetonConfigField.REF_END)  # type: ignore
-        region_2 = parse_uint_range(
+        region_2 = _parse_uint_range(
             TargetonConfigField.R2_START,  # type: ignore
             TargetonConfigField.R2_END)  # type: ignore
 
@@ -144,10 +145,10 @@ class TargetonConfig:
         region_1_length, region_3_length = parse_ext_vector(ext_vector)
 
         return cls(
-            a[TargetonConfigField.REF_CHR],  # type: ignore
-            Strand(a[TargetonConfigField.REF_STRAND]),  # type: ignore
             ref_range,
             region_2,
+            a[TargetonConfigField.REF_CHR],  # type: ignore
+            Strand(a[TargetonConfigField.REF_STRAND]),  # type: ignore
             region_1_length,
             region_3_length,
             (ma, mb, mc),
@@ -206,3 +207,12 @@ class TargetonConfig:
             for i, r in enumerate(self.get_regions())
             if r is not None and self.get_region_mutators(i)
         ]
+
+    def get_all_regions(self) -> list[UIntRange]:
+        return get_not_none([
+            self.get_const_1(),
+            self.get_region_1(),
+            self.region_2,
+            self.get_region_3(),
+            self.get_const_2()
+        ])

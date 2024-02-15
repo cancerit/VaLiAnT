@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2023, 2024 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,32 +16,29 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from __future__ import annotations
-
+import abc
 from dataclasses import dataclass
+from typing import TypeVar
 
-from .exon import Exon
-from .transcript_info import TranscriptInfo
-from .uint_range import UIntRange, UIntRangeSortedList
+from ..uint_range import UIntRange
+from .mutator_config import MutatorConfig
+from .utils import parse_list
 
 
-@dataclass(slots=True)
-class Annotation:
-    transcript_info: TranscriptInfo
+def parse_mutators(s: str) -> list[MutatorConfig]:
+    mutator_codes = sorted(set(parse_list(s)))
+    return list(map(MutatorConfig.parse, mutator_codes))
 
-    # Features
-    utr: UIntRangeSortedList[UIntRange]
-    cds: UIntRangeSortedList[Exon]
 
-    @property
-    def cds_start(self) -> int:
-        # Assumption: CDS ranges are sorted by position
-        return self.cds[0].start
+@dataclass
+class BaseTargetonConfig(abc.ABC):
+    ref: UIntRange
+    region_2: UIntRange
 
     @property
-    def cds_end(self) -> int:
-        # Assumption: CDS ranges are sorted by position
-        return self.cds[-1].end
+    @abc.abstractmethod
+    def name(self) -> str:
+        pass
 
-    def __post_init__(self) -> None:
-        assert self.cds_start < self.cds_end
+
+BaseTargetonConfigT = TypeVar('BaseTargetonConfigT', bound=BaseTargetonConfig)

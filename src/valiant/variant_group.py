@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2023 Genome Research Ltd
+# Copyright (C) 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -25,7 +25,7 @@ from typing import Generator, Generic, Iterable
 from .oligo_seq import alter_seq
 from .seq import Seq
 from .uint_range import UIntRange
-from .variant import Variant, VariantT, compute_genomic_offset
+from .variant import Variant, VariantT, compute_genomic_offset, variant_sort_key
 
 
 class InvalidVariantRef(Exception):
@@ -42,13 +42,12 @@ def check_ref(ref_seq: Seq, variant: Variant) -> None:
             f"expected {variant.ref}, found {exp_ref}!")
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(slots=True, init=False)
 class VariantGroup(Sized, Generic[VariantT]):
     variants: list[VariantT]
 
-    @classmethod
-    def from_variants(cls, variants: Iterable[VariantT]):
-        return cls(sorted(variants, key=lambda x: x.pos))
+    def __init__(self, variants: Iterable[VariantT]) -> None:
+        self.variants = sorted(variants, key=variant_sort_key)
 
     def __len__(self) -> int:
         return len(self.variants)
@@ -72,11 +71,9 @@ class VariantGroup(Sized, Generic[VariantT]):
     def get_alt_length(self, ref_length: int) -> int:
         return ref_length + compute_genomic_offset(self.variants)
 
-    def apply(self, ref_seq: Seq, ref_check: bool = False) -> tuple[Seq, list[VariantT]]:
-        alt_seq: Seq = ref_seq.clone()
-        alt_offset: int = 0
-        alt_vars: list[VariantT] = []
-        offset_variant: VariantT
+    def apply(self, ref_seq: Seq, start: int | None = None, ref_check: bool = False) -> Seq:
+        alt_seq = ref_seq.clone()
+        alt_offset = 0
 
         for variant in self.variants:
 
@@ -86,7 +83,6 @@ class VariantGroup(Sized, Generic[VariantT]):
 
             # Offset the variant based on the preceding variants
             offset_variant = variant.offset(alt_offset)
-            alt_vars.append(offset_variant)
 
             # Mutate the ALT sequence
             alt_seq = alter_seq(alt_seq, offset_variant)
@@ -94,19 +90,12 @@ class VariantGroup(Sized, Generic[VariantT]):
             # Correct the following variant position
             alt_offset += variant.alt_ref_delta
 
-        return alt_seq, alt_vars
+        if start is not None:
 
-    def get_sub(self, r: UIntRange) -> VariantGroup:
-        def var_in_range(variant: Variant) -> bool:
-            if variant.pos in r:
-                return True
-            if variant.ref_len > 1:
-                var_end = variant.pos + variant.ref_len - 1
-                if var_end in r:
-                    return True
-            return False
+            # Override the start position
+            alt_seq.start = start
 
-        return VariantGroup(list(filter(var_in_range, self.variants)))
+        return alt_seq
 
     def overlaps_range(self, r: UIntRange) -> bool:
         return any(

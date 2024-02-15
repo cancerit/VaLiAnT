@@ -17,38 +17,21 @@
 #############################
 
 from array import array
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import IntEnum
-from typing import Callable, Generic, Iterable
+from typing import Callable, Iterable
 
+from .array_utils import get_prev_index, get_next_index, get_u32_array, get_u8_array
 from .uint_range import UIntRange
-from .utils import get_end, get_zero_array
-from .variant import VariantT, sort_variants
-from .variant_group import VariantGroup
+from .utils import get_end
+from .var_stats import VarStats, clamp_var_stats_collection, get_alt_ref_delta
+from .variant import VariantT
 
 
-def get_u8_array(n: int) -> array:
-    return get_zero_array('B', n)
-
-
-def get_u32_array(n: int) -> array:
-    return get_zero_array('I', n)
-
-
-def get_prev_index(a: array, i: int, value: int) -> int | None:
-    j = i - 1
-    while j >= 0:
-        if a[j] == value:
-            return j
-        j -= 1
-    return None
-
-
-def get_next_index(a: array, i: int, value: int) -> int | None:
-    try:
-        return a.index(value, i + 1)
-    except ValueError:
-        return None
+class InvalidRefRange(ValueError):
+    def __init__(self, r: UIntRange, *args: object) -> None:
+        self.msg = f"Range {r} could not be lift over!"
+        super().__init__(*args)
 
 
 class SearchType(IntEnum):
@@ -70,21 +53,7 @@ class PosOffset:
     offset: int
 
 
-def _filter_variants_by_range(
-    ref_start: int,
-    ref_length: int,
-    variants: list[VariantT],
-    sort: bool = False
-) -> list[VariantT]:
-    a: list[VariantT] = [
-        variant
-        for variant in variants
-        if 0 <= (variant.pos - ref_start) < ref_length
-    ]
-    return sort_variants(a) if sort else a
-
-
-def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable[VariantT]) -> tuple[array, array]:
+def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable[VarStats]) -> tuple[array, array]:
     """
     Generate an array of position offsets to convert relative positions in ALT to
     reference positions
@@ -116,7 +85,7 @@ def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable
     return alt_offsets, ins_mask
 
 
-def _compute_ref_offsets(ref_variants: list[VariantT]) -> list[PosOffset]:
+def _compute_ref_offsets(ref_variants: list[VarStats]) -> list[PosOffset]:
     """
     Map sorted positions to the cumulative offsets the corresponding variants introduce
 
@@ -131,47 +100,61 @@ def _compute_ref_offsets(ref_variants: list[VariantT]) -> list[PosOffset]:
     return pos_offset
 
 
-def _build_variant_mask(origin: int, length: int, variants: Iterable[VariantT], cond: Callable[[VariantT], bool]) -> array:
-    mask = get_u8_array(length)
+def _compute_ref_del_mask(ref_start: int, ref_length: int, ref_variants: list[VarStats]) -> array:
+    mask = get_u8_array(ref_length)
 
-    for variant in variants:
+    for variant in ref_variants:
 
         # Filter out variants that do not add to ALT
-        if cond(variant):
-            ref_offset = variant.pos - origin
+        if variant.alt_ref_delta < 0:
+            ref_offset = variant.pos - ref_start
 
             # Increment offsets spanned by ALT
-            for i in range(variant.alt_len):
+            for i in range(variant.ref_len):
                 mask[ref_offset + i] = 1
 
     return mask
 
 
-def _compute_ref_del_mask(ref_start: int, ref_length: int, ref_variants: list[VariantT]) -> array:
-    return _build_variant_mask(
-        ref_start, ref_length, ref_variants, lambda x: x.alt_ref_delta < 0)
-
-
 @dataclass(slots=True)
-class GenomicPositionOffsets(Generic[VariantT]):
-    ref_start: int
-    ref_length: int
-    variants_in_range: VariantGroup[VariantT]
+class GenomicPositionOffsets:
+    ref_range: UIntRange
 
     # ALT
-    _alt_length: int = field(init=False)
+    alt_length: int
 
     # REF -> ALT
-    _pos_offsets: list[PosOffset] = field(init=False)
-    _ref_del_mask: array = field(init=False)
+    _pos_offsets: list[PosOffset]
+    _ref_del_mask: array
 
     # ALT -> REF
-    _ins_offsets: array = field(init=False)
-    _alt_ins_mask: array = field(init=False)
+    _ins_offsets: array
+    _alt_ins_mask: array
+
+    @classmethod
+    def from_var_stats(cls, vs: Iterable[VarStats], r: UIntRange):
+        cvs = clamp_var_stats_collection(vs, r)
+        ref_start = r.start
+        ref_length = len(r)
+
+        alt_length = ref_length + get_alt_ref_delta(cvs)
+        del_mask = _compute_ref_del_mask(ref_start, ref_length, cvs)
+        pos_offsets = _compute_ref_offsets(cvs)
+        ins_offsets, ins_mask = _compute_alt_offsets(ref_start, alt_length, cvs)
+
+        return cls(r, alt_length, pos_offsets, del_mask, ins_offsets, ins_mask)
+
+    def __post_init__(self) -> None:
+        if self.alt_length < 0:
+            raise ValueError("Negative ALT length: verify the variants!")
 
     @property
-    def alt_length(self) -> int:
-        return self._alt_length
+    def ref_start(self) -> int:
+        return self.ref_range.start
+
+    @property
+    def ref_length(self) -> int:
+        return len(self.ref_range)
 
     @property
     def alt_end(self) -> int | None:
@@ -185,38 +168,6 @@ class GenomicPositionOffsets(Generic[VariantT]):
         if self.alt_length == 0:
             return None
         return UIntRange.from_length(self.ref_start, self.alt_length)
-
-    def __post_init__(self) -> None:
-        if self.ref_start < 0:
-            raise ValueError(f"Invalid REF start {self.ref_start}!")
-        if self.ref_length < 0:
-            raise ValueError(f"Invalid REF length {self.ref_length}!")
-
-        # Compute the length of the ALT sequence
-        self._alt_length = self.variants_in_range.get_alt_length(self.ref_length)
-        if self._alt_length < 0:
-            raise ValueError("Negative ALT length: verify the variants!")
-
-        self._ref_del_mask = self._compute_del_mask()
-        self._pos_offsets = self._compute_ref_offsets()
-        self._ins_offsets, self._alt_ins_mask = self._compute_ins_offsets()
-
-    def _compute_del_mask(self) -> array:
-        return _compute_ref_del_mask(
-            self.ref_start, self.ref_length, self.variants_in_range.variants)
-
-    def _compute_ins_offsets(self) -> tuple[array, array]:
-        return _compute_alt_offsets(
-            self.ref_start, self._alt_length, self.variants_in_range.iter_alt_variants())
-
-    def _compute_ref_offsets(self) -> list[PosOffset]:
-        return _compute_ref_offsets(self.variants_in_range.variants)
-
-    @classmethod
-    def from_variants(cls, ref_start: int, ref_length: int, variants: list[VariantT]):
-        variants_in_range = VariantGroup.from_variants(_filter_variants_by_range(
-            ref_start, ref_length, variants, sort=True))
-        return cls(ref_start, ref_length, variants_in_range)
 
     def _ref_to_alt_offset(self, ref_pos: int) -> int:
         # TODO: optimise search in sorted list
@@ -282,6 +233,9 @@ class GenomicPositionOffsets(Generic[VariantT]):
             if self.alt_pos_exists_in_ref(alt_pos)
         ]
 
+    def _ref_offset_to_alt_pos(self, ref_pos: int) -> int:
+        return ref_pos + self._ref_to_alt_offset(ref_pos)
+
     def ref_to_alt_position(self, ref_pos: int, nearest: SearchType | None = None) -> int | None:
         i = self._pos_to_offset(ref_pos)
         mask = self._ref_del_mask
@@ -289,7 +243,7 @@ class GenomicPositionOffsets(Generic[VariantT]):
         if mask[i] == 0:
 
             # A corresponding position exists
-            return self._offset_to_pos(self._ref_to_alt_offset(ref_pos))
+            return self._ref_offset_to_alt_pos(ref_pos)
 
         if nearest is None:
             return None
@@ -297,16 +251,42 @@ class GenomicPositionOffsets(Generic[VariantT]):
         f = SEARCH_F[nearest]
 
         # Search for an existing position before or after the query
-        return f(mask, i, 0)
+        offset = f(mask, i, 0)
+        if offset is None:
+            return None
 
-    def ref_to_alt_range(self, r: UIntRange) -> UIntRange:
+        # Return the nearest existing ALT position
+        nearest_ref_pos = self._offset_to_pos(offset)
+        return self._ref_offset_to_alt_pos(nearest_ref_pos)
+
+    def ref_to_alt_range(self, r: UIntRange, shrink: bool = False) -> UIntRange | None:
+        """
+        Lift a range of positions from REF to ALT
+
+        If either range boundary does not exist in ALT, and shrink is set,
+        return the widest existing range within it.
+        """
+
         # TODO: consider whether there's a requirement for this
         #  to be able to return a range with gaps, considering
         #  that custom variants can't overlap background variants.
-        start = self.ref_to_alt_position(r.start)
-        end = self.ref_to_alt_position(r.end)
-        assert start is not None
-        assert end is not None
+        start = self.ref_to_alt_position(
+            r.start, nearest=SearchType.AFTER if shrink else None)
+
+        if start is None:
+            return None
+
+        end = self.ref_to_alt_position(
+            r.end, nearest=SearchType.BEFORE if shrink else None)
+
+        if end is None:
+            raise RuntimeError("Unexpected null range end position!")
+
+        if end < start:
+
+            # No position in the range could be lift over
+            return None
+
         return UIntRange(start, end)
 
     def ref_to_alt_variant(self, variant: VariantT) -> VariantT:
