@@ -557,7 +557,7 @@ The execution parameters depend on the execution mode, and each corresponds to o
 |`bg`|`backgroundVCFFilePath`|
 |`pam`|`PAMProtectionVCFFilePath`|
 |`vcf`|`customVCFManifestFilePath`|
-|`mask_bg_fp`|`maskBackground`|
+|`mask_bg_fp`|`maskBackgroundFilePath`|
 |`force-bg-ns`|`forceBackgroundNonSynonymous`|
 |`force-bg-indels`|`forceBackgroundFrameShifting`|
 
@@ -584,7 +584,7 @@ Example:
         "GFFFilePath": "reference_input_files/ENST00000357654.9.gtf",
         "PAMProtectionVCFFilePath": "parameter_input_files/brca1_protection_edits.vcf",
         "customVCFManifestFilePath": "reference_input_files/brca1_custom_variants_manifest.csv",
-        "maskBackground": null,
+        "maskBackgroundFilePath": null,
         "forceBackgroundNonSynonymous": false,
         "forceBackgroundFrameShifting": false
     }
