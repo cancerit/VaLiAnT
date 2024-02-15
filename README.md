@@ -481,23 +481,19 @@ Please take care to read errors during the dependency installation step carefull
 
 Requirements:
 
-- Python 3.7, 3.8, or 3.9
+- Python 3.10 or above
 
 To install in a virtual environment:
 
 ```sh
 # Initialise the virtual environment
-python3.7 -m venv .env
+python3.11 -m venv .env
 
 # Activate the virtual environment
 source .env/bin/activate
 
-# Install the dependencies
-pip install cython==0.29.30
-pip install -r src/requirements.txt
-
 # Install the valiant package
-pip install src/
+pip install .
 ```
 
 ### Docker image
