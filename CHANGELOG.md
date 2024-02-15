@@ -10,6 +10,7 @@
 ### Changed
 
 - Mutator: deletion pattern span and offset can be set to any valid value
+- Metadata table: in cDNA mode, mutations preserving stop codons are now annotated as nonsense (*vs.* synonymous)
 
 ### Fixed
 
