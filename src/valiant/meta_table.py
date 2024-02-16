@@ -16,12 +16,15 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from contextlib import contextmanager, nullcontext
 import os
 from collections import defaultdict
 from dataclasses import dataclass
 from functools import partial
 from sqlite3 import Connection
-from typing import ClassVar
+from typing import ClassVar, Generator
+
+from pysam import VariantFile
 
 from .config import BaseConfig
 from .constants import REVCOMP_OLIGO_NAME_SUFFIX
@@ -121,6 +124,15 @@ class MetaTable:
     ppe_mut_types: list[MutationType]
     transcript: TranscriptInfo | None
 
+    @contextmanager
+    def open_vcf_write(self, fp: str) -> Generator[VariantFile | None, None, None]:
+        ctx = (
+            open_vcf_write(fp, self.contig) if self.src_type == SrcType.REF else
+            nullcontext()
+        )
+        with ctx as fh:
+            yield fh
+
     def _write_header(self, fh) -> None:
         fh.write(self.CSV_HEADER)
         fh.write('\n')
@@ -185,10 +197,6 @@ class MetaTable:
                 is_rc = self.opt.should_rc(Strand(strand))
                 get_oligo_name_f = partial(
                     get_sge_oligo_name, gene_id, transcript_id, contig, is_rc)
-                # tr_frag = get_transcript_frag(gene_id, transcript_id)
-                # var_frag = v.get_oligo_name_frag()
-                # rc = REVCOMP_OLIGO_NAME_SUFFIX if is_rc else ''
-                # return f"{tr_frag}_{contig}:{var_frag}_{src}{rc}"
                 pam_seq = self.alt_seq.s
                 pam_mut_annot = ';'.join([x.value for x in self.ppe_mut_types])
 
@@ -196,15 +204,16 @@ class MetaTable:
                 assert self.seq_id
                 strand = ''
                 is_rc = False
-                get_oligo_name_f = partial(get_cdna_oligo_name, gene_id, transcript_id, self.seq_id)
+                get_oligo_name_f = partial(
+                    get_cdna_oligo_name, gene_id, transcript_id, self.seq_id)
                 pam_seq = None
                 pam_mut_annot = None
 
         with (
             open(meta_fp, 'w') as meta_fh,
             open(meta_excl_fp, 'w') as meta_excl_fh,
-            open_vcf_write(vcf_ref_fp, contig) as vcf_ref_fh,
-            open_vcf_write(vcf_pam_fp, contig) as vcf_pam_fh
+            self.open_vcf_write(vcf_ref_fp) as vcf_ref_fh,
+            self.open_vcf_write(vcf_pam_fp) as vcf_pam_fh
         ):
             self._write_header(meta_fh)
             self._write_header(meta_excl_fh)
@@ -348,7 +357,7 @@ class MetaTable:
 
                             # Write REF VCF record
                             write_vcf_record(
-                                vcf_ref_fh,
+                                vcf_ref_fh,  # type: ignore
                                 contig,
                                 vcf_ref,
                                 mr.mutator,
@@ -358,7 +367,7 @@ class MetaTable:
 
                             # Write PAM VCF record
                             write_vcf_record(
-                                vcf_pam_fh,
+                                vcf_pam_fh,  # type: ignore
                                 contig,
                                 vcf_pam,
                                 mr.mutator,
@@ -467,7 +476,7 @@ class MetaTable:
         if info.in_range == 0:
             os.unlink(meta_fp)
 
-        if info.in_range == 0 or self.src_type == SrcType.CDNA:
+        if info.in_range == 0 and self.src_type == SrcType.REF:
             os.unlink(vcf_ref_fp)
             os.unlink(vcf_pam_fp)
 
