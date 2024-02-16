@@ -102,13 +102,6 @@ class Variant:
         return cls(*t)
 
     @classmethod
-    def from_row(cls, pos: int, ref: str | None, alt: str | None):
-        return cls(pos, DnaStr.parse(ref), DnaStr.parse(alt))
-
-    def to_row(self) -> tuple[int, str | None, str | None]:
-        return self.pos, self.ref.as_nullable(), self.alt.as_nullable()
-
-    @classmethod
     def get_snvs(cls, pos: int, nt: Nucleotide) -> list[Variant]:
         """Create the three SNV's for a given position"""
 
@@ -167,17 +160,3 @@ class RegisteredVariant(Variant):
 
 VariantT = TypeVar('VariantT', bound=Variant)
 VariantWithContigT = TypeVar('VariantWithContigT', bound=VariantWithContig)
-
-
-def variant_sort_key(variant: Variant) -> int:
-    return variant.pos
-
-
-def compute_genomic_offset(variants: list[VariantT]) -> int:
-    """Given a list of variants, get the offset they would introduce if applied"""
-
-    # TODO: check for overlapping variants (best done upstream, when filtering the full list via PyRanges)
-    return sum(
-        variant.alt_ref_delta
-        for variant in variants
-    )
