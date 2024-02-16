@@ -22,7 +22,7 @@ from dataclasses import dataclass
 
 from .strings.strand import Strand
 from .uint_range import UIntRange
-from .utils import get_cds_ext_3_length, get_codon_offset_complement
+from .utils import clamp_non_negative, get_cds_ext_3_length, get_codon_offset_complement
 
 
 def get_codon_range(strand: Strand, origin: int, codon_index: int) -> UIntRange:
@@ -83,10 +83,10 @@ class Exon(UIntRange):
 
     def get_codon_index_at(self, pos: int) -> int | None:
         # TODO: make strand-aware?
-        return (
-            ((pos - self.start - self.compl_frame) // 3) if pos in self else
-            None
-        )
+        if pos not in self:
+            return None
+        return clamp_non_negative(
+            (pos - self.start - self.compl_frame) // 3)
 
     def get_codon_indices(self, r: UIntRange) -> list[int]:
         t = self.intersect(r)
@@ -111,6 +111,7 @@ class Exon(UIntRange):
     def get_codon(self, strand: Strand, codon_index: int) -> UIntRange:
         """Get the range of positions of a codon (which may be partial)"""
 
+        assert codon_index >= 0
         origin = self.get_first_codon_start(strand)
         # Range as if the neighbouring exons were adjacent
         r = get_codon_range(strand, origin, codon_index)
