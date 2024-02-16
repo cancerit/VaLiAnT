@@ -23,6 +23,7 @@ from valiant.strings.dna_str import DnaStr
 
 s = DnaStr('AACC')
 
+
 @pytest.mark.parametrize('n,exp', [
     (0, ''),
     (1, 'C'),
