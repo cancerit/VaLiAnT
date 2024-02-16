@@ -46,10 +46,6 @@ class Seq(Sized):
         return len(self.s)
 
     @property
-    def is_length_multiple_of_three(self) -> bool:
-        return len(self) % 3 == 0
-
-    @property
     def end(self) -> int:
         return get_end(self.start, len(self))
 
@@ -65,10 +61,6 @@ class Seq(Sized):
         elif pos <= self.end:
             return Nucleotide(self.s[self.get_rel_pos(pos)])
         raise IndexError(f"Position {pos} not found in sequence ({self.start}-{self.end})!")
-
-    @classmethod
-    def from_str(cls, start: int, s: str) -> Seq:
-        return cls(start, DnaStr.parse(s))
 
     def get_rel_range(self, r: UIntRange) -> UIntRange:
         return r.offset(-self.start)

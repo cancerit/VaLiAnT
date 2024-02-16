@@ -20,7 +20,7 @@ from typing import Iterable
 from valiant.exon import Exon
 
 from valiant.loaders.csv import load_csv
-from valiant.loaders.utils import get_int_enum, parse_uint_range
+from valiant.loaders.utils import parse_uint_range
 from valiant.strings.strand import Strand
 from valiant.transcript import Transcript
 from valiant.transcript_info import TranscriptInfo
@@ -34,9 +34,6 @@ CSV_HEADER = [
     'cds_start',
     'cds_end'
 ]
-
-
-AnnotField = get_int_enum('AnnotField', CSV_HEADER)
 
 
 def get_faux_transcript(seq_id: str, gene_id: str | None, transcript_id: str | None, cds_range: UIntRange | None) -> Transcript:

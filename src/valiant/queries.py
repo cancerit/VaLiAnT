@@ -31,10 +31,8 @@ from .sql_gen import SqlQuery, SqlScript, get_multi_range_check, sql_eq_or_in_st
 from .strings.dna_str import DnaStr
 from .strings.strand import Strand
 from .uint_range import UIntRange
-from .utils import get_enum_values, safe_group_by
-from .variant import RegisteredVariant, VarStats, Variant
-from .variant_group import VariantGroup
-from .variant_select import VariantSelectStart, VariantSelectStartEnd
+from .variant import RegisteredVariant, VarStats
+from .variant_select import VariantSelectStartEnd
 
 
 class NoRowId(Exception):
@@ -179,45 +177,6 @@ def insert_pam_protection_edits(conn: Connection, vars: list[PamVariant]) -> Non
                 (var_id, sgrna_name_ids[v.sgrna_id]))
 
 
-sql_select_exon_ppes = """
-select
-    exon_index,
-    start,
-    ref,
-    alt
-from v_exon_ppes
-"""
-
-
-def select_exon_ppes(conn: Connection, sgrna_ids: frozenset[str] | None = None) -> dict[int, VariantGroup[Variant]]:
-    """Map exon indices to PPE's, optionally filtering by sgRNA ID"""
-
-    query = sql_select_exon_ppes
-    if sgrna_ids:
-        query = f"{query} where {sql_eq_or_in_str_list('sgrna_id', list(sgrna_ids))}"
-
-    with cursor(conn) as cur:
-        res = cur.execute(query).fetchall()
-
-    return {
-        x: VariantGroup([Variant(*t[1:]) for t in y])
-        for x, y in safe_group_by(res, lambda r: r[0])
-    }
-
-
-# TODO: consider start positions get offset as they go...
-sql_select_offsets = """
-select
-    start,
-    sum(alt_ref_delta) over (
-        order by start
-        rows between unbounded preceding and current row
-    ) as offset
-from v_background_variants b
-where start >= ? and start <= ? and alt_ref_delta != 0
-"""
-
-
 insert_pattern_variant_fields = [
     DbFieldName.POS_R,
     DbFieldName.POS_A,
@@ -281,13 +240,6 @@ def insert_annot_pattern_variants(conn: Connection, vars: list[OligoSeq[AnnotVar
         ])
 
 
-def insert_enum(conn: Connection, t: DbTableName, cls) -> None:
-    with cursor(conn) as cur:
-        cur.executemany(SqlQuery.get_insert_names(t), [
-            (name,) for name in get_enum_values(cls)
-        ])
-
-
 sql_select_exons_in_range = """
 select
     exon_index,
@@ -316,14 +268,6 @@ clear_per_contig_tables = SqlScript.from_queries(
 
 clear_per_targeton_tables = SqlScript.from_queries(
     map(SqlQuery.get_delete, PER_TARGETON_TABLES))
-
-
-sql_select_ppes_in_range = VariantSelectStart.from_table(
-    DbTableName.V_PPE_SGRNA_IDS).query
-
-
-select_bgs_in_range = VariantSelectStart.from_table(
-    DbTableName.BACKGROUND_VARIANTS).select_in_range
 
 
 select_custom_variants_in_range = VariantSelectStartEnd.from_table(
