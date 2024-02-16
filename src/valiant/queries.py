@@ -26,12 +26,11 @@ from .db import PER_TARGETON_TABLES, VARIANT_FIELDS, cursor, DbTableName, DbFiel
 from .exon import Exon
 from .oligo_seq import OligoSeq
 from .pam_variant import PamVariant
-from .pattern_variant import PatternVariant
 from .sql_gen import SqlQuery, SqlScript, get_multi_range_check, sql_eq_or_in_str_list
 from .strings.dna_str import DnaStr
 from .strings.strand import Strand
 from .uint_range import UIntRange
-from .variant import RegisteredVariant, VarStats
+from .variant import PatternVariant, RegisteredVariant, VarStats
 from .variant_select import VariantSelectStartEnd
 
 

@@ -33,8 +33,8 @@ from .mutators.codon import AlaMutator, StopMutator, AminoAcidMutator
 from .mutators.deletion import DeletionMutator, InFrameDeletionMutator
 from .mutators.snv import SnvMutator
 from .mutators.snv_re import SnvReMutator
-from .pattern_variant import PatternVariant
 from .seq import Seq
+from .variant import PatternVariant
 
 
 class MutatorBuilder:

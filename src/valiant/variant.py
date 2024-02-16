@@ -145,6 +145,15 @@ class Variant:
                 raise ValueError("Unknown variant type!")
 
 
+@dataclass
+class PatternVariant(Variant):
+    mutator: str
+
+    @classmethod
+    def from_variant(cls, mutator: str, v: Variant, offset: int = 0):
+        return cls(pos=v.pos + offset, ref=v.ref, alt=v.alt, mutator=mutator)
+
+
 @dataclass(slots=True)
 class VariantWithContig(Variant):
     contig: str

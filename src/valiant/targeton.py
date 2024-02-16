@@ -31,14 +31,13 @@ from .genomic_position_offsets import GenomicPositionOffsets
 from .loaders.targeton_config import TargetonConfig
 from .mutator import MutatorCollection
 from .oligo_seq import OligoSeq
-from .pattern_variant import PatternVariant
 from .queries import insert_annot_pattern_variants, insert_pattern_variants, insert_targeton_custom_variants, select_exons_in_range, select_ppes_with_offset, select_custom_variants_in_range
 from .seq import Seq
 from .strings.codon import Codon
 from .strings.strand import Strand
 from .transcript import Transcript
 from .uint_range import UIntRange
-from .variant import RegisteredVariant, Variant, VariantT
+from .variant import PatternVariant, RegisteredVariant, Variant, VariantT
 
 
 class InvalidTargetonRegion(Exception):
