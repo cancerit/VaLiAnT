@@ -240,32 +240,6 @@ def get_ppe_seq(
     return ppe_seq
 
 
-# def get_alt_targeton(
-#     conn: Connection,
-#     seq: Seq,
-#     gpo: GenomicPositionOffsets,
-#     tc: TargetonConfig
-# ) -> Targeton:
-#     ppe_seq = get_ppe_seq(conn, tc.strand, gpo, seq, tc.sgrna_ids, tc.ref)
-#     # !!!!!
-
-#     if transcript:
-#         transcript_seq_ppe = TranscriptSeq.from_seq_exons(
-#             targeton.strand, ppe_seq, transcript.exons)
-
-#         if not transcript_seq_ppe.begins_with_start_codon:
-#             logging.warning("The CDS does not begin with the start codon!")
-
-#         # Compute the PPE mutation types
-#         ppe_mut_types = (targeton_alt or targeton).get_ppe_mut_types(
-#             conn, codon_table, transcript, transcript_ppe)
-
-#     # TODO: validate the regions defined by offset (R1, R3) and by difference (C1, C2)
-
-#     # Altered targeton
-#     return get_targeton(ppe_seq, bg_tc)
-
-
 def proc_targeton(
     conn: Connection,
     config: SGEConfig,
@@ -524,9 +498,6 @@ def write_ref_sequences(config: SGEConfig, targetons: list[TargetonConfig]) -> N
 
 
 def run_sge(config: SGEConfig, sequences_only: bool) -> None:
-    # Load options
-    options = config.get_options()
-
     exp_meta = ExperimentMeta(
         config.species,
         config.assembly,

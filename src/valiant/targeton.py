@@ -20,7 +20,7 @@ import logging
 from dataclasses import dataclass
 from functools import partial
 from sqlite3 import Connection
-from typing import Callable, Iterable
+from typing import Iterable
 
 from .annot_variant import AnnotVariant
 from .background_variants import RegisteredBackgroundVariant
@@ -39,9 +39,6 @@ from .strings.strand import Strand
 from .transcript import Transcript
 from .uint_range import UIntRange
 from .variant import RegisteredVariant, Variant, VariantT
-
-
-GetVariantsInRangeCallable = Callable[[Connection, UIntRange], list[RegisteredVariant]]
 
 
 class InvalidTargetonRegion(Exception):

@@ -77,11 +77,7 @@ class DbFieldName(str, Enum):
     ID = 'id'
     VAR_ID = 'var_id'
     VCF_NT = 'vcf_nt'
-    REF_POS = 'ref_pos'
-    OFFSET = 'offset'
     POS_R = 'pos_r'
-    REF_R = 'ref_r'
-    ALT_R = 'alt_r'
     POS_A = 'pos_a'
     REF_A = 'ref_a'
     ALT_A = 'alt_a'
@@ -91,17 +87,8 @@ class DbFieldName(str, Enum):
     AA_REF = 'aa_ref'
     AA_ALT = 'aa_alt'
     REF_START = 'ref_start'
-    REF_AA = 'ref_aa'
-    ALT_AA = 'alt_aa'
-    VCF_VAR_ID = 'vcf_var_id'
-    VCF_ALIAS = 'vcf_alias'
     SGRNA_IDS = 'sgrna_ids'
-    SPECIES = 'species'
-    ASSEMBLY = 'assembly'
-    MSEQ = 'mseq'
-    MSEQ_NO_ADAPT = 'mseq_no_adapt'
     IN_CONST = 'in_const'
-    REVC = 'revc'
     OLIGO = 'oligo'
     MUTATION_TYPE = 'mutation_type'
     CDS_PREFIX_LENGTH = 'cds_prefix_length'
@@ -109,7 +96,6 @@ class DbFieldName(str, Enum):
     FIRST_CODON_START = 'first_codon_start'
     REF_LEN = 'ref_len'
     ALT_LEN = 'alt_len'
-    ALT_REF_DELTA = 'alt_ref_delta'
 
     def _sql_op(self, op: str) -> str:
         return f"{self.value} {op} ?"
@@ -156,63 +142,3 @@ def cursor(conn: Connection) -> Generator[Cursor, None, None]:
         yield cur
     finally:
         cur.close()
-
-
-def dump_table(conn: Connection, t: DbTableName, fh, sep='\t') -> None:
-    for r in conn.execute(f"select * from {t.value}"):
-        fh.write(sep.join(str(x) if x is not None else '.' for x in r))
-        fh.write('\n')
-
-
-def dump_all(conn: Connection) -> None:
-    for t in DbTableName:
-        with open(f"{t.value}_dump.tsv", 'w') as fh:
-            dump_table(conn, t, fh)
-
-
-def get_csv_header(fields: list[DbFieldName]) -> str:
-    return ','.join([f.value for f in fields])
-
-
-def sql_to_str(x: Any) -> str:
-    """Serialise Python types expected from a SQL query"""
-
-    if x is None:
-        return ''
-    if isinstance(x, str):
-        return x
-    if isinstance(x, int):
-        return str(x)
-    raise TypeError("Unsupported type!")
-
-
-def select_to_csv(conn: Connection, query: str, field_count: int, header: str, fp: str, sep: str = ',') -> None:
-    """
-    Stream the results from a SQL query to a CSV file
-
-    Assumptions:
-    - the header does not end with a new line character
-    """
-
-    n = field_count - 1
-
-    with open(fp, 'w') as fh:
-
-        # Write header
-        fh.write(header)
-        fh.write('\n')
-
-        with cursor(conn) as cur:
-            it = cur.execute(query)
-
-            # Fetch row
-            while r := it.fetchone():
-                for i in range(n):
-
-                    # Write field
-                    fh.write(sql_to_str(r[i]))
-                    fh.write(sep)
-
-                # Write last field
-                fh.write(sql_to_str(r[n]))
-                fh.write('\n')
