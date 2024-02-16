@@ -133,7 +133,6 @@ def proc_targeton(
 
 
 def run_cdna(config: CDNAConfig) -> None:
-    options = config.get_options()
 
     # Load targeton configurations
     try:
