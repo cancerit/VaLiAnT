@@ -17,14 +17,14 @@
 #############################
 
 from typing import Iterable
-from valiant.exon import Exon
 
-from valiant.loaders.csv import load_csv
-from valiant.loaders.utils import parse_uint_range
-from valiant.strings.strand import Strand
-from valiant.transcript import Transcript
-from valiant.transcript_info import TranscriptInfo
-from valiant.uint_range import UIntRange, UIntRangeSortedList
+from ..exon import Exon
+from ..strings.strand import Strand
+from ..transcript import Transcript
+from ..transcript_info import TranscriptInfo
+from ..uint_range import UIntRange, UIntRangeSortedList
+from .csv import load_csv
+from .utils import parse_uint_range
 
 
 CSV_HEADER = [
