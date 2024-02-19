@@ -67,6 +67,9 @@ class VarStats:
     def overlaps(self, r: UIntRange) -> bool:
         return self.pos in r or self.ref_end in r
 
+    def is_in_range(self, r: UIntRange) -> bool:
+        return self.pos in r and (self.ref_len == 0 or self.ref_end in r)
+
 
 def get_alt_ref_delta(vs: Iterable[VarStats]) -> int:
     return sum(x.alt_ref_delta for x in vs)
@@ -89,7 +92,7 @@ def clamp_var_stats_collection(vs: Iterable[VarStats], r: UIntRange) -> list[Var
 
     # Test for out of bounds at the start
     v = a[0]
-    if v.ref_range not in r:
+    if not v.is_in_range(r):
         raise OutOfBoundsVar(v.pos, r)
 
     n = len(a)
@@ -103,7 +106,7 @@ def clamp_var_stats_collection(vs: Iterable[VarStats], r: UIntRange) -> list[Var
         v = a[-1]
 
         # Test for out of bounds at the end
-        if v.ref_range not in r:
+        if not v.is_in_range(r):
             raise OutOfBoundsVar(v.pos, r)
 
     return a
