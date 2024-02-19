@@ -167,6 +167,9 @@ class MetaTable:
         ref_start = str(ref_range.start)
         ref_end = str(ref_range.end)
 
+        adaptor_5 = self.cfg.adaptor_5 or ''
+        adaptor_3 = self.cfg.adaptor_3 or ''
+
         gene_id = None
         transcript_id = None
         if self.transcript:
@@ -184,7 +187,7 @@ class MetaTable:
         def get_full_oligo(frag: str) -> str:
             """Add the adaptors to the oligonucleotide sequence"""
 
-            return f"{self.cfg.adaptor_5}{frag}{self.cfg.adaptor_3}"
+            return f"{adaptor_5}{frag}{adaptor_3}"
 
         def get_mave_hgvs(pos: int, t: VariantType, ref: str, alt: str | None = None) -> str:
             """Compile the MAVE-HGVS string"""
