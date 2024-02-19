@@ -23,7 +23,7 @@ from ..strings.strand import Strand
 from ..transcript import Transcript
 from ..transcript_info import TranscriptInfo
 from ..uint_range import UIntRange, UIntRangeSortedList
-from .csv import load_csv
+from .csv import load_csv, parse_str
 from .utils import parse_uint_range
 
 
@@ -54,7 +54,10 @@ def parse_opt_uint_range(cds_start: str | None, cds_end: str | None) -> UIntRang
 def load_annot(fp: str, ids: Iterable[str]) -> dict[str, Transcript | None]:
     return {
         seq_id: get_faux_transcript(
-            seq_id, gene_id, transcript_id, parse_opt_uint_range(cds_start, cds_end))
+            parse_str(seq_id),
+            parse_str(gene_id),
+            parse_str(transcript_id),
+            parse_opt_uint_range(cds_start, cds_end))
         for seq_id, gene_id, transcript_id, cds_start, cds_end in load_csv(
             fp, columns=CSV_HEADER, delimiter='\t')
         if seq_id in ids

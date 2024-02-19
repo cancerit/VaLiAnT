@@ -22,6 +22,21 @@ from typing import Generator
 from .utils import detect_encoding
 
 
+trim_sl = slice(1, -1)
+
+
+def parse_str(s: str) -> str:
+    if not s:
+        return s
+    if s.startswith('"') and s.endswith('"'):
+        return s[trim_sl]
+    return s
+
+
+def parse_opt_str(s: str | None) -> str | None:
+    return parse_str(s) if s is not None else None
+
+
 def load_csv(fp: str, columns: list[str] | None = None, delimiter: str = ',') -> Generator[list[str], None, None]:
     """Validate header and parse all rows of a CSV or TSV file as lists of strings"""
 

@@ -22,7 +22,7 @@ from dataclasses import dataclass
 from enum import IntEnum, Enum
 from itertools import chain
 
-from .csv import load_csv
+from .csv import load_csv, parse_opt_str
 from ..annotation import Annotation
 from ..exon import Exon
 from ..strings.strand import Strand
@@ -71,8 +71,8 @@ class GtfFeature(UIntRange):
         return cls(
             int(r[GtfField.START]),
             int(r[GtfField.END]),
-            attrs.get(GtfAttribute.GENE_ID.value),
-            attrs.get(GtfAttribute.TRANSCRIPT_ID.value))
+            parse_opt_str(attrs.get(GtfAttribute.GENE_ID.value)),
+            parse_opt_str(attrs.get(GtfAttribute.TRANSCRIPT_ID.value)))
 
     def to_range(self) -> UIntRange:
         return UIntRange(self.start, self.end)
