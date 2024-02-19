@@ -36,12 +36,7 @@ class CdsSeq(Seq):
         assert self.ext_length % 3 == 0
 
     def as_codon(self) -> Codon:
-        assert (
-            len(self) == 3 and
-            not self.cds_prefix and
-            not self.cds_suffix
-        )
-        return Codon(self.s)
+        return Codon(self.ext)
 
     @property
     def cds_prefix_length(self) -> int:
