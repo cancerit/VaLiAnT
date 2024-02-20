@@ -56,9 +56,6 @@ class CdsSeq(Seq):
     def get_inner_cds_seq(self) -> Seq:
         return self.subseq(self.get_inner_cds_range(), rel=False)
 
-    def get_codons(self) -> list[Seq]:
-        return self.get_inner_cds_seq().subseq_triplets()
-
     def get_ext_offset(self, pos: int) -> int:
         return super().get_offset(pos) + self.cds_prefix_length
 
