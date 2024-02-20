@@ -359,6 +359,7 @@ def insert_targeton_custom_variants(
 sql_select_ppes_with_offset = """
 select
     exon_index,
+    ppe_ref_start,
     ppe_start,
     codon_offset
 from v_exon_codon_ppes
@@ -367,7 +368,7 @@ order by ppe_start
 """
 
 
-def select_ppes_with_offset(conn: Connection, r: UIntRange) -> list[tuple[int, int, int]]:
+def select_ppes_with_offset(conn: Connection, r: UIntRange) -> list[tuple[int, int, int, int]]:
     with cursor(conn) as cur:
         return cur.execute(sql_select_ppes_with_offset, r.to_tuple()).fetchall()
 

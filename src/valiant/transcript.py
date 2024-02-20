@@ -189,4 +189,5 @@ class Transcript:
         codon_range = exon.get_codon_at(self.strand, pos)
         if not codon_range:
             return None
+        assert pos in codon_range
         return self._get_cds_seq(seq, exon, codon_range)

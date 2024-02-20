@@ -192,20 +192,17 @@ class Targeton:
             return []
 
         res = []
-        for exon_number, ppe_start, codon_offset in select_ppes_with_offset(conn, self.config.ref):
+        for exon_number, ppe_ref_start, ppe_start, codon_offset in select_ppes_with_offset(conn, self.config.ref):
             rng = get_codon_range_from_offset(self.config.strand, ppe_start, codon_offset)
             assert len(rng) == 3
 
             codon_alt = transcript_alt.get_cds_seq(seq_alt, exon_number, rng).as_codon()
             # TODO: the original PPE start could be fetched from the database
-            ppe_ref_start = gpo.alt_to_ref_position(ppe_start) if gpo else ppe_start
-            assert ppe_ref_start is not None
             # TODO: verify the codon from position logic (strandedness issue?)
-            # codon_ref_seq = transcript_ref.get_codon_at(seq_ref, ppe_ref_start)
-            # assert codon_ref_seq
-            # codon_ref = codon_ref_seq.as_codon()
+            codon_ref_seq = transcript_ref.get_codon_at(seq_ref, ppe_ref_start)
+            assert codon_ref_seq
+            codon_ref = codon_ref_seq.as_codon()
             # TODO: reconsider if this is appropriate with frame shifts
-            codon_ref = transcript_ref.get_cds_seq(seq_ref, exon_number, rng).as_codon()
 
             res.append(codon_table.get_aa_change(codon_ref, codon_alt))
 
