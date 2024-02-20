@@ -159,10 +159,12 @@ select
     e.exon_index,
     ecp.codon_index,
     ecp.ppe_id,
-    ppe.start as ppe_start,
-    abs(ppe.start - e.first_codon_start) % 3 as codon_offset
+    ppe.start as ppe_ref_start,
+    tppe.start as ppe_start,
+    abs(tppe.start - e.first_codon_start) % 3 as codon_offset
 from targeton_exon_codon_ppes ecp
 left join v_exon_ext e on e.id = ecp.exon_id
+left join targeton_pam_protection_edits tppe on tppe.id = ecp.ppe_id
 left join pam_protection_edits ppe on ppe.id = ecp.ppe_id;
 
 create view v_exon_ppes as
