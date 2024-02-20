@@ -246,8 +246,8 @@ select
     end
 from exons
 where
-    (start >= ? and start <= ?) or
-    (end >= ? and end <= ?)
+    (? >= start and ? <= end) or
+    (? >= start and ? <= end)
 """
 
 
@@ -257,7 +257,7 @@ def select_exons_in_range(conn: Connection, start: int, end: int) -> list[tuple[
             (r[0], UIntRange(r[1], r[2]))
             for r in cur.execute(
                 sql_select_exons_in_range,
-                (start, end, start, end)).fetchall()
+                (start, start, end, end)).fetchall()
         ]
 
 
