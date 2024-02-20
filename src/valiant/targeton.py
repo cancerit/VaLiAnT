@@ -158,7 +158,7 @@ def get_pattern_variants_from_region(
     return vars, annot_vars
 
 
-def _get_oligo(alt: Seq, x: Variant, ref_start: int | None = None) -> OligoSeq:
+def _get_oligo(alt: Seq, x: VariantT, ref_start: int | None = None) -> OligoSeq[VariantT]:
     return OligoSeq.from_ref(alt, x, ref_start=ref_start)
 
 
@@ -254,6 +254,7 @@ class Targeton:
     def _process_pattern_variants(
         self,
         conn: Connection,
+        contig: str,
         codon_table: CodonTable,
         gpo: GenomicPositionOffsets | None,
         transcript: Transcript | None,
@@ -272,19 +273,32 @@ class Targeton:
             pattern_variants.extend(vars)
             annot_variants.extend(annot_vars)
 
-        def get_oligo(x: Variant) -> OligoSeq:
-            # TODO: check that it is appropriate to use the variant position as ref start!
+        def get_oligo(x: VariantT) -> OligoSeq[VariantT] | None:
+            # TODO: verify the lift-over calculation
             ref_start = gpo.alt_to_ref_position(x.pos) if gpo else x.pos
+            if ref_start is None:
+                logging.warning(
+                    "Pattern variant at %s:%d does not exist in reference (discarded)!" %
+                    (contig, x.pos))
+                return None
             return _get_oligo(targeton_seq, x, ref_start=ref_start)
 
-        insert_pattern_variants(conn, list(map(get_oligo, pattern_variants)))
-        insert_annot_pattern_variants(conn, list(map(get_oligo, annot_variants)))
+        def get_oligos(variants: list[VariantT]) -> list[OligoSeq[VariantT]]:
+            return [
+                oligo
+                for x in variants
+                if (oligo := get_oligo(x)) is not None
+            ]
+
+        insert_pattern_variants(conn, get_oligos(pattern_variants))
+        insert_annot_pattern_variants(conn, get_oligos(annot_variants))
 
         return pattern_variants, annot_variants
 
     def process(
         self,
         conn: Connection,
+        contig: str,
         codon_table: CodonTable,
         gpo: GenomicPositionOffsets | None,
         transcript: Transcript | None,
@@ -295,4 +309,4 @@ class Targeton:
         ref_start = seq.start
 
         self._process_custom_variants(conn, gpo, targeton_seq, ref_start)
-        self._process_pattern_variants(conn, codon_table, gpo, transcript, seq, targeton_seq)
+        self._process_pattern_variants(conn, contig, codon_table, gpo, transcript, seq, targeton_seq)

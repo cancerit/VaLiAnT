@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2023 Genome Research Ltd
+# Copyright (C) 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -41,6 +41,6 @@ class OligoSeq(Sized, Generic[VariantT]):
         return len(self.seq)
 
     @classmethod
-    def from_ref(cls, seq: Seq, var: VariantT, ref_start: int | None = None, rc: bool = False) -> OligoSeq:
+    def from_ref(cls, seq: Seq, var: VariantT, ref_start: int | None = None, rc: bool = False) -> OligoSeq[VariantT]:
         s = alter_seq(seq, var).s
         return cls(var, s.revc if rc else s, ref_start=ref_start)

@@ -312,7 +312,7 @@ def proc_targeton(
         ppe_mut_types = []
 
     (targeton_alt or targeton_ref).process(
-        conn, codon_table, gpo, transcript_bg or transcript_ref, ppe_seq)
+        conn, contig, codon_table, gpo, transcript_bg or transcript_ref, ppe_seq)
 
     targeton_name = targeton_config.name
 
