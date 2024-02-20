@@ -81,20 +81,19 @@ class Exon(UIntRange):
             self.end + self.cds_prefix_length
         )
 
-    def get_codon_index_at(self, pos: int) -> int | None:
-        # TODO: make strand-aware?
+    def get_codon_index_at(self, strand: Strand, pos: int) -> int | None:
         if pos not in self:
             return None
         return clamp_non_negative(
-            (pos - self.start - self.compl_frame) // 3)
+            abs(pos - self.get_first_codon_start(strand))) // 3
 
     def get_codon_indices(self, r: UIntRange) -> list[int]:
         t = self.intersect(r)
         if t is None:
             return []
 
-        first = self.get_codon_index_at(t.start)
-        last = self.get_codon_index_at(t.end)
+        first = self.get_codon_index_at(strand, t.start)
+        last = self.get_codon_index_at(strand, t.end)
         assert first is not None and last is not None
 
         return (
@@ -103,7 +102,7 @@ class Exon(UIntRange):
         )
 
     def get_codon_at(self, strand: Strand, pos: int) -> UIntRange | None:
-        codon_index = self.get_codon_index_at(pos)
+        codon_index = self.get_codon_index_at(strand, pos)
         if codon_index is None:
             return None
         return self.get_codon(strand, codon_index)
