@@ -40,7 +40,7 @@ from .loaders.vcf_manifest import VcfManifest
 from .meta_table import MetaTable
 from .oligo_generation_info import OligoGenerationInfo
 from .options import Options
-from .pam_variant import PamVariant
+from .pam_variant import InvalidPamVariant, PamVariant
 from .queries import insert_background_variants, insert_custom_variant_collection, insert_exons, insert_pam_protection_edits, insert_targeton_ppes, is_meta_table_empty, select_background_variant_stats, select_background_variants, select_ppe_bg_codon_overlaps, select_ppes_by_sgrna_id, clear_per_contig_tables, clear_per_targeton_tables
 from .seq import Seq
 from .seq_converter import apply_variants
@@ -51,7 +51,7 @@ from .targeton import Targeton, is_variant_frame_shifting, is_variant_nonsynonym
 from .transcript import Transcript
 from .uint_range import UIntRange, UIntRangeT
 from .utils import fmt_genomic_range, safe_group_by
-from .variant import Variant
+from .variant import Variant, get_variant_duplicate_positions
 
 
 def get_ctx_range(ranges: list[UIntRangeT]) -> UIntRange:
@@ -214,13 +214,25 @@ def get_ppe_seq(
         return seq
 
     ppes = select_ppes_by_sgrna_id(conn, targeton.sgrna_ids)
+    duplicate_positions = get_variant_duplicate_positions(ppes)
+    if duplicate_positions:
+        for pos in duplicate_positions:
+            logging.warning(f"Multiple PPE's at {targeton.config.contig}:{pos}!")
+        logging.critical(f"Overlapping PPE's in targeton {targeton.as_str()}!")
+        sys.exit(1)
 
     if gpo:
         # Correct PPE coordiantes
         ppes = list(map(gpo.ref_to_alt_variant, ppes))
 
-    # Register the [potentially] coordinate-corrected PPE's on the database
-    insert_targeton_ppes(conn, ppes)
+    try:
+
+        # Register the [potentially] coordinate-corrected PPE's on the database
+        insert_targeton_ppes(conn, ppes)
+
+    except InvalidPamVariant:
+        logging.critical(f"Multiple PPE's in the same codon in tartgeton {targeton.as_str()}!")
+        sys.exit(1)
 
     ppes_in_range: list[Variant] = []
     for ppe in ppes:

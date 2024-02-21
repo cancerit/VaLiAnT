@@ -17,7 +17,7 @@
 #############################
 
 from itertools import chain
-from sqlite3 import Connection, Cursor
+from sqlite3 import Connection, Cursor, IntegrityError
 
 from .annot_variant import AnnotVariant
 from .background_variants import RegisteredBackgroundVariant
@@ -25,7 +25,7 @@ from .custom_variant import CustomVariant
 from .db import PER_TARGETON_TABLES, VARIANT_FIELDS, cursor, DbTableName, DbFieldName, PER_CONTIG_TABLES
 from .exon import Exon
 from .oligo_seq import OligoSeq
-from .pam_variant import PamVariant
+from .pam_variant import InvalidPamVariant, PamVariant
 from .sql_gen import SqlQuery, SqlScript, get_multi_range_check, sql_eq_or_in_str_list
 from .strings.dna_str import DnaStr
 from .strings.strand import Strand
@@ -311,8 +311,14 @@ def insert_targeton_ppes(conn: Connection, variants: list[RegisteredVariant]) ->
             for v in variants
         ])
 
-        # Assign exon ID's and codon indices to the PPE's
-        cur.execute(sql_insert_exon_codon_ppes)
+        try:
+
+            # Assign exon ID's and codon indices to the PPE's
+            cur.execute(sql_insert_exon_codon_ppes)
+
+        except IntegrityError as ex:
+            if ex.sqlite_errorname == 'SQLITE_CONSTRAINT_PRIMARYKEY':
+                raise InvalidPamVariant
 
 
 def is_table_empty(conn: Connection, t: DbTableName) -> bool:

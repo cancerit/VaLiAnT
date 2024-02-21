@@ -166,6 +166,9 @@ def _get_oligo(alt: Seq, x: VariantT, ref_start: int | None = None) -> OligoSeq[
 class Targeton:
     config: TargetonConfig
 
+    def as_str(self) -> str:
+        return f"{self.config.contig}:{self.ref.start}-{self.ref.end}"
+
     @property
     def ref(self) -> UIntRange:
         return self.config.ref

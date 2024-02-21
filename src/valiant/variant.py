@@ -17,6 +17,7 @@
 #############################
 
 from __future__ import annotations
+from collections import Counter
 
 from dataclasses import dataclass, replace
 from typing import NoReturn, TypeVar
@@ -169,3 +170,8 @@ class RegisteredVariant(Variant):
 
 VariantT = TypeVar('VariantT', bound=Variant)
 VariantWithContigT = TypeVar('VariantWithContigT', bound=VariantWithContig)
+
+
+def get_variant_duplicate_positions(variants: list[VariantT]) -> list[int]:
+    counts = Counter(x.pos for x in variants)
+    return [pos for pos, count in counts.items() if count > 1]
