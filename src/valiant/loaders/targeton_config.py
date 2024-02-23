@@ -166,15 +166,17 @@ class TargetonConfig(BaseTargetonConfig):
 
     def get_const_1(self) -> UIntRange | None:
         r1 = self.get_region_1()
-        if not r1 or r1.start <= self.ref.start:
+        const_end = (r1 or self.region_2).start - 1
+        if const_end < self.ref.start:
             return None
-        return UIntRange(self.ref.start, r1.start - 1)
+        return UIntRange(self.ref.start, const_end)
 
     def get_const_2(self) -> UIntRange | None:
         r3 = self.get_region_3()
-        if not r3 or r3.end >= self.ref.end:
+        const_start = (r3 or self.region_2).end + 1
+        if const_start > self.ref.end:
             return None
-        return UIntRange(r3.end + 1, self.ref.end)
+        return UIntRange(const_start, self.ref.end)
 
     def is_in_const_1(self, pos: int) -> bool:
         return is_in_opt_range(self.get_const_1(), pos)
