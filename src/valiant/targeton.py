@@ -20,7 +20,7 @@ import logging
 from dataclasses import dataclass
 from functools import partial
 from sqlite3 import Connection
-from typing import Iterable
+from typing import Callable, Iterable
 
 from .annot_variant import AnnotVariant
 from .background_variants import RegisteredBackgroundVariant
@@ -162,6 +162,17 @@ def _get_oligo(alt: Seq, x: VariantT, ref_start: int | None = None) -> OligoSeq[
     return OligoSeq.from_ref(alt, x, ref_start=ref_start)
 
 
+def _get_oligos(
+    variants: list[VariantT],
+    get_oligo_f: Callable[[VariantT], OligoSeq[VariantT] | None]
+) -> list[OligoSeq[VariantT]]:
+    return [
+        oligo
+        for x in variants
+        if (oligo := get_oligo_f(x)) is not None
+    ]
+
+
 @dataclass(slots=True)
 class Targeton:
     config: TargetonConfig
@@ -214,23 +225,32 @@ class Targeton:
     def _process_custom_variants(
         self,
         conn: Connection,
+        contig: str,
         gpo: GenomicPositionOffsets | None,
         targeton_seq: Seq,
-        ref_start: int
     ) -> None:
         custom_vars = select_custom_variants_in_range(conn, self.config.ref)
 
-        def get_oligo(x: Variant) -> OligoSeq:
-            # Lift custom variant positions from reference to altered
-            # TODO: filter out on clash!
-            return _get_oligo(
-                targeton_seq, gpo.ref_to_alt_variant(x) if gpo else x,
-                ref_start=ref_start)
+        def get_oligo(x: VariantT) -> OligoSeq[VariantT] | None:
+            if gpo:
+                if gpo.ref_pos_overlaps_var(x.pos):
+                    logging.warning(
+                        "Custom variant %s:%s overlaps a background variant (discarded)!" %
+                        (contig, x))
+                    return None
+
+                # Lift custom variant positions from reference to altered
+                y = gpo.ref_to_alt_variant(x)
+
+            else:
+                y = x
+
+            return _get_oligo(targeton_seq, y, ref_start=x.pos)
 
         # Register the filtered custom variants
         insert_targeton_custom_variants(
             conn,
-            list(map(get_oligo, custom_vars)),
+            _get_oligos(custom_vars, get_oligo),
             self.config.get_const_regions())
 
     def _process_region(
@@ -287,11 +307,7 @@ class Targeton:
             return _get_oligo(targeton_seq, x, ref_start=ref_start)
 
         def get_oligos(variants: list[VariantT]) -> list[OligoSeq[VariantT]]:
-            return [
-                oligo
-                for x in variants
-                if (oligo := get_oligo(x)) is not None
-            ]
+            return _get_oligos(variants, get_oligo)
 
         insert_pattern_variants(conn, get_oligos(pattern_variants))
         insert_annot_pattern_variants(conn, get_oligos(annot_variants))
@@ -308,8 +324,6 @@ class Targeton:
         seq: Seq
     ) -> None:
         targeton_seq = seq.subseq(self.config.ref, rel=False)
-        # Verify it is appropriate to set it for custom variants!
-        ref_start = seq.start
 
-        self._process_custom_variants(conn, gpo, targeton_seq, ref_start)
+        self._process_custom_variants(conn, contig, gpo, targeton_seq)
         self._process_pattern_variants(conn, contig, codon_table, gpo, transcript, seq, targeton_seq)

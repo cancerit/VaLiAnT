@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Callable, Iterable
 
-from .array_utils import get_prev_index, get_next_index, get_u32_array, get_u8_array
+from .array_utils import get_prev_index, get_next_index, get_u32_array, get_u8_array, get_i32_array
 from .uint_range import UIntRange
 from .utils import get_end
 from .var_stats import VarStats, clamp_var_stats_collection, get_alt_ref_delta
@@ -64,23 +64,28 @@ def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable
     alt_offsets = get_u32_array(alt_length)
     ins_mask = get_u8_array(alt_length)
     alt_offset: int = 0
+    var_offset: int = 0
     for variant in alt_variants:
 
         # Filter out variants that do not add to ALT
         if variant.alt_ref_delta > 0:
-            ref_offset: int = variant.pos - ref_start
+            ref_offset: int = variant.pos + var_offset - ref_start
+
+            alt_offset += var_offset
 
             # Increment offsets spanned by ALT
             for i in range(variant.alt_len):
                 offset = ref_offset + i
                 alt_offset += 1
-                alt_offsets[offset] += i
+                alt_offsets[offset] = 0
                 ins_mask[offset] = 1
 
             # Set all downstream offsets (assumes the variants to be sorted by position)
             offset = ref_offset + variant.alt_len
             for i in range(offset, alt_length):
                 alt_offsets[i] = alt_offset
+
+        var_offset += variant.alt_ref_delta
 
     return alt_offsets, ins_mask
 
@@ -100,20 +105,25 @@ def _compute_ref_offsets(ref_variants: list[VarStats]) -> list[PosOffset]:
     return pos_offset
 
 
-def _compute_ref_del_mask(ref_start: int, ref_length: int, ref_variants: list[VarStats]) -> array:
+def _compute_ref_del_mask(ref_start: int, ref_length: int, ref_variants: list[VarStats]) -> tuple[array, array]:
     mask = get_u8_array(ref_length)
+    any_mask = get_u8_array(ref_length)
 
     for variant in ref_variants:
+        ref_offset = variant.pos - ref_start
+
+        if variant.ref_len > 0:
+            for i in range(variant.ref_len):
+                any_mask[ref_offset + i] = 1
 
         # Filter out variants that do not add to ALT
         if variant.alt_ref_delta < 0:
-            ref_offset = variant.pos - ref_start
 
             # Increment offsets spanned by ALT
             for i in range(variant.ref_len):
                 mask[ref_offset + i] = 1
 
-    return mask
+    return mask, any_mask
 
 
 @dataclass(slots=True)
@@ -126,10 +136,12 @@ class GenomicPositionOffsets:
     # REF -> ALT
     _pos_offsets: list[PosOffset]
     _ref_del_mask: array
+    _any_mask: array
 
     # ALT -> REF
     _ins_offsets: array
     _alt_ins_mask: array
+    _ref_del_offsets: array
 
     @classmethod
     def from_var_stats(cls, vs: Iterable[VarStats], r: UIntRange):
@@ -138,11 +150,20 @@ class GenomicPositionOffsets:
         ref_length = len(r)
 
         alt_length = ref_length + get_alt_ref_delta(cvs)
-        del_mask = _compute_ref_del_mask(ref_start, ref_length, cvs)
+        del_mask, any_mask = _compute_ref_del_mask(ref_start, ref_length, cvs)
         pos_offsets = _compute_ref_offsets(cvs)
+
+        ref_del_offsets = get_i32_array(ref_length)
+        offset = 0
+        for x in pos_offsets:
+            offset = x.offset
+            for i in range(x.pos - ref_start, ref_length):
+                ref_del_offsets[i] = offset
+
+        # TODO: build these based on the reference offsets
         ins_offsets, ins_mask = _compute_alt_offsets(ref_start, alt_length, cvs)
 
-        return cls(r, alt_length, pos_offsets, del_mask, ins_offsets, ins_mask)
+        return cls(r, alt_length, pos_offsets, del_mask, any_mask, ins_offsets, ins_mask, ref_del_offsets)
 
     def __post_init__(self) -> None:
         if self.alt_length < 0:
@@ -202,6 +223,9 @@ class GenomicPositionOffsets:
 
     def ref_pos_exists_in_alt(self, ref_pos: int) -> bool:
         return self._ref_del_mask[self._pos_to_offset(ref_pos)] == 0
+
+    def ref_pos_overlaps_var(self, ref_pos: int) -> bool:
+        return self._any_mask[self._pos_to_offset(ref_pos)] == 1
 
     def _alt_to_ref_position(self, alt_pos: int) -> int:
         """
