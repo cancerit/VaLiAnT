@@ -223,23 +223,6 @@ create table targeton_custom_variants (
     in_const int not null default 0
 );
 
-create table mutations (
-    id integer primary key,
-    -- Original reference
-    pos_r integer not null,
-    ref_r text not null,
-    alt_r text not null,
-    -- Altered reference
-    pos_a integer not null,
-    ref_a text not null,
-    alt_a text not null,
-    -- CDS-specific annotation
-    codon_ref text,
-    codon_alt text,
-    aa_ref text,
-    aa_alt text
-);
-
 create view v_meta_pattern as
 select
     pos_r as original_start,  -- to be computed

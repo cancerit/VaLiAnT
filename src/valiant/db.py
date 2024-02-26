@@ -37,7 +37,6 @@ class DbTableName(str, Enum):
     SGRNA_IDS = 'sgrna_ids'
     ALT_PATTERN_VARIANTS = 'alt_pattern_variants'
     V_META = 'v_meta'
-    MUTATIONS = 'mutations'
     TARGETON_CUSTOM_VARIANTS = 'targeton_custom_variants'
     V_CUSTOM_VARIANTS = 'v_custom_variants'
     V_PPE_SGRNA_IDS = 'v_ppe_sgrna_ids'
@@ -55,7 +54,6 @@ PER_CONTIG_TABLES: list[DbTableName] = [
 
 
 PER_TARGETON_TABLES: set[DbTableName] = {
-    DbTableName.MUTATIONS,
     DbTableName.ALT_PATTERN_VARIANTS,
     DbTableName.TARGETON_PAM_PROTECTION_EDITS,
     DbTableName.TARGETON_CUSTOM_VARIANTS,
