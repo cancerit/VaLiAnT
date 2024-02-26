@@ -233,7 +233,7 @@ class Targeton:
 
         def get_oligo(x: VariantT) -> OligoSeq[VariantT] | None:
             if gpo:
-                if gpo.ref_pos_overlaps_var(x.pos):
+                if gpo.ref_var_overlaps_var(x):
                     logging.warning(
                         "Custom variant %s:%s overlaps a background variant (discarded)!" %
                         (contig, x))

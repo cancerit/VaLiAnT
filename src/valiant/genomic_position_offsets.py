@@ -227,6 +227,12 @@ class GenomicPositionOffsets:
     def ref_pos_overlaps_var(self, ref_pos: int) -> bool:
         return self._any_mask[self._pos_to_offset(ref_pos)] == 1
 
+    def ref_var_overlaps_var(self, variant: VariantT) -> bool:
+        return any(
+            self.ref_pos_overlaps_var(x)
+            for x in range(variant.pos, variant.ref_end + 1)
+        ) if variant.ref_len > 1 else self.ref_pos_overlaps_var(variant.pos)
+
     def _alt_to_ref_position(self, alt_pos: int) -> int:
         """
         Lift a position from ALT to REF
