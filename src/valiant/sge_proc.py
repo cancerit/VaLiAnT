@@ -41,7 +41,7 @@ from .meta_table import MetaTable
 from .oligo_generation_info import OligoGenerationInfo
 from .options import Options
 from .pam_variant import InvalidPamVariant, PamVariant
-from .queries import insert_background_variants, insert_custom_variant_collection, insert_exons, insert_pam_protection_edits, insert_targeton_ppes, is_meta_table_empty, select_background_variant_stats, select_background_variants, select_ppe_bg_codon_overlaps, select_ppes_by_sgrna_id, clear_per_contig_tables, clear_per_targeton_tables
+from .queries import insert_background_variants, insert_custom_variant_collection, insert_exons, insert_pam_protection_edits, insert_targeton_ppes, is_meta_table_empty, select_background_variant_stats, select_background_variants, select_overlapping_background_variants, select_ppe_bg_codon_overlaps, select_ppes_by_sgrna_id, clear_per_contig_tables, clear_per_targeton_tables
 from .seq import Seq
 from .seq_converter import apply_variants
 from .sge_config import SGEConfig
@@ -252,6 +252,10 @@ def get_ppe_seq(
     return ppe_seq
 
 
+def get_targeton_seq(seq: Seq, t: Targeton) -> Seq:
+    return seq.subseq(t.ref, rel=False, prev_nt=True)
+
+
 def proc_targeton(
     conn: Connection,
     config: SGEConfig,
@@ -329,12 +333,15 @@ def proc_targeton(
     targeton_name = targeton_config.name
 
     if not is_meta_table_empty(conn):
-        t_ref = ctx_seq.subseq(targeton_ref.ref, rel=False, prev_nt=True)
-        # if t_ref.start > 1:
-        #     t_ref.prev_nt = ctx_seq.get_nt(t_ref.start - 1)
-        t_alt = ppe_seq.subseq((targeton_alt or targeton_ref).ref, rel=False, prev_nt=True)
-        # if t_alt.start > 1:
-        #     t_alt.prev_nt = ctx_seq.get_nt(t_alt.start - 1)
+        t_ref = get_targeton_seq(ctx_seq, targeton_ref)
+        t = targeton_alt or targeton_ref
+        t_alt = get_targeton_seq(ppe_seq, t)
+        if ctx_seq_bg:
+            t_bg_vars = select_overlapping_background_variants(conn, t.ref)
+            t_bg = get_targeton_seq(ctx_seq_bg, t)
+        else:
+            t_bg_vars = []
+            t_bg = t_ref
         mt = MetaTable(
             SrcType.REF,
             None,
@@ -345,7 +352,9 @@ def proc_targeton(
             contig,
             strand,
             t_ref,
+            t_bg,
             t_alt,
+            t_bg_vars,
             ppe_mut_types,
             transcript_ref.info if transcript_ref else None)
 

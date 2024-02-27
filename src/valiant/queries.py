@@ -30,7 +30,7 @@ from .sql_gen import SqlQuery, SqlScript, get_multi_range_check, sql_eq_or_in_st
 from .strings.dna_str import DnaStr
 from .strings.strand import Strand
 from .uint_range import UIntRange
-from .variant import PatternVariant, RegisteredVariant, VarStats
+from .variant import PatternVariant, RegisteredVariant, VarStats, Variant
 from .variant_select import VariantSelectStartEnd
 
 
@@ -400,6 +400,25 @@ def select_background_variants(conn: Connection, r: UIntRange) -> list[Registere
             RegisteredBackgroundVariant(*r)
             for r in cur.execute(
                 sql_select_background_variants, r.to_tuple()).fetchall()
+        ]
+
+
+sql_select_overlapping_background_variants = """
+select start, ref, alt
+from v_background_variants
+where
+    (start >= ? and start <= ?) or
+    (ref_end >= ? and ref_end <= ?)
+"""
+
+
+def select_overlapping_background_variants(conn: Connection, r: UIntRange) -> list[Variant]:
+    t = r.to_tuple()
+    with cursor(conn) as cur:
+        return [
+            Variant(*r)
+            for r in cur.execute(
+                sql_select_overlapping_background_variants, (*t, *t)).fetchall()
         ]
 
 

@@ -126,6 +126,8 @@ def proc_targeton(
             Strand('+'),
             targeton_seq,
             targeton_seq,
+            targeton_seq,
+            [],
             [],
             transcript.info if transcript else None).to_csv(conn, targeton_name)
 

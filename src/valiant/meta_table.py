@@ -75,7 +75,9 @@ META_CSV_FIELDS = [
     'pam_mut_sgrna_id',
     'mave_nt',
     'mave_nt_ref',
-    'vcf_var_in_const'
+    'vcf_var_in_const',
+    'background_variants',
+    'background_seq'
 ]
 
 
@@ -116,11 +118,12 @@ class MetaTable:
     exp: ExperimentMeta
     opt: Options
     gpo: GenomicPositionOffsets | None
-    # TODO: support cDNA
     contig: str
     strand: Strand
     seq: Seq
+    bg_seq: Seq
     alt_seq: Seq
+    bg_variants: list[Variant]
     ppe_mut_types: list[MutationType]
     transcript: TranscriptInfo | None
 
@@ -177,6 +180,23 @@ class MetaTable:
             gene_id = self.transcript.gene_id
 
         src_type = self.src_type.value
+
+        # Targeton-level background-specific metadata
+        if self.bg_variants:
+            background_seq = self.bg_seq.s
+            # Coordinates expected to be in the reference coordinate system
+            background_variants = ';'.join(
+                get_mave_nt(
+                    x.pos,
+                    ref_range.start,
+                    x.type,
+                    x.ref or None,
+                    x.alt or None
+                ) for x in self.bg_variants
+            )
+        else:
+            background_seq = ref_seq
+            background_variants = ''
 
         info = OligoGenerationInfo()
 
@@ -469,8 +489,13 @@ class MetaTable:
                     wf(mave_nt_ref)
 
                     # 30. vcf_var_in_const
-                    fh.write(str(mr.in_const))
+                    wf(str(mr.in_const))
 
+                    # 31. background_variants
+                    wf(background_variants)
+
+                    # 32. background_seq
+                    fh.write(background_seq)
                     fh.write('\n')
 
         if info.out_of_range_n == 0:
