@@ -409,6 +409,7 @@ from v_background_variants
 where
     (start >= ? and start <= ?) or
     (ref_end >= ? and ref_end <= ?)
+order by start, ref, alt
 """
 
 
