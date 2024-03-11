@@ -82,7 +82,6 @@ def validate_background_variants(
     codon_table: CodonTable,
     gpo: GenomicPositionOffsets,
     contig: str,
-    strand: Strand,
     seq_ref: Seq,
     seq_bg: Seq,
     transcript: Transcript | None,
@@ -265,7 +264,6 @@ def proc_targeton(
     contig: str,
     strand: Strand,
     exp_meta: ExperimentMeta,
-    exp_config: ExperimentConfig,
     codon_table: CodonTable,
     transcript_ref: Transcript | None,
     transcript_bg: Transcript | None,
@@ -287,7 +285,6 @@ def proc_targeton(
             codon_table,
             gpo,
             contig,
-            strand,
             ctx_seq,
             ctx_seq_bg,
             transcript_bg,
@@ -402,7 +399,6 @@ def proc_contig(
     conn: Connection,
     config: SGEConfig,
     exp_meta: ExperimentMeta,
-    exp_config: ExperimentConfig,
     contig: str,
     codon_table_builder: CodonTableBuilder,
     targeton_configs: list[TargetonConfig],
@@ -472,7 +468,7 @@ def proc_contig(
 
                 # Process targeton
                 stats.update(proc_targeton(
-                    conn, config, opt, gpo, ctx_seq, ctx_seq_bg, contig, strand, exp_meta, exp_config, codon_table, transcript, transcript_bg, targeton_config))
+                    conn, config, opt, gpo, ctx_seq, ctx_seq_bg, contig, strand, exp_meta, codon_table, transcript, transcript_bg, targeton_config))
 
         else:
             targeton_ctxs = [
@@ -492,7 +488,7 @@ def proc_contig(
                     ctx_seq_bg = get_ctx_seq_bg(conn, gpo, ctx_seq) if gpo else None
 
                     stats.update(proc_targeton(
-                        conn, config, opt, gpo, ctx_seq, ctx_seq_bg, contig, strand, exp_meta, exp_config, codon_table, None, None, targeton_config))
+                        conn, config, opt, gpo, ctx_seq, ctx_seq_bg, contig, strand, exp_meta, codon_table, None, None, targeton_config))
 
 
 def get_ref_seq_info(seq: Seq, t: TargetonConfig) -> list[str]:
@@ -553,7 +549,7 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
 
         try:
             for contig, targeton_configs in exp_config.targeton_configs.items():
-                proc_contig(conn, config, exp_meta, exp_config, contig, codon_table_builder, targeton_configs, stats)
+                proc_contig(conn, config, exp_meta, contig, codon_table_builder, targeton_configs, stats)
         except InvalidBackgroundVariant as ex:
             logging.critical(ex.args[0])
             sys.exit(1)
