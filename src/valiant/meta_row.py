@@ -47,6 +47,7 @@ select
     end_ppe_start,
     sgrna_ids
 from v_meta
+order by original_start, ref_start, ref_end, ref, alt, vcf_var_id, mutator
 """
 
 
