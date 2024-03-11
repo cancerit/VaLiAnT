@@ -562,7 +562,7 @@ Example:
 ```json
 {
     "appName": "valiant",
-    "appVersion": "3.0.0",
+    "appVersion": "4.0.0",
     "mode": "sge",
     "params": {
         "species": "homo sapiens",
@@ -598,7 +598,7 @@ Example:
 ```json
 {
     "appName": "valiant",
-    "appVersion": "3.0.0",
+    "appVersion": "4.0.0",
     "mode": "cdna",
     "params": {
         "species": "human",
