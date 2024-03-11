@@ -173,7 +173,7 @@ class Transcript:
         return [
             self._get_codon_seq(seq, exon, codon_index)
             for exon, ri in exon_ranges
-            for codon_index in exon.get_codon_indices(ri)
+            for codon_index in exon.get_codon_indices(self.strand, ri)
         ]
 
     def get_exon_at(self, pos: int) -> Exon | None:

@@ -87,7 +87,7 @@ class Exon(UIntRange):
         return clamp_non_negative(
             abs(pos - self.get_first_codon_start(strand))) // 3
 
-    def get_codon_indices(self, r: UIntRange) -> list[int]:
+    def get_codon_indices(self, strand: Strand, r: UIntRange) -> list[int]:
         t = self.intersect(r)
         if t is None:
             return []
