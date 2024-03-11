@@ -51,7 +51,6 @@ def is_variant_frame_shifting(variant: RegisteredVariant) -> bool:
 
 
 def is_variant_nonsynonymous(
-    strand: Strand,
     codon_table: CodonTable,
     seq: Seq,
     seq_bg: Seq,

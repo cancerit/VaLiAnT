@@ -96,7 +96,6 @@ def validate_background_variants(
     def is_var_non_syn(v: RegisteredBackgroundVariant) -> bool:
         assert transcript
         return is_variant_nonsynonymous(
-            strand,
             codon_table,
             seq_ref,
             seq_bg,
