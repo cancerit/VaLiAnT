@@ -65,7 +65,7 @@ def is_variant_nonsynonymous(
         return True
 
     # TODO: drop these once the new approach is validated...
-    if bool(variant.start_exon_index) != bool(variant.end_exon_index):
+    if (variant.start_exon_index is None) != (variant.end_exon_index is None):
         logging.warning("[LIMITATION] Background variant spanning coding and non-coding regions, affecting more than a single codon: may or may not be synonymous (assuming it is by default)!")
         return False
 
@@ -73,9 +73,11 @@ def is_variant_nonsynonymous(
         logging.warning("[LIMITATION] Background variant spanning more than one exon: may or may not be synonymous (assuming it is by default)!")
         return False
 
-    assert variant.start_exon_index
-    assert variant.start_codon_index
-    assert variant.end_codon_index
+    # NOTE: if both indices were null, variant.is_cds would be false
+    assert variant.start_exon_index is not None
+    assert variant.start_codon_index is not None
+    assert variant.end_exon_index is not None
+    assert variant.end_codon_index is not None
 
     # TODO: use GPO to convert the codon coordinates to fetch ALT's
 
