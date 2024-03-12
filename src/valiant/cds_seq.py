@@ -18,22 +18,26 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .seq import Seq
 from .strings.codon import Codon
 from .strings.dna_str import DnaStr
 from .uint_range import UIntRange
-from .utils import get_codon_offset_complement
+from .utils import get_codon_offset_complement, is_unique_ascending
 
 
 @dataclass(slots=False)
 class CdsSeq(Seq):
     cds_prefix: DnaStr = DnaStr.empty()
     cds_suffix: DnaStr = DnaStr.empty()
+    cds_prefix_positions: list[int] = field(default_factory=list)
+    cds_suffix_positions: list[int] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         assert self.ext_length % 3 == 0
+        assert is_unique_ascending(self.cds_prefix_positions)
+        assert is_unique_ascending(self.cds_suffix_positions)
 
     def as_codon(self) -> Codon:
         return Codon(self.ext)
@@ -68,12 +72,21 @@ class CdsSeq(Seq):
         )
 
     @classmethod
-    def from_seq(cls, seq: Seq, cds_prefix: DnaStr | None = None, cds_suffix: DnaStr | None = None) -> CdsSeq:
+    def from_seq(
+        cls,
+        seq: Seq,
+        cds_prefix: DnaStr | None = None,
+        cds_suffix: DnaStr | None = None,
+        cds_prefix_positions: list[int] | None = None,
+        cds_suffix_positions: list[int] | None = None
+    ) -> CdsSeq:
         return cls(
             s=seq.s,
             start=seq.start,
             cds_prefix=cds_prefix or DnaStr.empty(),
-            cds_suffix=cds_suffix or DnaStr.empty())
+            cds_suffix=cds_suffix or DnaStr.empty(),
+            cds_prefix_positions=cds_prefix_positions or list(),
+            cds_suffix_positions=cds_suffix_positions or list())
 
     @property
     def ext(self) -> DnaStr:
@@ -81,3 +94,21 @@ class CdsSeq(Seq):
 
     def ext_substr(self, r: UIntRange, rel: bool = True) -> DnaStr:
         return self._substr(self.ext, r, rel=rel)
+
+    @property
+    def ext_positions(self) -> list[int]:
+        positions = [
+            *self.cds_prefix_positions,
+            *self.get_range().positions,
+            *self.cds_suffix_positions
+        ]
+        n = len(positions)
+        assert n > 0 and n % 3 == 0
+        # Check the positions are in ascending order and unique
+        assert is_unique_ascending(positions)
+        return positions
+
+    @property
+    def ext_start(self) -> int:
+        # BEWARE: this may fail if the prefix positions are not set
+        return self.cds_prefix_positions[0] if self.cds_prefix else self.start

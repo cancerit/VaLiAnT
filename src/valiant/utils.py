@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -124,3 +124,10 @@ def fmt_genomic_range(contig: str, r: UIntRange) -> str:
         f"{contig}:{r.start}-{r.end}" if len(r) > 1 else
         f"{contig}:{r.start}"
     )
+
+
+def is_unique_ascending(a: list) -> bool:
+    n = len(a)
+    if n == 0:
+        return True
+    return all(a[i] > a[i - 1] for i in range(1, n))

@@ -92,21 +92,26 @@ def is_variant_nonsynonymous(
     else:
 
         # Search all codons (supports variants spanning multiple exons)
-        codons = transcript.get_codons_in_range(seq, variant.ref_range)
+        if variant.ref_len > 1:
+            codons = transcript.get_codons_in_range(seq, variant.ref_range)
+        else:
+            # Handle insertion (if not tracked above)
+            codon = transcript.get_codon_at(seq, variant.pos)
+            assert codon is not None
+            codons = [codon]
 
     for codon_ref in codons:
-        codon_ref_range = codon_ref.get_range()
-        codon_alt_range = gpo.ref_to_alt_range(codon_ref.get_range())
+        codon_ref_range = codon_ref.ext_positions
+        codon_alt_range = [gpo.ref_to_alt_position(x) for x in codon_ref_range]
 
         # A difference in span would imply a frame shift
         assert codon_alt_range and len(codon_alt_range) == len(codon_ref_range)
 
         # Reference transcript applied to background sequence (?)
-        codon_alt = transcript.get_codon_at(seq_bg, codon_alt_range.start)
-        assert codon_alt
+        alt = Codon(seq_bg.get_at(codon_ref_range))
+        # assert codon_alt
 
         ref = Codon(codon_ref.ext)
-        alt = Codon(codon_alt.ext)
         if not codon_table.is_syn(ref, alt):
             return True
 

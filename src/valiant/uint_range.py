@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2023 Genome Research Ltd
+# Copyright (C) 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -90,6 +90,10 @@ class UIntRange(Sized, Container):
             min(r.start for r in ranges),
             max(r.end for r in ranges)
         )
+
+    @property
+    def positions(self) -> list[int]:
+        return list(range(self.start, self.end + 1))
 
     def to_slice(self, offset: int = 0) -> slice:
         return slice(self.start - offset, self.end - offset + 1)

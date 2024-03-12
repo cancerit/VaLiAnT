@@ -24,7 +24,7 @@ from valiant.strings.dna_str import DnaStr
 from valiant.strings.strand import Strand
 from valiant.transcript import Transcript
 from valiant.transcript_info import TranscriptInfo
-from valiant.uint_range import UIntRangeSortedList
+from valiant.uint_range import UIntRange, UIntRangeSortedList
 
 
 seq = Seq(100, DnaStr('AAACCTTCGGGAATACCC'))
@@ -68,3 +68,23 @@ def test_transcript_get_codon_at(pos, exp):
     else:
         assert obs is not None
         assert obs == exp or obs.ext == exp.ext
+
+
+@pytest.mark.parametrize('r,exp', [
+    (UIntRange(start, end), [c.as_codon() for c in exp_codons])
+    for start, end, exp_codons in [
+        # Before the transcript
+        (50, 60, []),
+        # Within the transcript
+        (100, 104, codons[0:2]),
+        (100, 107, codons[0:2]),
+        (100, 108, codons[0:3]),
+        # Before and within the transcript
+        (60, 108, codons[0:3]),
+        # Before and after the transcript
+        (60, 300, codons)
+    ]
+])
+def test_transcript_get_codons_in_range(r, exp):
+    obs = transcript_plus.get_codons_in_range(seq, r)
+    assert [x.as_codon() for x in obs] == exp

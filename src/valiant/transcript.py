@@ -148,7 +148,11 @@ class Transcript:
         cds_suffix = seq.get_at(after_positions)
 
         return CdsSeq.from_seq(
-            main_seq, cds_prefix=cds_prefix, cds_suffix=cds_suffix)
+            main_seq,
+            cds_prefix=cds_prefix,
+            cds_suffix=cds_suffix,
+            cds_prefix_positions=before_positions,
+            cds_suffix_positions=after_positions)
 
     def _get_codon_seq(self, seq: Seq, exon: Exon, codon_index: int) -> CdsSeq:
         codon_range = exon.get_codon(self.strand, codon_index)
@@ -170,11 +174,22 @@ class Transcript:
                 break
 
         # Collect codons
-        return [
+        codons = [
             self._get_codon_seq(seq, exon, codon_index)
             for exon, ri in exon_ranges
             for codon_index in exon.get_codon_indices(self.strand, ri)
         ]
+
+        if not codons:
+            return []
+
+        # Drop duplicate codons
+        unique_codons = [codons[0]]
+        for i in range(1, len(codons)):
+            if codons[i].ext_start != codons[i - 1].ext_start:
+                unique_codons.append(codons[i])
+
+        return unique_codons
 
     def get_exon_at(self, pos: int) -> Exon | None:
         for exon in self.exons:
