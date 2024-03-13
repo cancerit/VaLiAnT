@@ -20,6 +20,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .options import Options
+
 
 @dataclass(slots=True, init=False)
 class OligoGenerationInfo:
@@ -48,3 +50,16 @@ class OligoGenerationInfo:
         self.too_short += info.too_short
         self.in_range += info.in_range
         self.too_long += info.too_long
+
+    def eval_in_range(self, opt: Options, oligo_length: int) -> bool:
+        if oligo_length < opt.oligo_min_length:
+            self.too_short += 1
+            return False
+
+        elif oligo_length > opt.oligo_max_length:
+            self.too_long += 1
+            return False
+
+        else:
+            self.in_range += 1
+            return True

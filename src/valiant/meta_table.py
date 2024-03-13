@@ -95,6 +95,12 @@ def get_transcript_frag(gene_id: str | None, transcript_id: str | None) -> str:
     )
 
 
+def get_sge_oligo_no_op_name(gene_id: str | None, transcript_id: str | None, contig: str, is_rc: bool) -> str:
+    tr_frag = get_transcript_frag(gene_id, transcript_id)
+    rc = REVCOMP_OLIGO_NAME_SUFFIX if is_rc else ''
+    return f"{tr_frag}_{contig}_no_op{rc}"
+
+
 def get_sge_oligo_name(gene_id: str | None, transcript_id: str | None, contig: str, is_rc: bool, src: str, v: Variant) -> str:
     tr_frag = get_transcript_frag(gene_id, transcript_id)
     var_frag = v.get_oligo_name_frag()
@@ -109,6 +115,63 @@ def get_cdna_oligo_name(gene_id: str | None, transcript_id: str | None, seq_id: 
     return f"{seq_id}_{tr_frag}_{var_frag}_{src}"
 
 
+def write_no_op_meta_record(
+    fh: TextIOWrapper,
+    oligo_name: str,
+    species: str,
+    assembly: str,
+    gene_id: str | None,
+    transcript_id: str | None,
+    contig: str,
+    strand: str,
+    ref_start: str,
+    ref_end: str,
+    revc: str,
+    ref_seq: str,
+    pam_seq: str | None,
+    oligo_length: int,
+    oligo: str,
+    oligo_no_adapt: str,
+    pam_mut_annot: str | None,
+    background_variants: str,
+    background_seq: str
+) -> None:
+    write_meta_record(
+        fh,
+        oligo_name,
+        species,
+        assembly,
+        gene_id,
+        transcript_id,
+        '',
+        contig,
+        strand,
+        ref_start,
+        ref_end,
+        revc,
+        ref_seq,
+        pam_seq,
+        '',
+        '',
+        -1,
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        oligo_length,
+        oligo,
+        oligo_no_adapt,
+        pam_mut_annot,
+        '',
+        '',
+        '',
+        0,
+        background_variants,
+        background_seq)
+
+
 def write_meta_record(
     fh: TextIOWrapper,
     oligo_name: str,
@@ -116,7 +179,8 @@ def write_meta_record(
     assembly: str,
     gene_id: str | None,
     transcript_id: str | None,
-    src_type: str, contig,
+    src_type: str,
+    contig: str,
     strand: str,
     ref_start: str,
     ref_end: str,
@@ -374,10 +438,47 @@ class MetaTable:
             self._write_header(meta_fh)
             self._write_header(meta_excl_fh)
 
-            def wf(s: str | None) -> None:
-                _write_field(fh, s)
-
             with cursor(conn) as cur:
+
+                if self.src_type == SrcType.REF:
+
+                    # Prepare no-op oligonucleotide sequences
+                    oligo_no_adapt = self.bg_seq.s
+                    if is_rc:
+                        oligo_no_adapt = reverse_complement(oligo_no_adapt)
+                    oligo = get_full_oligo(oligo_no_adapt)
+                    oligo_length = len(oligo)
+
+                    oligo_name = get_sge_oligo_no_op_name(gene_id, transcript_id, contig, is_rc)
+
+                    # Evalute oligonucleotide length
+                    if info.eval_in_range(self.opt, oligo_length):
+                        fh = meta_fh
+                        unique_oligos[oligo].append(oligo_name)
+                    else:
+                        fh = meta_excl_fh
+
+                    write_no_op_meta_record(
+                        fh,
+                        oligo_name,
+                        species,
+                        assembly,
+                        gene_id,
+                        transcript_id,
+                        contig,
+                        strand,
+                        ref_start,
+                        ref_end,
+                        revc,
+                        ref_seq,
+                        pam_seq,
+                        oligo_length,
+                        oligo,
+                        oligo_no_adapt,
+                        pam_mut_annot,
+                        background_variants,
+                        background_seq)
+
                 it = cur.execute(sql_select_meta)
                 while r := it.fetchone():
                     mr = MetaRow(*r)
@@ -385,6 +486,7 @@ class MetaTable:
                     alt_var = mr.to_alt_variant()
                     var_type = ref_var.type
 
+                    # Prepare oligonucleotide sequences
                     oligo_no_adapt = mr.oligo
                     if is_rc:
                         oligo_no_adapt = reverse_complement(oligo_no_adapt)
@@ -475,19 +577,8 @@ class MetaTable:
                                 pam_ref_start, var_type, pam_codon_ref, alt=pam_alt)
 
                     # Evaluate oligonucleotide length
-
                     oligo_length = len(oligo)
-
-                    if oligo_length < self.opt.oligo_min_length:
-                        info.too_short += 1
-                        fh = meta_excl_fh
-
-                    elif oligo_length > self.opt.oligo_max_length:
-                        info.too_long += 1
-                        fh = meta_excl_fh
-
-                    else:
-                        info.in_range += 1
+                    if info.eval_in_range(self.opt, oligo_length):
                         fh = meta_fh
 
                         # Populate unique collection
@@ -526,6 +617,8 @@ class MetaTable:
                                 oligo_name,
                                 mr.vcf_alias,
                                 mr.vcf_var_id)
+                    else:
+                        fh = meta_excl_fh
 
                     # Write metadata table fields
                     #  (either to the default or to the excluded file)
