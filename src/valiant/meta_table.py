@@ -17,6 +17,7 @@
 #############################
 
 from contextlib import contextmanager, nullcontext
+from io import TextIOWrapper
 import os
 from collections import defaultdict
 from dataclasses import dataclass
@@ -106,6 +107,138 @@ def get_cdna_oligo_name(gene_id: str | None, transcript_id: str | None, seq_id: 
     tr_frag = get_transcript_frag(gene_id, transcript_id)
     var_frag = v.get_oligo_name_frag()
     return f"{seq_id}_{tr_frag}_{var_frag}_{src}"
+
+
+def write_meta_record(
+    fh: TextIOWrapper,
+    oligo_name: str,
+    species: str,
+    assembly: str,
+    gene_id: str | None,
+    transcript_id: str | None,
+    src_type: str, contig,
+    strand: str,
+    ref_start: str,
+    ref_end: str,
+    revc: str,
+    ref_seq: str,
+    pam_seq: str | None,
+    vcf_alias: str,
+    vcf_var_id: str,
+    ref_var_pos: int,
+    pam_ref: str,
+    ref_var_alt: str,
+    ref_aa: str,
+    alt_aa: str,
+    mutation_type: str,
+    mutator: str,
+    oligo_length: int,
+    oligo: str,
+    oligo_no_adapt: str,
+    pam_mut_annot: str | None,
+    sgrna_ids: str,
+    mave_nt: str,
+    mave_nt_ref: str,
+    in_const: int,
+    background_variants: str,
+    background_seq: str
+) -> None:
+    # 1. oligo_name
+    _write_field(fh, oligo_name)
+
+    # 2. species
+    _write_field(fh, species)
+
+    # 3. assembly
+    _write_field(fh, assembly)
+
+    # 4. gene_id
+    _write_field(fh, gene_id)
+
+    # 5. transcript_id
+    _write_field(fh, transcript_id)
+
+    # 6. src_type
+    _write_field(fh, src_type)
+
+    # 7. ref_chr
+    _write_field(fh, contig)
+
+    # 8. ref_strand
+    _write_field(fh, strand)
+
+    # 9. ref_start
+    _write_field(fh, ref_start)
+
+    # 10. ref_end
+    _write_field(fh, ref_end)
+
+    # 11. revc
+    _write_field(fh, revc)
+
+    # 12. ref_seq
+    _write_field(fh, ref_seq)
+
+    # 13. pam_seq
+    _write_field(fh, pam_seq)
+
+    # 14. vcf_alias
+    _write_field(fh, vcf_alias)
+
+    # 15. vcf_var_id
+    _write_field(fh, vcf_var_id)
+
+    # 16. mut_position
+    _write_field(fh, str(ref_var_pos))
+
+    # 17. ref
+    _write_field(fh, pam_ref)
+
+    # 18. new
+    _write_field(fh, ref_var_alt)
+
+    # 19. ref_aa
+    _write_field(fh, ref_aa)
+
+    # 20. alt_aa
+    _write_field(fh, alt_aa)
+
+    # 21. mut_type
+    _write_field(fh, mutation_type)
+
+    # 22. mutator
+    _write_field(fh, mutator)
+
+    # 23. oligo_length
+    _write_field(fh, str(oligo_length))
+
+    # 24. mseq
+    _write_field(fh, oligo)
+
+    # 25. mseq_no_adapt
+    _write_field(fh, oligo_no_adapt)
+
+    # 26. pam_mut_annot
+    _write_field(fh, pam_mut_annot)
+
+    # 27. pam_mut_sgrna_id
+    _write_field(fh, sgrna_ids)
+
+    # 28. mave_nt
+    _write_field(fh, mave_nt)
+
+    # 29. mave_nt_ref
+    _write_field(fh, mave_nt_ref)
+
+    # 30. vcf_var_in_const
+    _write_field(fh, str(in_const))
+
+    # 31. background_variants
+    _write_field(fh, background_variants)
+
+    # 32. background_seq
+    fh.write(background_seq)
+    fh.write('\n')
 
 
 @dataclass(slots=True)
@@ -397,102 +530,39 @@ class MetaTable:
                     # Write metadata table fields
                     #  (either to the default or to the excluded file)
 
-                    # 1. oligo_name
-                    wf(oligo_name)
-
-                    # 2. species
-                    wf(species)
-
-                    # 3. assembly
-                    wf(assembly)
-
-                    # 4. gene_id
-                    wf(gene_id)
-
-                    # 5. transcript_id
-                    wf(transcript_id)
-
-                    # 6. src_type
-                    wf(src_type)
-
-                    # 7. ref_chr
-                    wf(contig)
-
-                    # 8. ref_strand
-                    wf(strand)
-
-                    # 9. ref_start
-                    wf(ref_start)
-
-                    # 10. ref_end
-                    wf(ref_end)
-
-                    # 11. revc
-                    wf(revc)
-
-                    # 12. ref_seq
-                    wf(ref_seq)
-
-                    # 13. pam_seq
-                    wf(pam_seq)
-
-                    # 14. vcf_alias
-                    wf(mr.vcf_alias)
-
-                    # 15. vcf_var_id
-                    wf(mr.vcf_var_id)
-
-                    # 16. mut_position
-                    wf(str(ref_var.pos))
-
-                    # 17. ref
-                    wf(pam_ref)
-
-                    # 18. new
-                    wf(ref_var.alt)
-
-                    # 19. ref_aa
-                    wf(mr.ref_aa)
-
-                    # 20. alt_aa
-                    wf(mr.alt_aa)
-
-                    # 21. mut_type
-                    wf(mr.mutation_type)
-
-                    # 22. mutator
-                    wf(mr.mutator)
-
-                    # 23. oligo_length
-                    wf(str(oligo_length))
-
-                    # 24. mseq
-                    wf(oligo)
-
-                    # 25. mseq_no_adapt
-                    wf(oligo_no_adapt)
-
-                    # 26. pam_mut_annot
-                    wf(pam_mut_annot)
-
-                    # 27. pam_mut_sgrna_id
-                    wf(mr.sgrna_ids)
-
-                    # 28. mave_nt
-                    wf(mave_nt)
-
-                    # 29. mave_nt_ref
-                    wf(mave_nt_ref)
-
-                    # 30. vcf_var_in_const
-                    wf(str(mr.in_const))
-
-                    # 31. background_variants
-                    wf(background_variants)
-
-                    # 32. background_seq
-                    fh.write(background_seq)
-                    fh.write('\n')
+                    write_meta_record(
+                        fh,
+                        oligo_name,
+                        species,
+                        assembly,
+                        gene_id,
+                        transcript_id,
+                        src_type, contig,
+                        strand,
+                        ref_start,
+                        ref_end,
+                        revc,
+                        ref_seq,
+                        pam_seq,
+                        mr.vcf_alias,
+                        mr.vcf_var_id,
+                        ref_var.pos,
+                        pam_ref,
+                        ref_var.alt,
+                        mr.ref_aa,
+                        mr.alt_aa,
+                        mr.mutation_type,
+                        mr.mutator,
+                        oligo_length,
+                        oligo,
+                        oligo_no_adapt,
+                        pam_mut_annot,
+                        mr.sgrna_ids,
+                        mave_nt,
+                        mave_nt_ref,
+                        mr.in_const,
+                        background_variants,
+                        background_seq)
 
         if info.out_of_range_n == 0:
             os.unlink(meta_excl_fp)
