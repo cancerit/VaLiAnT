@@ -53,3 +53,7 @@ class InvalidVariantRef(Exception):
 
 class GenomicRangeOutOfBounds(Exception):
     pass
+
+
+class InvalidBackgroundVariant(CustomException):
+    pass

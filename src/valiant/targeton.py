@@ -23,7 +23,7 @@ from sqlite3 import Connection
 from typing import Callable, Iterable
 
 from .annot_variant import AnnotVariant
-from .background_variants import RegisteredBackgroundVariant
+from .cds_seq import CdsSeq
 from .codon_table import CodonTable
 from .enums import MutationType
 from .exon import get_codon_range_from_offset
@@ -37,7 +37,7 @@ from .strings.codon import Codon
 from .strings.strand import Strand
 from .transcript import Transcript
 from .uint_range import UIntRange
-from .variant import PatternVariant, RegisteredVariant, Variant, VariantT
+from .variant import PatternVariant, Variant, VariantT
 
 
 class InvalidTargetonRegion(Exception):
@@ -46,59 +46,32 @@ class InvalidTargetonRegion(Exception):
         self.msg = f"Invalid targeton region: {msg}!"
 
 
-def is_variant_frame_shifting(variant: RegisteredVariant) -> bool:
+def is_variant_frame_shifting(variant: Variant) -> bool:
     return variant.alt_ref_delta != 0
+
+
+def get_variant_codons(transcript: Transcript, seq: Seq, variant: Variant) -> list[CdsSeq]:
+    # Search all codons (supports variants spanning multiple exons)
+    if variant.ref_len > 1:
+        codons = transcript.get_codons_in_range(seq, variant.ref_range)
+    else:
+        # Handle insertion
+        codon = transcript.get_codon_at(seq, variant.pos)
+        codons = [codon] if codon is not None else []
+    return codons
 
 
 def is_variant_nonsynonymous(
     codon_table: CodonTable,
-    seq: Seq,
     seq_bg: Seq,
     gpo: GenomicPositionOffsets,
-    transcript: Transcript,
-    variant: RegisteredBackgroundVariant
+    variant: Variant,
+    codons: list[CdsSeq]
 ) -> bool:
-    assert variant.in_cds
+    assert codons
 
     if is_variant_frame_shifting(variant):
         return True
-
-    # TODO: drop these once the new approach is validated...
-    if (variant.start_exon_index is None) != (variant.end_exon_index is None):
-        logging.warning("[LIMITATION] Background variant spanning coding and non-coding regions, affecting more than a single codon: may or may not be synonymous (assuming it is by default)!")
-        return False
-
-    if variant.start_exon_index != variant.end_exon_index:
-        logging.warning("[LIMITATION] Background variant spanning more than one exon: may or may not be synonymous (assuming it is by default)!")
-        return False
-
-    # NOTE: if both indices were null, variant.is_cds would be false
-    assert variant.start_exon_index is not None
-    assert variant.start_codon_index is not None
-    assert variant.end_exon_index is not None
-    assert variant.end_codon_index is not None
-
-    # TODO: use GPO to convert the codon coordinates to fetch ALT's
-
-    if (
-        variant.start_exon_index == variant.end_exon_index and
-        variant.start_codon_index == variant.end_codon_index
-    ):
-
-        # Fall back to single codon index
-        codons = [transcript.get_codon(
-            seq, variant.start_exon_index, variant.start_codon_index)]
-
-    else:
-
-        # Search all codons (supports variants spanning multiple exons)
-        if variant.ref_len > 1:
-            codons = transcript.get_codons_in_range(seq, variant.ref_range)
-        else:
-            # Handle insertion (if not tracked above)
-            codon = transcript.get_codon_at(seq, variant.pos)
-            assert codon is not None
-            codons = [codon]
 
     for codon_ref in codons:
         codon_ref_range = codon_ref.ext_positions
@@ -107,11 +80,9 @@ def is_variant_nonsynonymous(
         # A difference in span would imply a frame shift
         assert codon_alt_range and len(codon_alt_range) == len(codon_ref_range)
 
-        # Reference transcript applied to background sequence (?)
-        alt = Codon(seq_bg.get_at(codon_ref_range))
-        # assert codon_alt
-
         ref = Codon(codon_ref.ext)
+        alt = Codon(seq_bg.get_at(codon_ref_range))
+
         if not codon_table.is_syn(ref, alt):
             return True
 
@@ -157,7 +128,6 @@ def get_pattern_variants_from_region(
 
     vars, annot_vars = mc.get_variants(codon_table, r_seq)
 
-    # if is_cds:
     vars = get_vars_in_region(vars)
     annot_vars = get_vars_in_region(annot_vars)
 

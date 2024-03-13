@@ -20,7 +20,6 @@ from itertools import chain
 from sqlite3 import Connection, Cursor, IntegrityError
 
 from .annot_variant import AnnotVariant
-from .background_variants import RegisteredBackgroundVariant
 from .custom_variant import CustomVariant
 from .db import PER_TARGETON_TABLES, VARIANT_FIELDS, cursor, DbTableName, DbFieldName, PER_CONTIG_TABLES
 from .exon import Exon
@@ -384,20 +383,16 @@ select
     start,
     ref,
     alt,
-    id,
-    start_exon_index,
-    start_codon_index,
-    end_exon_index,
-    end_codon_index
-from v_background_variant_codons
+    id
+from background_variants
 where start >= ? and start <= ?
 """
 
 
-def select_background_variants(conn: Connection, r: UIntRange) -> list[RegisteredBackgroundVariant]:
+def select_background_variants(conn: Connection, r: UIntRange) -> list[RegisteredVariant]:
     with cursor(conn) as cur:
         return [
-            RegisteredBackgroundVariant(*r)
+            RegisteredVariant(*r)
             for r in cur.execute(
                 sql_select_background_variants, r.to_tuple()).fetchall()
         ]

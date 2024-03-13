@@ -20,7 +20,7 @@ import logging
 import sys
 from sqlite3 import Connection
 
-from .background_variants import InvalidBackgroundVariant, RegisteredBackgroundVariant
+from .cds_seq import CdsSeq
 from .codon_table import CodonTable
 from .codon_table_builder import CodonTableBuilder
 from .common_cli import finalise
@@ -29,6 +29,7 @@ from .contig_filter import ContigFilter
 from .custom_variant import CustomVariant
 from .db import get_db_conn, init_db
 from .enums import SrcType
+from .errors import InvalidBackgroundVariant
 from .experiment_meta import ExperimentMeta
 from .genomic_position_offsets import GenomicPositionOffsets
 from .loaders.bed import BedLoader
@@ -47,7 +48,7 @@ from .seq_converter import apply_variants
 from .sge_config import SGEConfig
 from .sge_utils import fetch_sequence
 from .strings.strand import Strand
-from .targeton import Targeton, is_variant_frame_shifting, is_variant_nonsynonymous
+from .targeton import Targeton, is_variant_frame_shifting, is_variant_nonsynonymous, get_variant_codons
 from .transcript import Transcript
 from .uint_range import UIntRange, UIntRangeT
 from .utils import fmt_genomic_range, safe_group_by
@@ -76,6 +77,11 @@ def load_pam_variants(conn: Connection, vcf_fp: str, contig: str, ranges: list[U
     insert_pam_protection_edits(conn, ppe_vars)
 
 
+def get_non_syn_warn_message(contig, is_frame_shifting: bool, variant: Variant) -> str:
+    prefix = "Frame shifting" if is_frame_shifting else "Non-synonymous"
+    return f"{prefix} background variant at {contig}:{variant.pos}!"
+
+
 def validate_background_variants(
     conn: Connection,
     opt: Options,
@@ -92,25 +98,25 @@ def validate_background_variants(
     any_frame_shift = False
     any_non_syn = False
 
-    def is_var_non_syn(v: RegisteredBackgroundVariant) -> bool:
-        assert transcript
+    def is_var_non_syn(variant: Variant, variant_codons: list[CdsSeq]) -> bool:
         return is_variant_nonsynonymous(
             codon_table,
-            seq_ref,
             seq_bg,
             gpo,
-            transcript,
-            v)
+            variant,
+            variant_codons)
 
     for v in bg_vars:
-        if v.in_cds:
-            if is_var_non_syn(v):
+        codons = get_variant_codons(transcript, seq_ref, v) if transcript else []
+
+        if len(codons) > 0:
+            if is_var_non_syn(v, codons):
                 any_non_syn = True
                 # TODO: reassess for multiples of three
                 fs = is_variant_frame_shifting(v)
                 if fs:
                     any_frame_shift = True
-                logging.warning(v.get_non_syn_warn_message(contig, fs))
+                logging.warning(get_non_syn_warn_message(contig, fs, v))
 
         elif v.alt_ref_delta != 0:
             logging.warning(f"Background indel {contig}:{v} in non-coding region may impact splicing and SGE screen outcome!")
