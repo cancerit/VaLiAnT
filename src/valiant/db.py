@@ -20,7 +20,7 @@ import sqlite3
 from contextlib import contextmanager
 from enum import Enum
 from sqlite3 import Connection, Cursor
-from typing import Any, Generator
+from typing import Generator
 
 from .utils import get_ddl_path
 
