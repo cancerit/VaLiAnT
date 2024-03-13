@@ -272,10 +272,6 @@ class MetaTable:
                     pam_var = Variant(ref_var.pos, DnaStr(pam_ref), DnaStr(mr.alt))
                     oligo_name = get_oligo_name_f(src, pam_var)
 
-                    # TODO: consider dropping (just for backwards compatibility)
-                    if mr.mutator in {'aa', 'ala', 'stop'}:
-                        mr.mutation_type = ''
-
                     pam_ref_start = ref_var.pos
 
                     # Default SGE_REF (assuming no PPE interaction)
