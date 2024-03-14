@@ -443,7 +443,7 @@ class MetaTable:
                 if self.src_type == SrcType.REF:
 
                     # Prepare no-op oligonucleotide sequences
-                    oligo_no_adapt = self.bg_seq.s
+                    oligo_no_adapt = background_seq
                     if is_rc:
                         oligo_no_adapt = reverse_complement(oligo_no_adapt)
                     oligo = get_full_oligo(oligo_no_adapt)
