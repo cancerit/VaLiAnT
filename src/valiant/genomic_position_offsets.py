@@ -25,7 +25,7 @@ from .array_utils import get_prev_index, get_next_index, get_u32_array, get_u8_a
 from .uint_range import UIntRange
 from .utils import get_end
 from .var_stats import VarStats, clamp_var_stats_collection, get_alt_ref_delta
-from .variant import VariantT
+from .variant import Variant, VariantT
 
 
 class InvalidRefRange(ValueError):
@@ -227,7 +227,7 @@ class GenomicPositionOffsets:
     def ref_pos_overlaps_var(self, ref_pos: int) -> bool:
         return self._any_mask[self._pos_to_offset(ref_pos)] == 1
 
-    def ref_var_overlaps_var(self, variant: VariantT) -> bool:
+    def ref_var_overlaps_var(self, variant: Variant) -> bool:
         return any(
             self.ref_pos_overlaps_var(x)
             for x in range(variant.pos, variant.ref_end + 1)
