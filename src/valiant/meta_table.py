@@ -429,6 +429,9 @@ class MetaTable:
                 pam_seq = None
                 pam_mut_annot = None
 
+        # Name of the no-op oligonucleotide
+        no_op_oligo_name = get_sge_oligo_no_op_name(gene_id, transcript_id, contig, is_rc)
+
         with (
             open(meta_fp, 'w') as meta_fh,
             open(meta_excl_fp, 'w') as meta_excl_fh,
@@ -449,18 +452,16 @@ class MetaTable:
                     oligo = get_full_oligo(oligo_no_adapt)
                     oligo_length = len(oligo)
 
-                    oligo_name = get_sge_oligo_no_op_name(gene_id, transcript_id, contig, is_rc)
-
                     # Evalute oligonucleotide length
                     if info.eval_in_range(self.opt, oligo_length):
                         fh = meta_fh
-                        unique_oligos[oligo].append(oligo_name)
+                        unique_oligos[oligo].append(no_op_oligo_name)
                     else:
                         fh = meta_excl_fh
 
                     write_no_op_meta_record(
                         fh,
-                        oligo_name,
+                        no_op_oligo_name,
                         species,
                         assembly,
                         gene_id,
