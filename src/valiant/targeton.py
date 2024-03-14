@@ -168,6 +168,9 @@ class Targeton:
     def sgrna_ids(self) -> frozenset[str]:
         return self.config.sgrna_ids
 
+    def get_mave_nt(self, variant: Variant) -> str:
+        return variant.get_mave_nt(self.config.ref.start)
+
     def get_ppe_mut_types(
         self,
         conn: Connection,
@@ -276,8 +279,7 @@ class Targeton:
             if gpo:
                 if gpo.alt_var_overlaps_var(x):
                     logging.warning(
-                        "Pattern variant %s:%s" % (contig, x) +
-                        " (local background-corrected coordinates)" +
+                        "Pattern variant %s" % self.get_mave_nt(x) +
                         " overlaps coordinate-shifting background variant (discarded)!")
                     return None
 

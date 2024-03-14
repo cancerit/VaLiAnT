@@ -24,6 +24,7 @@ from typing import Callable, NoReturn, TypeVar
 
 from .constants import NT_SNVS
 from .enums import VariantType
+from .mave_hgvs import get_mave_nt
 from .strings.dna_str import DnaStr
 from .strings.nucleotide import Nucleotide
 from .uint_range import UIntRange
@@ -152,6 +153,9 @@ class Variant:
                 return f"{pos_frag}_{self.alt}"
             case VariantType.UNKNOWN:
                 raise ValueError("Unknown variant type!")
+
+    def get_mave_nt(self, targeton_start: int) -> str:
+        return get_mave_nt(self.pos, targeton_start, self.type, self.ref, self.alt)
 
 
 @dataclass
