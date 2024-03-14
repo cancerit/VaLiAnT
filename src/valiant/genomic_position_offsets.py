@@ -106,24 +106,24 @@ def _compute_ref_offsets(ref_variants: list[VarStats]) -> list[PosOffset]:
 
 
 def _compute_ref_del_mask(ref_start: int, ref_length: int, ref_variants: list[VarStats]) -> tuple[array, array]:
-    mask = get_u8_array(ref_length)
-    any_mask = get_u8_array(ref_length)
+    del_mask = get_u8_array(ref_length)
+    shift_mask = get_u8_array(ref_length)
 
     for variant in ref_variants:
         if variant.alt_ref_delta != 0:
             ref_offset = variant.pos - ref_start
 
             for i in range(max(1, variant.ref_len)):
-                any_mask[ref_offset + i] = 1
+                shift_mask[ref_offset + i] = 1
 
             # Filter out variants that do not add to ALT
             if variant.alt_ref_delta < 0:
 
                 # Increment offsets spanned by ALT
                 for i in range(variant.ref_len):
-                    mask[ref_offset + i] = 1
+                    del_mask[ref_offset + i] = 1
 
-    return mask, any_mask
+    return del_mask, shift_mask
 
 
 @dataclass(slots=True)
@@ -136,7 +136,7 @@ class GenomicPositionOffsets:
     # REF -> ALT
     _pos_offsets: list[PosOffset]
     _ref_del_mask: array
-    _any_mask: array
+    _shift_mask: array
 
     # ALT -> REF
     _ins_offsets: array
@@ -150,7 +150,7 @@ class GenomicPositionOffsets:
         ref_length = len(r)
 
         alt_length = ref_length + get_alt_ref_delta(cvs)
-        del_mask, any_mask = _compute_ref_del_mask(ref_start, ref_length, cvs)
+        del_mask, shift_mask = _compute_ref_del_mask(ref_start, ref_length, cvs)
         pos_offsets = _compute_ref_offsets(cvs)
 
         ref_del_offsets = get_i32_array(ref_length)
@@ -163,7 +163,7 @@ class GenomicPositionOffsets:
         # TODO: build these based on the reference offsets
         ins_offsets, ins_mask = _compute_alt_offsets(ref_start, alt_length, cvs)
 
-        return cls(r, alt_length, pos_offsets, del_mask, any_mask, ins_offsets, ins_mask, ref_del_offsets)
+        return cls(r, alt_length, pos_offsets, del_mask, shift_mask, ins_offsets, ins_mask, ref_del_offsets)
 
     def __post_init__(self) -> None:
         if self.alt_length < 0:
@@ -225,7 +225,7 @@ class GenomicPositionOffsets:
         return self._ref_del_mask[self._pos_to_offset(ref_pos)] == 0
 
     def ref_pos_overlaps_var(self, ref_pos: int) -> bool:
-        return self._any_mask[self._pos_to_offset(ref_pos)] == 1
+        return self._shift_mask[self._pos_to_offset(ref_pos)] == 1
 
     def ref_var_overlaps_var(self, variant: Variant) -> bool:
         return any(
