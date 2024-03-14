@@ -110,18 +110,18 @@ def _compute_ref_del_mask(ref_start: int, ref_length: int, ref_variants: list[Va
     any_mask = get_u8_array(ref_length)
 
     for variant in ref_variants:
-        ref_offset = variant.pos - ref_start
+        if variant.alt_ref_delta != 0:
+            ref_offset = variant.pos - ref_start
 
-        if variant.ref_len > 0:
-            for i in range(variant.ref_len):
+            for i in range(max(1, variant.ref_len)):
                 any_mask[ref_offset + i] = 1
 
-        # Filter out variants that do not add to ALT
-        if variant.alt_ref_delta < 0:
+            # Filter out variants that do not add to ALT
+            if variant.alt_ref_delta < 0:
 
-            # Increment offsets spanned by ALT
-            for i in range(variant.ref_len):
-                mask[ref_offset + i] = 1
+                # Increment offsets spanned by ALT
+                for i in range(variant.ref_len):
+                    mask[ref_offset + i] = 1
 
     return mask, any_mask
 
