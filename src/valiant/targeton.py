@@ -211,8 +211,8 @@ class Targeton:
             if gpo:
                 if gpo.ref_var_overlaps_var(x):
                     logging.warning(
-                        "Custom variant %s:%s overlaps a background variant (discarded)!" %
-                        (contig, x))
+                        "Custom variant %s:%s" % (contig, x) +
+                        " overlaps a coordinate-shifting background variant (discarded)!")
                     return None
 
                 # Lift custom variant positions from reference to altered
@@ -273,13 +273,18 @@ class Targeton:
             annot_variants.extend(annot_vars)
 
         def get_oligo(x: VariantT) -> OligoSeq[VariantT] | None:
-            # TODO: verify the lift-over calculation
-            ref_start = gpo.alt_to_ref_position(x.pos) if gpo else x.pos
-            if ref_start is None:
-                logging.warning(
-                    "Pattern variant at %s:%d does not exist in reference (discarded)!" %
-                    (contig, x.pos))
-                return None
+            if gpo:
+                if gpo.alt_var_overlaps_var(x):
+                    logging.warning(
+                        "Pattern variant %s:%s" % (contig, x) +
+                        " (local background-corrected coordinates)" +
+                        " overlaps coordinate-shifting background variant (discarded)!")
+                    return None
+
+                ref_start = gpo.alt_to_ref_position(x.pos)
+
+            else:
+                ref_start = x.pos
             return _get_oligo(targeton_seq, x, ref_start=ref_start)
 
         def get_oligos(variants: list[VariantT]) -> list[OligoSeq[VariantT]]:

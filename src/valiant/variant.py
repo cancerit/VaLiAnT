@@ -17,10 +17,10 @@
 #############################
 
 from __future__ import annotations
-from collections import Counter
 
+from collections import Counter
 from dataclasses import dataclass, replace
-from typing import NoReturn, TypeVar
+from typing import Callable, NoReturn, TypeVar
 
 from .constants import NT_SNVS
 from .enums import VariantType
@@ -128,6 +128,14 @@ class Variant:
 
     def offset(self, offset: int):
         return self.clone(pos=self.pos + offset)
+
+    def any_pos(self, pos_cond_f: Callable[[int], bool]) -> bool:
+        """Test if any of the reference positions statisfies a condition"""
+
+        return any(
+            pos_cond_f(x)
+            for x in self.ref_range.positions
+        ) if self.ref_len > 1 else pos_cond_f(self.pos)
 
     def get_oligo_name_frag(self) -> str:
         pos_frag = (

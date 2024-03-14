@@ -228,10 +228,34 @@ class GenomicPositionOffsets:
         return self._shift_mask[self._pos_to_offset(ref_pos)] == 1
 
     def ref_var_overlaps_var(self, variant: Variant) -> bool:
-        return any(
-            self.ref_pos_overlaps_var(x)
-            for x in range(variant.pos, variant.ref_end + 1)
-        ) if variant.ref_len > 1 else self.ref_pos_overlaps_var(variant.pos)
+        return variant.any_pos(self.ref_pos_overlaps_var)
+
+    def alt_var_overlaps_var(self, variant: Variant) -> bool:
+        # Lift start over
+        ref_start = self.alt_to_ref_position(variant.pos)
+        if ref_start is None:
+            return True
+
+        if variant.ref_len <= 1:
+            return False
+
+        # Lift end over
+        ref_end = self.alt_to_ref_position(variant.ref_end)
+        if ref_end is None:
+            return True
+
+        ref_range = UIntRange(ref_start, ref_end)
+
+        # Test for change in reference length
+        if len(ref_range) != variant.ref_len:
+            return True
+
+        # Test for lifted over positions overlapping indels
+        for ref_pos in ref_range.positions:
+            if self.ref_pos_overlaps_var(ref_pos):
+                return True
+
+        return False
 
     def _alt_to_ref_position(self, alt_pos: int) -> int:
         """
