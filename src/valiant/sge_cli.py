@@ -39,6 +39,10 @@ from .sge_proc import run_sge
     is_flag=True,
     help="Include reverse complement in oligonucleotide if reference is on minus strand")
 @click.option(
+    '--include-no-op-oligo',
+    is_flag=True,
+    help="Include no-op oligonucleotide if any background or PAM protection variant is applied to the targeton")
+@click.option(
     '--force-bg-ns',
     'force_bg_ns',
     is_flag=True,
@@ -78,6 +82,7 @@ def sge(
     # Actions
     sequences_only: bool,
     revcomp_minus_strand: bool,
+    include_no_op_oligo: bool,
     max_length: int,
     min_length: int
 
@@ -106,6 +111,7 @@ def sge(
             ref_fasta_fp=ref_fasta_fp,
             output_dir=output_dir,
             revcomp_minus_strand=revcomp_minus_strand,
+            include_no_op_oligo=include_no_op_oligo,
             force_bg_ns=force_bg_ns,
             force_bg_fs=force_bg_fs,
             gff_fp=gff_fp,

@@ -24,6 +24,7 @@ from .strings.strand import Strand
 @dataclass(slots=True)
 class Options:
     revcomp_minus_strand: bool
+    include_no_op_oligo: bool
     oligo_max_length: int
     oligo_min_length: int
     allow_frame_shift: bool

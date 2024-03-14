@@ -443,7 +443,7 @@ class MetaTable:
 
             with cursor(conn) as cur:
 
-                if self.src_type == SrcType.REF:
+                if self.opt.include_no_op_oligo:
 
                     # Prepare no-op oligonucleotide sequences
                     oligo_no_adapt = background_seq

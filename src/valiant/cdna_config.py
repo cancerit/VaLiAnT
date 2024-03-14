@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -29,6 +29,7 @@ class CDNAConfig(BaseConfig):
         # TODO: subclass instead
         return Options(
             revcomp_minus_strand=False,
+            include_no_op_oligo=False,
             oligo_max_length=self.max_length,
             oligo_min_length=self.min_length,
             allow_frame_shift=False,

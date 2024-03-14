@@ -26,7 +26,10 @@ from .utils import get_not_none
 
 
 class SGEConfig(BaseConfig):
+
+    # Flags
     revcomp_minus_strand: bool = Field(alias='reverseComplementOnMinusStrand')
+    include_no_op_oligo: bool = Field(alias='includeNoOpOligo', default=False)
 
     # File paths
     gff_fp: str | None = Field(alias='GFFFilePath')
@@ -51,6 +54,7 @@ class SGEConfig(BaseConfig):
     def get_options(self) -> Options:
         return Options(
             revcomp_minus_strand=self.revcomp_minus_strand,
+            include_no_op_oligo=self.include_no_op_oligo,
             oligo_max_length=self.max_length,
             oligo_min_length=self.min_length,
             allow_non_syn=self.force_bg_ns,

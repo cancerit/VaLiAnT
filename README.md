@@ -556,6 +556,7 @@ The execution parameters depend on the execution mode, and each corresponds to o
 |`mask_bg_fp`|`maskBackgroundFilePath`|
 |`force-bg-ns`|`forceBackgroundNonSynonymous`|
 |`force-bg-indels`|`forceBackgroundFrameShifting`|
+|`include-no-op-oligo`|`includeNoOpOligo`|
 
 Example:
 
@@ -577,6 +578,7 @@ Example:
         "refFASTAFilePath": "reference_input_files/chr17.fa",
         "outputDirPath": "brca1_nuc_output",
         "reverseComplementOnMinusStrand": true,
+        "includeNoOpOligo": false,
         "GFFFilePath": "reference_input_files/ENST00000357654.9.gtf",
         "PAMProtectionVCFFilePath": "parameter_input_files/brca1_protection_edits.vcf",
         "customVCFManifestFilePath": "reference_input_files/brca1_custom_variants_manifest.csv",
