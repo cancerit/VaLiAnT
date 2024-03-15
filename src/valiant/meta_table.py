@@ -419,6 +419,10 @@ class MetaTable:
                     get_sge_oligo_name, gene_id, transcript_id, contig, is_rc)
                 pam_seq = self.alt_seq.s
                 pam_mut_annot = ';'.join([x.value for x in self.ppe_mut_types])
+                include_no_op_oligo = self.opt.include_no_op_oligo and (
+                    len(self.ppe_mut_types) > 0 or
+                    len(self.bg_variants) > 0
+                )
 
             case SrcType.CDNA:
                 assert self.seq_id
@@ -428,6 +432,7 @@ class MetaTable:
                     get_cdna_oligo_name, gene_id, transcript_id, self.seq_id)
                 pam_seq = None
                 pam_mut_annot = None
+                include_no_op_oligo = False
 
         # Name of the no-op oligonucleotide
         no_op_oligo_name = get_sge_oligo_no_op_name(gene_id, transcript_id, contig, is_rc)
@@ -443,7 +448,7 @@ class MetaTable:
 
             with cursor(conn) as cur:
 
-                if self.opt.include_no_op_oligo:
+                if include_no_op_oligo:
 
                     # Prepare no-op oligonucleotide sequences
                     oligo_no_adapt = background_seq
