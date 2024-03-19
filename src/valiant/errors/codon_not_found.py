@@ -16,10 +16,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from . import CustomException
 
-
-class CodonNotFound(CustomException):
+class CodonNotFound(Exception):
     def __init__(self, codon: str) -> None:
         self.codon = codon
 

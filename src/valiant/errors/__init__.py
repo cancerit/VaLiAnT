@@ -16,16 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from abc import ABC, abstractmethod
-
-
-class CustomException(Exception, ABC):
-
-    @property
-    @abstractmethod
-    def message(self) -> str:
-        pass
-
 
 class NonUniqueError(Exception):
     pass
@@ -55,5 +45,5 @@ class GenomicRangeOutOfBounds(Exception):
     pass
 
 
-class InvalidBackgroundVariant(CustomException):
+class InvalidBackgroundVariant(Exception):
     pass
