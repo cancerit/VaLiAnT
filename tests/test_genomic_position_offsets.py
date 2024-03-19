@@ -16,9 +16,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from valiant.genomic_position_offsets import GenomicPositionOffsets
+import pytest
+
+from valiant.genomic_position_offsets import GenomicPositionOffsets, PosOffset, get_pos_offset
 from valiant.uint_range import UIntRange
-from valiant.var_stats import VarStats
+from valiant.var_stats import VarStats, get_alt_ref_delta
 
 
 def get_del(pos, ref_len = 1):
@@ -29,24 +31,64 @@ def get_ins(pos, alt_len = 1):
     return VarStats(pos, 0, alt_len)
 
 
-def check_alt_to_ref_to_alt(gpo, ref):
-    alt_1 = gpo.ref_to_alt_position(ref)
-    print(f"{ref} -> {alt_1}")
-    alt_2 = gpo.alt_to_ref_position(alt_1)
-    print(f"{alt_1} -> {alt_2}")
-    assert alt_1 == alt_2
+pos_offsets = [PosOffset(10, -1), PosOffset(13, 0), PosOffset(15, 2)]
 
 
+@pytest.mark.parametrize('pos,exp', [
+    (9, 0),
+    (10, -1),
+    (11, -1),
+    (14, 0),
+    (15, 2),
+    (20, 2)
+])
+def test_get_pos_offset(pos, exp):
+    assert get_pos_offset(pos_offsets, pos) == exp
+
+
+# XAY AAXAAY  AY AA
+#  AXXAA AAXXXAXXAA
 def test_genomic_position_offsets():
-    gpo = GenomicPositionOffsets.from_var_stats([
+    var_stats = [
         get_del(10),
         get_ins(12),
         get_del(15),
         get_ins(18, 2),
         get_ins(20, 1)
-    ], UIntRange(10, 22))
-    assert gpo.alt_to_ref_position(11) is None
+    ]
+    gpo = GenomicPositionOffsets.from_var_stats(var_stats, UIntRange(10, 22))
+    print(gpo._ref_del_mask)
+    print(gpo._pos_offsets)
+    print(gpo._alt_ins_mask)
+
+    print('\t'.join(['ref', 'alt', 'ref', 'alt']))
+    for pos in range(gpo.ref_start, gpo.ref_range.end):
+        alt = gpo.ref_to_alt_position(pos)
+        ref = gpo.alt_to_ref_position(alt) if alt else None
+        alt2 = gpo.ref_to_alt_position(ref) if ref else None
+        if ref is not None:
+            assert alt2 == alt
+        print('\t'.join(str(x) if x is not None else '.' for x in [pos, alt, ref, alt2]))
+
+    print('\t'.join(['alt', 'ref', 'alt']))
+    for alt_pos in range(gpo.ref_start, gpo.ref_start + gpo.alt_length):
+        ref = gpo.alt_to_ref_position(alt_pos)
+        alt = gpo.ref_to_alt_position(ref) if ref is not None else None
+        print('\t'.join(str(x) if x is not None else '.' for x in [alt_pos, ref, alt]))
+        if alt is not None:
+            assert alt == alt_pos
+
+    assert len(gpo._ref_del_mask) == len(gpo.ref_range)
+    assert len(gpo._alt_ins_mask) == len(gpo.ref_range) + get_alt_ref_delta(var_stats)
+
+    # Position does not exist in the reference
+    for pos in [11, 17, 18]:
+        assert gpo.alt_to_ref_position(pos) is None
+
+    # Position exists in the reference (unaltered)
     assert gpo.alt_to_ref_position(12) == 12
-    assert gpo.alt_to_ref_position(17) is None
-    assert gpo.alt_to_ref_position(18) is None
+    assert gpo.ref_to_alt_position(12) == 12
+
+    # Position exists in the reference (altered)
     assert gpo.alt_to_ref_position(19) == 18
+    assert gpo.ref_to_alt_position(18) == 19
