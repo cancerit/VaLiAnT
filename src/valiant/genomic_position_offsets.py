@@ -72,7 +72,7 @@ def get_pos_offset(pos_offsets: list[PosOffset], pos: int) -> int:
     return 0
 
 
-def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable[VarStats]) -> tuple[array, array]:
+def _compute_alt_ins_mask(ref_start: int, alt_length: int, alt_variants: Iterable[VarStats]) -> array:
     """
     Generate an array of position offsets to convert relative positions in ALT to
     reference positions
@@ -80,7 +80,6 @@ def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable
     The variants are assumed to be in range and sorted by position.
     """
 
-    alt_offsets = get_u32_array(alt_length)
     ins_mask = get_u8_array(alt_length)
     alt_offset: int = 0
     var_offset: int = 0
@@ -96,17 +95,14 @@ def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable
             for i in range(variant.alt_len):
                 offset = ref_offset + i
                 alt_offset += 1
-                alt_offsets[offset] = 0
                 ins_mask[offset] = 1
 
             # Set all downstream offsets (assumes the variants to be sorted by position)
             offset = ref_offset + variant.alt_len
-            for i in range(offset, alt_length):
-                alt_offsets[i] = alt_offset
 
         var_offset += variant.alt_ref_delta
 
-    return alt_offsets, ins_mask
+    return ins_mask
 
 
 def _compute_ref_offsets(ref_variants: list[VarStats]) -> tuple[list[PosOffset], list[PosOffset]]:
@@ -163,10 +159,8 @@ class GenomicPositionOffsets:
     _shift_mask: array
 
     # ALT -> REF
-    _ins_offsets: array
     _alt_offsets: list[PosOffset]
     _alt_ins_mask: array
-    _ref_del_offsets: array
 
     def _get_ref_pos_offset(self, ref_pos: int) -> int:
         return get_pos_offset(self._pos_offsets, ref_pos)
@@ -184,17 +178,10 @@ class GenomicPositionOffsets:
         del_mask, shift_mask = _compute_ref_del_mask(ref_start, ref_length, cvs)
         pos_offsets, alt_offsets = _compute_ref_offsets(cvs)
 
-        ref_del_offsets = get_i32_array(ref_length)
-        offset = 0
-        for x in pos_offsets:
-            offset = x.offset
-            for i in range(x.pos - ref_start, ref_length):
-                ref_del_offsets[i] = offset
-
         # TODO: build these based on the reference offsets
-        ins_offsets, ins_mask = _compute_alt_offsets(ref_start, alt_length, cvs)
+        ins_mask = _compute_alt_ins_mask(ref_start, alt_length, cvs)
 
-        return cls(r, alt_length, pos_offsets, del_mask, shift_mask, ins_offsets, alt_offsets, ins_mask, ref_del_offsets)
+        return cls(r, alt_length, pos_offsets, del_mask, shift_mask, alt_offsets, ins_mask)
 
     def __post_init__(self) -> None:
         if self.alt_length < 0:
@@ -296,7 +283,7 @@ class GenomicPositionOffsets:
         Unsafe, no boundary or insertion mask test.
         """
 
-        return alt_pos - self._ins_offsets[self._pos_to_offset(alt_pos)]
+        return alt_pos + self._get_alt_pos_offset(alt_pos)
 
     def alt_to_ref_position(self, alt_pos: int) -> int | None:
         """Lift a position from ALT to REF"""
@@ -321,14 +308,6 @@ class GenomicPositionOffsets:
 
     def _ref_offset_to_alt_pos(self, ref_pos: int) -> int:
         return ref_pos + self._ref_to_alt_offset(ref_pos)
-
-    def alt_to_ref_position_2(self, alt_pos: int) -> int | None:
-        self.validate_alt_position(alt_pos)
-
-        if not self.alt_pos_exists_in_ref(alt_pos):
-            return None
-
-        return alt_pos + self._get_alt_pos_offset(alt_pos)
 
     def ref_to_alt_position(self, ref_pos: int, nearest: SearchType | None = None) -> int | None:
         i = self._pos_to_offset(ref_pos)
