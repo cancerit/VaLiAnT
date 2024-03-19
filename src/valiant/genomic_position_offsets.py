@@ -53,6 +53,25 @@ class PosOffset:
     offset: int
 
 
+def get_pos_offset(pos_offsets: list[PosOffset], pos: int) -> int:
+    if not pos_offsets:
+        return pos
+
+    first = pos_offsets[0]
+    if pos < first.pos:
+        return 0
+
+    last = pos_offsets[-1]
+    if pos >= last.pos:
+        return last.offset
+
+    for i in range(1, len(pos_offsets)):
+        if pos < pos_offsets[i].pos:
+            return pos_offsets[i - 1].offset
+
+    return 0
+
+
 def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable[VarStats]) -> tuple[array, array]:
     """
     Generate an array of position offsets to convert relative positions in ALT to
@@ -90,7 +109,7 @@ def _compute_alt_offsets(ref_start: int, alt_length: int, alt_variants: Iterable
     return alt_offsets, ins_mask
 
 
-def _compute_ref_offsets(ref_variants: list[VarStats]) -> list[PosOffset]:
+def _compute_ref_offsets(ref_variants: list[VarStats]) -> tuple[list[PosOffset], list[PosOffset]]:
     """
     Map sorted positions to the cumulative offsets the corresponding variants introduce
 
@@ -99,10 +118,15 @@ def _compute_ref_offsets(ref_variants: list[VarStats]) -> list[PosOffset]:
 
     offset: int = 0
     pos_offset = []
+    alt_offset = []
+    alt_pos: int = 0
     for variant in ref_variants:
-        offset += variant.alt_ref_delta
-        pos_offset.append(PosOffset(variant.pos, offset))
-    return pos_offset
+        if variant.alt_ref_delta != 0:
+            alt_pos = variant.pos + offset
+            offset += variant.alt_ref_delta
+            pos_offset.append(PosOffset(variant.pos, offset))
+            alt_offset.append(PosOffset(alt_pos, -offset))
+    return pos_offset, alt_offset
 
 
 def _compute_ref_del_mask(ref_start: int, ref_length: int, ref_variants: list[VarStats]) -> tuple[array, array]:
@@ -140,8 +164,15 @@ class GenomicPositionOffsets:
 
     # ALT -> REF
     _ins_offsets: array
+    _alt_offsets: list[PosOffset]
     _alt_ins_mask: array
     _ref_del_offsets: array
+
+    def _get_ref_pos_offset(self, ref_pos: int) -> int:
+        return get_pos_offset(self._pos_offsets, ref_pos)
+
+    def _get_alt_pos_offset(self, alt_pos: int) -> int:
+        return get_pos_offset(self._alt_offsets, alt_pos)
 
     @classmethod
     def from_var_stats(cls, vs: Iterable[VarStats], r: UIntRange):
@@ -151,7 +182,7 @@ class GenomicPositionOffsets:
 
         alt_length = ref_length + get_alt_ref_delta(cvs)
         del_mask, shift_mask = _compute_ref_del_mask(ref_start, ref_length, cvs)
-        pos_offsets = _compute_ref_offsets(cvs)
+        pos_offsets, alt_offsets = _compute_ref_offsets(cvs)
 
         ref_del_offsets = get_i32_array(ref_length)
         offset = 0
@@ -163,7 +194,7 @@ class GenomicPositionOffsets:
         # TODO: build these based on the reference offsets
         ins_offsets, ins_mask = _compute_alt_offsets(ref_start, alt_length, cvs)
 
-        return cls(r, alt_length, pos_offsets, del_mask, shift_mask, ins_offsets, ins_mask, ref_del_offsets)
+        return cls(r, alt_length, pos_offsets, del_mask, shift_mask, ins_offsets, alt_offsets, ins_mask, ref_del_offsets)
 
     def __post_init__(self) -> None:
         if self.alt_length < 0:
@@ -192,16 +223,17 @@ class GenomicPositionOffsets:
 
     def _ref_to_alt_offset(self, ref_pos: int) -> int:
         # TODO: optimise search in sorted list
-        for p in self._pos_offsets:
-            if ref_pos >= p.pos:
-                return p.offset
-        return 0
+        return self._get_ref_pos_offset(ref_pos)
 
     def get_offset(self, pos: int) -> int:
         if not self._pos_offsets or pos < self._pos_offsets[0].pos:
             return 0
 
         return self._ref_to_alt_offset(pos)
+
+    def validate_ref_position(self, ref_pos: int) -> None:
+        if ref_pos not in self.ref_range:
+            raise ValueError(f"Invalid ALT position {ref_pos}: out of bounds!")
 
     def validate_alt_position(self, alt_pos: int) -> None:
         if alt_pos < self.ref_start or self.alt_end is None or alt_pos > self.alt_end:
@@ -290,28 +322,52 @@ class GenomicPositionOffsets:
     def _ref_offset_to_alt_pos(self, ref_pos: int) -> int:
         return ref_pos + self._ref_to_alt_offset(ref_pos)
 
+    def alt_to_ref_position_2(self, alt_pos: int) -> int | None:
+        self.validate_alt_position(alt_pos)
+
+        if not self.alt_pos_exists_in_ref(alt_pos):
+            return None
+
+        return alt_pos + self._get_alt_pos_offset(alt_pos)
+
     def ref_to_alt_position(self, ref_pos: int, nearest: SearchType | None = None) -> int | None:
         i = self._pos_to_offset(ref_pos)
+
+        # Reference position before the context
+        if i < 0:
+
+            # This position is guaranteed to exist because alt positions are anchored to the left
+            # Assumption: nonzero context length
+            return ref_pos
+
         mask = self._ref_del_mask
 
-        if mask[i] == 0:
+        if i < self.ref_length:
 
-            # A corresponding position exists
-            return self._ref_offset_to_alt_pos(ref_pos)
+            # Reference position within the context
+            if mask[i] == 0:
 
-        if nearest is None:
-            return None
+                # A corresponding position exists
+                return self._ref_offset_to_alt_pos(ref_pos)
 
-        f = SEARCH_F[nearest]
+            if nearest is None:
+                return None
 
-        # Search for an existing position before or after the query
-        offset = f(mask, i, 0)
-        if offset is None:
-            return None
+            # Search for an existing position before or after the query
+            f = SEARCH_F[nearest]
+            offset = f(mask, i, 0)
+            if offset is None:
+                return None
 
-        # Return the nearest existing ALT position
-        nearest_ref_pos = self._offset_to_pos(offset)
-        return self._ref_offset_to_alt_pos(nearest_ref_pos)
+            # Return the nearest existing ALT position
+            nearest_ref_pos = self._offset_to_pos(offset)
+            return self._ref_offset_to_alt_pos(nearest_ref_pos)
+
+        else:
+
+            # Reference position after the context (guaranteed to exist)
+            # Assumption: reference position is within the contig bounds (not verified anywhere)
+            return self._ref_offset_to_alt_pos(self.ref_range.end)
 
     def ref_to_alt_range(self, r: UIntRange, shrink: bool = False) -> UIntRange | None:
         """
