@@ -92,3 +92,30 @@ def test_genomic_position_offsets():
     # Position exists in the reference (altered)
     assert gpo.alt_to_ref_position(19) == 18
     assert gpo.ref_to_alt_position(18) == 19
+
+
+@pytest.mark.parametrize('variant,shift_range,del_range,ins_range', [
+    (VarStats(15, 1, 1), None, None, None),  # SNV
+    (VarStats(15, 5, 0), UIntRange(15, 19), UIntRange(15, 19), None),  # deletion
+    (VarStats(15, 0, 5), UIntRange(15, 15), UIntRange(15, 15), UIntRange(15, 19)),  # insertion
+    (VarStats(15, 5, 3), UIntRange(15, 19), UIntRange(15, 19), UIntRange(15, 19)),  # MNV (shift)
+    (VarStats(15, 3, 5), UIntRange(15, 17), UIntRange(15, 17), UIntRange(15, 19)),  # MNV (shift)
+    (VarStats(15, 5, 5), None, UIntRange(15, 19), UIntRange(15, 19))  # MNV (no shift)
+])
+def test_genomic_position_offsets_mask(variant, shift_range, del_range, ins_range):
+    r = UIntRange(10, 20)
+    gpo = GenomicPositionOffsets.from_var_stats([variant], r)
+
+    for pos in r.positions:
+        assert gpo._shift_mask[pos - gpo.ref_start] == (
+            int(pos in shift_range) if shift_range is not None else 0)
+        if variant.alt_ref_delta < 0:
+            assert gpo._ref_del_mask[pos - gpo.ref_start] == int(pos in del_range)
+
+    assert gpo.alt_range is not None
+    if ins_range is not None and variant.alt_ref_delta > 0:
+        for pos in gpo.alt_range.positions:
+            assert gpo._alt_ins_mask[pos - gpo.ref_start] == int(pos in ins_range)
+    else:
+        for pos in gpo.alt_range.positions:
+            assert gpo._alt_ins_mask[pos - gpo.ref_start] == 0
