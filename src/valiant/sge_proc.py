@@ -398,6 +398,7 @@ def get_gpo_ctx(
 def get_ctx_seq_bg(conn: Connection, gpo: GenomicPositionOffsets, ctx_seq: Seq) -> Seq:
     # TODO: fetch them only once for GPO and this...?
     bg_vars = select_background_variants(conn, ctx_seq.get_range())
+    # Assumption: the background variants are sorted by position
     return apply_variants(ctx_seq, gpo.alt_length, bg_vars)
 
 
