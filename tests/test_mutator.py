@@ -26,7 +26,7 @@ from valiant.utils import get_default_codon_table_path
 codon_table = CodonTable.from_list(
     load_codon_table_rows(get_default_codon_table_path()))
 
-seq = CdsSeq(10, DnaStr('AAAAAA'), DnaStr.empty(), DnaStr.empty())
+seq = CdsSeq(10, DnaStr('AAAAAA'))
 
 
 def test_snv_re_mutator():

@@ -16,12 +16,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
+from typing import Sequence
+
 from .seq import Seq
 from .strings.dna_str import DnaStr
 from .variant import Variant
 
 
-def apply_variants(ref_seq: Seq, alt_length: int, variants: list[Variant]) -> Seq:
+def apply_variants(ref_seq: Seq, alt_length: int, variants: Sequence[Variant]) -> Seq:
     """
     Alter a DNA sequence based on a set of variants
 
@@ -47,7 +49,7 @@ def apply_variants(ref_seq: Seq, alt_length: int, variants: list[Variant]) -> Se
     k = 0  # variant index
 
     # Next variant (assumption: variants are sorted by position)
-    v: Variant | None = variants[k]
+    v: Variant = variants[k]
 
     if v.pos > ref_start:
 
