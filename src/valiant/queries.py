@@ -386,6 +386,7 @@ select
     id
 from background_variants
 where start >= ? and start <= ?
+order by start
 """
 
 
