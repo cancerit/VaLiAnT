@@ -55,7 +55,7 @@ class PosOffset:
 
 def get_pos_offset(pos_offsets: list[PosOffset], pos: int) -> int:
     if not pos_offsets:
-        return pos
+        return 0
 
     first = pos_offsets[0]
     if pos < first.pos:
