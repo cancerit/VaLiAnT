@@ -451,7 +451,7 @@ class MetaTable:
                 if include_no_op_oligo:
 
                     # Prepare no-op oligonucleotide sequences
-                    oligo_no_adapt = background_seq
+                    oligo_no_adapt = self.alt_seq.s
                     if is_rc:
                         oligo_no_adapt = reverse_complement(oligo_no_adapt)
                     oligo = get_full_oligo(oligo_no_adapt)
