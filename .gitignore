@@ -2,6 +2,10 @@
 __pycache__/
 build/
 test_results/
+brca1_nuc_output/
+brca1_pep_output/
+output_a/
+output_b/
 *.egg-info
 .DS_Store
 .coverage

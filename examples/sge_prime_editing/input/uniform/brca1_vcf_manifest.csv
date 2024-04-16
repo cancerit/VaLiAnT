@@ -1,3 +1,0 @@
-vcf_alias,vcf_id_tag,vcf_path
-gnomad_v3,,input/uniform/BRCA1.ENSG00000012048.gnomad.genomes.r3.0.vcf
-clinvar_20201107,,input/uniform/clinvar_20201107_chr_brca1.vcf

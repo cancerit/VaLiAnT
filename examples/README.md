@@ -24,6 +24,7 @@ cd sge
 To generate the example BRCA1 libraries (the corresponding output directories will be created if they don't exist):
 
 ```sh
+cd brca1
 ./run_brca1_nuc.sh  # -> brca1_nuc_output/
 ./run_brca1_pep.sh  # -> brca1_pep_output/
 ```

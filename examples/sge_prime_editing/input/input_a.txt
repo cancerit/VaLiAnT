@@ -1,2 +1,0 @@
-ref_chr	ref_strand	ref_start	ref_end	r2_start	r2_end	ext_vector	action_vector	sgrna_vector
-chr17	-	43115722	43115768	43115726	43115768	"4,0"	"(1del,snv,2del0),(1del,snvre,inframe,stop,ala,aa),()"	sgRNA_ex2_a

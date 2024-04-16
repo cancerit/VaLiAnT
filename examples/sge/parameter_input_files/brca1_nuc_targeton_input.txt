@@ -1,5 +1,0 @@
-ref_chr	ref_strand	ref_start	ref_end	r2_start	r2_end	ext_vector	action_vector	sgrna_vector
-chr17	-	43115634	43115878	43115726	43115779	"25,25"	"(1del,2del1,snv),(1del,snvre,inframe,stop,ala),(1del,2del0,snv)"	sgRNA_ex2
-chr17	-	43106355	43106599	43106456	43106533	"25,25"	"(1del,2del1,snv),(1del,snvre,inframe,stop,ala),(1del,2del0,snv)"	sgRNA_ex3
-chr17	-	43104794	43105038	43104868	43104956	"25,25"	"(1del,2del1,snv),(1del,snvre,inframe,stop,ala),(1del,2del0,snv)"	sgRNA_ex4
-chr17	-	43104080	43104330	43104122	43104261	"20,41"	"(1del,2del0,snv),(1del,snvre,inframe,stop,ala),(1del,2del0,snv)"	sgRNA_ex5

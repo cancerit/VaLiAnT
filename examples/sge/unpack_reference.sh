@@ -18,5 +18,4 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-
-gunzip reference_input_files/chr17.fa.gz
+gunzip ref/chr17.fa.gz
