@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from enum import IntEnum
 from typing import Callable, Iterable
 
-from .array_utils import get_prev_index, get_next_index, get_u32_array, get_u8_array, get_i32_array
+from .array_utils import get_prev_index, get_next_index, get_u8_array
 from .uint_range import UIntRange
 from .utils import get_end
 from .var_stats import VarStats, clamp_var_stats_collection, get_alt_ref_delta

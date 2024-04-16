@@ -28,14 +28,6 @@ def get_u8_array(n: int) -> array:
     return get_zero_array('B', n)
 
 
-def get_u32_array(n: int) -> array:
-    return get_zero_array('I', n)
-
-
-def get_i32_array(n: int) -> array:
-    return get_zero_array('i', n)
-
-
 def get_prev_index(a: array, i: int, value: int) -> int | None:
     j = i - 1
     while j >= 0:

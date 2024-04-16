@@ -57,9 +57,6 @@ class CdsSeq(Seq):
         assert len(r) % 3 == 0
         return r
 
-    def get_inner_cds_seq(self) -> Seq:
-        return self.subseq(self.get_inner_cds_range(), rel=False)
-
     def get_ext_offset(self, pos: int) -> int:
         return super().get_offset(pos) + self.cds_prefix_length
 
