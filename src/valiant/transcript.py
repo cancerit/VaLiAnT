@@ -94,10 +94,6 @@ class Transcript:
     def is_empty(self) -> bool:
         return len(self.exons) == 0
 
-    @property
-    def exon_count(self) -> int:
-        return len(self.exons)
-
     def lift_exons(self, gpo: GenomicPositionOffsets):
         return replace(self, exons=UIntRangeSortedList(lift_exons(
             self.strand, gpo, self.exons)))
@@ -115,11 +111,6 @@ class Transcript:
         exon = self.exons[self.get_exon_index(exon_number)]
         assert exon.number == exon_number
         return exon
-
-    def get_exon_seq(self, seq: Seq, exon_number: int) -> Seq:
-        exon = self.get_exon(exon_number)
-        exon_seq = seq.subseq(exon, rel=False)
-        return exon_seq
 
     def get_cds_seq(self, seq: Seq, exon_number: int, r: UIntRange) -> CdsSeq:
         exon = self.get_exon(exon_number)

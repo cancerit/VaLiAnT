@@ -24,7 +24,7 @@ from dataclasses import dataclass, replace
 from .base_targeton_config import BaseTargetonConfig, parse_mutators
 from ..strings.strand import Strand
 from ..uint_range import UIntRange
-from ..utils import get_not_none, is_in_opt_range
+from ..utils import get_not_none
 from .mutator_config import MutatorConfig
 from .utils import parse_list, get_int_enum, parse_uint_range_from_list
 
@@ -178,20 +178,11 @@ class TargetonConfig(BaseTargetonConfig):
             return None
         return UIntRange(const_start, self.ref.end)
 
-    def is_in_const_1(self, pos: int) -> bool:
-        return is_in_opt_range(self.get_const_1(), pos)
-
-    def is_in_const_2(self, pos: int) -> bool:
-        return is_in_opt_range(self.get_const_2(), pos)
-
     def get_const_regions(self) -> list[UIntRange]:
         return get_not_none([
             self.get_const_1(),
             self.get_const_2()
         ])
-
-    def is_in_const_region(self, pos: int) -> bool:
-        return self.is_in_const_1(pos) or self.is_in_const_2(pos)
 
     def get_region_mutators(self, i: int) -> list[MutatorConfig]:
         return self.mutators[i]

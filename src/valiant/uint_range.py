@@ -112,14 +112,6 @@ class UIntRange(Sized, Container):
         assert n > 0
         return UIntRange(self.end + 1, self.end + n)
 
-    def get_until(self, pos: int) -> UIntRange:
-        assert pos in self
-        return replace(self, end=pos)
-
-    def get_from(self, pos: int) -> UIntRange:
-        assert pos in self
-        return replace(self, start=pos)
-
 
 class UIntRangeSortedList(list, Generic[UIntRangeT]):
 

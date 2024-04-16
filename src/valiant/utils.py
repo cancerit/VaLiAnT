@@ -68,10 +68,6 @@ def get_dataclass_fields(cls) -> list[str]:
     return [f.name for f in fields(cls)]
 
 
-def get_enum_values(cls) -> list:
-    return [x.value for x in cls]
-
-
 def get_not_none(it):
     return [x for x in it if x is not None]
 
@@ -99,10 +95,6 @@ def get_cds_ext_3_length(frame: int, length: int) -> int:
     """
 
     return (3 - (length + frame) % 3) % 3
-
-
-def is_in_opt_range(r: UIntRange | None, pos: int) -> bool:
-    return pos in r if r is not None else False
 
 
 def bool_to_int_str(x: bool) -> str:

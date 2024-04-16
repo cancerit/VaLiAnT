@@ -104,10 +104,6 @@ class Seq(Sized):
             for start in starts
         ]
 
-    def subseq_triplets(self) -> list[Seq]:
-        pt = IntPatternBuilder(0, 3)
-        return self.subseq_window(pt, start=0, length=len(self))
-
     def get_offset(self, pos: int) -> int:
         return pos - self.start
 

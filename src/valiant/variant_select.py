@@ -17,8 +17,8 @@
 #############################
 
 from __future__ import annotations
-from abc import ABC
 
+from abc import ABC
 from dataclasses import dataclass
 from sqlite3 import Connection
 from typing import ClassVar
@@ -47,11 +47,6 @@ class VariantSelect(ABC):
                 RegisteredVariant(r[0], DnaStr(r[1]), DnaStr(r[2]), r[3])
                 for r in cur.execute(self.query, r.to_tuple()).fetchall()
             ]
-
-
-@dataclass(slots=True)
-class VariantSelectStart(VariantSelect):
-    _START_ONLY = True
 
 
 @dataclass(slots=True)

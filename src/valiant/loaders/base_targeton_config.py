@@ -18,7 +18,6 @@
 
 import abc
 from dataclasses import dataclass
-from typing import TypeVar
 
 from ..uint_range import UIntRange
 from .mutator_config import MutatorConfig
@@ -39,6 +38,3 @@ class BaseTargetonConfig(abc.ABC):
     @abc.abstractmethod
     def name(self) -> str:
         pass
-
-
-BaseTargetonConfigT = TypeVar('BaseTargetonConfigT', bound=BaseTargetonConfig)

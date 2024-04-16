@@ -40,9 +40,6 @@ class DnaStr(str):
     def __add__(self, other) -> DnaStr:
         return DnaStr(str(self) + str(other))
 
-    def as_nullable(self) -> str | None:
-        return str(self) if self else None
-
     def slice(self, sl: slice) -> DnaStr:
         return DnaStr(self[sl])
 
@@ -86,16 +83,6 @@ class DnaStr(str):
                 return DnaStr(self[0])
             case _:
                 return self.substr(UIntRange(0, n - 1))
-
-    def ltrim(self, n: int) -> DnaStr:
-        delta = len(self) - n
-        assert delta >= 0
-        return self.tail(delta)
-
-    def rtrim(self, n: int) -> DnaStr:
-        delta = len(self) - n
-        assert delta >= 0
-        return self.head(delta)
 
     @property
     def revc(self):

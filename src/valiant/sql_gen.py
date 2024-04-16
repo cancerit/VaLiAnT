@@ -88,16 +88,6 @@ class SqlQuery(str):
         return cls(f"update {t.value} set {sets} where {where}")
 
     @classmethod
-    def get_update_at_id(cls, t: DbTableName, values: list[DbFieldName]) -> SqlQuery:
-        """
-        Generate a SQL update statement filtering by ID
-
-        E.g.: update t set f = ? where id = ?
-        """
-
-        return cls.get_update(t, values, DbFieldName.ID.sql_eq())
-
-    @classmethod
     def get_insert(cls, t: DbTableName, fields: list[DbFieldName], values: str) -> SqlQuery:
         return cls(f"insert into {t.value}({','.join(f.value for f in fields)}){values}")
 
