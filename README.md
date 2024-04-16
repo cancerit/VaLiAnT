@@ -18,8 +18,7 @@ Please also see the [VaLiAnT Wiki](https://github.com/cancerit/VaLiAnT/wiki) for
     - [valiant sge](#valiant-sge)
     - [valiant cdna](#valiant-cdna)
   - [Mutation types](#mutation-types)
-    - [Single-nucleotide deletion](#single-nucleotide-deletion)
-    - [Two-nucleotide deletion](#two-nucleotide-deletion)
+    - [Parametric deletion](#parametric-deletion)
     - [Single-nucleotide variant](#single-nucleotide-variant)
     - [In-frame deletion](#in-frame-deletion)
     - [Alanine codon substitution](#alanine-codon-substitution)
@@ -224,10 +223,14 @@ The `REF_FASTA` path is expected to point to a reference genome in FASTA format.
 |Option|Format|Default|Description|
 |-|-|-|-|
 |`gff`|file path|-|Path to GTF/GFF2 file containing CDS and UTR features; one transcript per gene only.|
+|`bg`|file path|-|Path to a background variant VCF file.|
 |`pam`|file path|-|Path to a [PAM protection file](#pam-protection-vcf-file).|
 |`vcf`|file path|-|Path to a [VCF manifest file](#vcf-manifest-file).|
 |`revcomp-minus-strand`|flag|`false`|For minus strand targets, include the reverse complement of the mutated reference sequence in the oligonucleotide.|
 |`sequences-only`|flag|`false`|Generate the [reference sequence retrieval quality check file](#reference-sequence-retrieval-quality-check-file) and quit.
+|`mask_bg_fp`|file path|-|Path to a BED file to exclude background variants from being applied to the specified genomic intervals.|
+|`force-bg-ns`|flag|`false`|Allow non-synonymous background variants.|
+|`force-bg-indels`|flag|`false`|Allow frame-shifting background variants.|
 
 ### valiant cdna
 
@@ -243,8 +246,7 @@ The `REF_FASTA` path is expected to point to a multi-FASTA containing cDNA seque
 
 Types of mutation that apply to any target (label):
 
-- [single-nucleotide deletion](#single-nucleotide-deletion) (`1del`)
-- [two-nucleotide deletion](#two-nucleotide-deletion) (`2del0`, `2del1`)
+- [parametric deletion](#parametric-deletion) (*e.g.*: `1del`, `2del0`, `2del1`)
 - [single-nucleotide variant](#single-nucleotide-variant) (`snv`)
 
 Types of mutation that apply to CDS targets only (label):
@@ -257,24 +259,13 @@ Types of mutation that apply to CDS targets only (label):
 
 [Variants imported from VCF files](#custom-variants) are labelled as `custom`.
 
-### Single-nucleotide deletion
+### Parametric deletion
 
-A single nucleotide is deleted at any one position of the target.
+Non-overlapping stretches of nucleotides of a given length are deleted starting from a given offset. No partial deletions are performed at the end of the target regions. Format: `<SPAN>del[<OFFSET>]` (the offset is assumed to be zero if not set).
 
-Given the target `ACGT`, *e.g.*:
+For backwards compatibility, in the [metadata table](#oligonucleotide-metadata-file), `1del0` is reported as `1del`.
 
-```
-CGT
-AGT
-ACT
-ACG
-```
-
-### Two-nucleotide deletion
-
-Non-overlapping pairs of nucleotides are deleted starting from the first (`2del0`) or the second (`2del1`) nucleotide. No partial (single-nucleotide) deletions are performed at the end of sequences with an odd or even length when the start offset is zero or one, respectively.
-
-Given the target `ACGTAAA` and start offset zero (`2del0`), *e.g.*:
+Given the target `ACGTAAA`, span two, and start offset zero (`2del0`), *e.g.*:
 
 ```
 GTAAA
@@ -490,23 +481,19 @@ Please take care to read errors during the dependency installation step carefull
 
 Requirements:
 
-- Python 3.7, 3.8, or 3.9
+- Python 3.10 or above
 
 To install in a virtual environment:
 
 ```sh
 # Initialise the virtual environment
-python3.7 -m venv .env
+python3.11 -m venv .env
 
 # Activate the virtual environment
 source .env/bin/activate
 
-# Install the dependencies
-pip install cython==0.29.30
-pip install -r src/requirements.txt
-
 # Install the valiant package
-pip install src/
+pip install .
 ```
 
 ### Docker image
@@ -563,15 +550,20 @@ The execution parameters depend on the execution mode, and each corresponds to o
 |-|-|
 |`revcomp-minus-strand`|`reverseComplementOnMinusStrand`|
 |`gff`|`GFFFilePath`|
+|`bg`|`backgroundVCFFilePath`|
 |`pam`|`PAMProtectionVCFFilePath`|
 |`vcf`|`customVCFManifestFilePath`|
+|`mask_bg_fp`|`maskBackgroundFilePath`|
+|`force-bg-ns`|`forceBackgroundNonSynonymous`|
+|`force-bg-indels`|`forceBackgroundFrameShifting`|
+|`include-no-op-oligo`|`includeNoOpOligo`|
 
 Example:
 
 ```json
 {
     "appName": "valiant",
-    "appVersion": "3.0.0",
+    "appVersion": "4.0.0",
     "mode": "sge",
     "params": {
         "species": "homo sapiens",
@@ -581,13 +573,18 @@ Example:
         "minOligoLength": 1,
         "maxOligoLength": 300,
         "codonTableFilePath": null,
+        "backgroundVCFFilePath": null,
         "oligoInfoFilePath": "parameter_input_files/brca1_nuc_targeton_input.txt",
         "refFASTAFilePath": "reference_input_files/chr17.fa",
         "outputDirPath": "brca1_nuc_output",
         "reverseComplementOnMinusStrand": true,
+        "includeNoOpOligo": false,
         "GFFFilePath": "reference_input_files/ENST00000357654.9.gtf",
         "PAMProtectionVCFFilePath": "parameter_input_files/brca1_protection_edits.vcf",
-        "customVCFManifestFilePath": "reference_input_files/brca1_custom_variants_manifest.csv"
+        "customVCFManifestFilePath": "reference_input_files/brca1_custom_variants_manifest.csv",
+        "maskBackgroundFilePath": null,
+        "forceBackgroundNonSynonymous": false,
+        "forceBackgroundFrameShifting": false
     }
 }
 ```
@@ -603,7 +600,7 @@ Example:
 ```json
 {
     "appName": "valiant",
-    "appVersion": "3.0.0",
+    "appVersion": "4.0.0",
     "mode": "cdna",
     "params": {
         "species": "human",
@@ -738,44 +735,46 @@ The [MAVE-HGVS](https://www.mavedb.org/docs/mavehgvs/) strings are all **linear 
 
 Array fields use the semicolon as separator.
 
-|Field|Format|Description|
-|-|-|-|
-|`oligo_name`|string|Name of the oligonucleotide.|
-|`species`|species name|Species.|
-|`assembly`|assembly name|Assembly.|
-|`gene_id`|string|Gene ID.|
-|`transcript_id`|string|Transcript ID.|
-|`src_type`|`ref`\|`cdna`|Sequence source type (reference genome or cDNA).|
-|`ref_chr`|string|Chromosome name.|
-|`ref_strand`|`+`\|`-`|DNA strand.|
-|`ref_start`|integer|Start position of the reference sequence.|
-|`ref_end`|integer|End position of the reference sequence.|
-|`revc`|0\|1|Whether the oligonucleotide contains the reverse complement of the reference sequence (minus strand transcripts only).|
-|`ref_seq`|DNA sequence|Reference sequence.|
-|`pam_seq`|DNA sequence|PAM-protected reference sequence.|
-|`vcf_alias`|string|VCF file alias (custom mutations only).|
-|`vcf_var_id`|string|Variant ID (custom mutations only).|
-|`mut_position`|integer|Start position of the mutation.|
-|`ref`|DNA sequence|Reference nucleotide or triplet.|
-|`new`|DNA sequence|Mutated nucleotide or triplet. Not set for deletions.|
-|`ref_aa`|amino acid|Reference amino acid.|
-|`alt_aa`|amino acid|Alternative amino acid.|
-|`mut_type`|`syn`\|`mis`\|`non`|Mutation type.|
-|`mutator`|type of mutator|Label of the [type of mutator](#mutation-types) that generated the oligonucleotide.|
-|`oligo_length`|integer|Oligonucleotide length.|
-|`mseq`|DNA sequence|Full oligonucleotide sequence (with adaptors, if any).|
-|`mseq_no_adapt`|DNA sequence|Oligonucleotide sequence excluding adaptors.|
-|`pam_mut_annot`|Array of `syn`\|`mis`\|`non`\|`ncd`|Applied PAM protection variant [mutation types](#mutation-types) (or `ncd` if affecting a noncoding region).|
-|`pam_mut_sgrna_id`|Array of sgRNA ID's|sgRNA ID's bound to the PAM protection variants spanned by the mutation or affecting the same codons as the mutation, if any.|
-|`mave_nt`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation.|
-|`mave_nt_ref`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation, where `REF` does not include PAM protection.|
-|`vcf_var_in_const`|0\|1|Whether the variant is in a region defined as constant (custom mutations only).|
+|Index|Field|Format|Description|
+|-|-|-|-|
+|1|`oligo_name`|string|Name of the oligonucleotide.|
+|2|`species`|species name|Species.|
+|3|`assembly`|assembly name|Assembly.|
+|4|`gene_id`|string|Gene ID.|
+|5|`transcript_id`|string|Transcript ID.|
+|6|`src_type`|`ref`\|`cdna`|Sequence source type (reference genome or cDNA).|
+|7|`ref_chr`|string|Chromosome name.|
+|8|`ref_strand`|`+`\|`-`|DNA strand.|
+|9|`ref_start`|integer|Start position of the reference sequence.|
+|10|`ref_end`|integer|End position of the reference sequence.|
+|11|`revc`|0\|1|Whether the oligonucleotide contains the reverse complement of the reference sequence (minus strand transcripts only).|
+|12|`ref_seq`|DNA sequence|Reference sequence.|
+|13|`pam_seq`|DNA sequence|PAM-protected reference sequence.|
+|14|`vcf_alias`|string|VCF file alias (custom mutations only).|
+|15|`vcf_var_id`|string|Variant ID (custom mutations only).|
+|16|`mut_position`|integer|Start position of the mutation.|
+|17|`ref`|DNA sequence|Reference nucleotide or triplet.|
+|18|`new`|DNA sequence|Mutated nucleotide or triplet. Not set for deletions.|
+|19|`ref_aa`|amino acid|Reference amino acid.|
+|20|`alt_aa`|amino acid|Alternative amino acid.|
+|21|`mut_type`|`syn`\|`mis`\|`non`|Mutation type.|
+|22|`mutator`|type of mutator|Label of the [type of mutator](#mutation-types) that generated the oligonucleotide.|
+|23|`oligo_length`|integer|Oligonucleotide length.|
+|24|`mseq`|DNA sequence|Full oligonucleotide sequence (with adaptors, if any).|
+|25|`mseq_no_adapt`|DNA sequence|Oligonucleotide sequence excluding adaptors.|
+|26|`pam_mut_annot`|Array of `syn`\|`mis`\|`non`\|`ncd`|Applied PAM protection variant [mutation types](#mutation-types) (or `ncd` if affecting a noncoding region).|
+|27|`pam_mut_sgrna_id`|Array of sgRNA ID's|sgRNA ID's bound to the PAM protection variants spanned by the mutation or affecting the same codons as the mutation, if any.|
+|28|`mave_nt`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation.|
+|29|`mave_nt_ref`|MAVE-HGVS string|MAVE-HGVS string corresponding to the mutation, where `REF` does not include PAM protection.|
+|30|`vcf_var_in_const`|0\|1|Whether the variant is in a region defined as constant (custom mutations only).|
+|31|`background_variants`|MAVE-HGVS strings|MAVE-HGVS strings corresponding to the background variants overlapping the targeton range, semicolon-separated.|
+|32|`background_seq`|DNA sequence|Reference sequence altered by the background variants.|
 
 Example:
 
 ```
-oligo_name,species,assembly,gene_id,transcript_id,src_type,ref_chr,ref_strand,ref_start,ref_end,revc,ref_seq,pam_seq,vcf_alias,vcf_var_id,mut_position,ref,new,ref_aa,alt_aa,mut_type,mutator,oligo_length,mseq,mseq_no_adapt,pam_mut_annot,pam_mut_sgrna_id,mave_nt,mave_nt_ref,vcf_var_in_const
-ENST00000357654.9.ENSG00000012048.23_chr17:43104102_A>T_snv_rc,homo sapiens,GRCh38,ENSG00000012048.23,ENST00000357654.9,ref,chr17,-,43104080,43104330,1,AGAAAAGAAGAAGAAGAAGAAGAAGAAAACAAATGGTTTTACCAAGGAAGGATTTTCGGGTTCACTCTGTAGAAGTCTTTTGGCACGGTTTCTGTAGCCCATACTTTGGATGATAGAAACTTCATCTTTTAGATGTTCAGGAGAGTTATTTTCCTTTTTTGCAAAATTATAGCTGTTTGCATCTGTAAAATACAAGGGAAAACATTATGTTTGCAGTTAGAGAAAAATGTATGAATTATAATCAAAGAAAC,AGAAAAGAAGAAGAAGAAGAAGAAGAAAACAAATGGTTTTACCAAGGAAGGATTTTCGGGTTCACTCTGTAGAAGTCTTTTGGCGCGATTTCTGTAGCCCATACTTTGGATGATAGAAACTTCATCTTTTAGATGTTCAGGAGAGTTATTTTCCTTTTTTGCAAAATTATAGCTGTTTGCATCTGTAAAATACAAGGGAAAACATTATGTTTGCAGTTAGAGAAAAATGTATGAATTATAATCAAAGAAAC,,,43104102,A,T,,,,snv,292,AATGATACGGCGACCACCGAGTTTCTTTGATTATAATTCATACATTTTTCTCTAACTGCAAACATAATGTTTTCCCTTGTATTTTACAGATGCAAACAGCTATAATTTTGCAAAAAAGGAAAATAACTCTCCTGAACATCTAAAAGATGAAGTTTCTATCATCCAAAGTATGGGCTACAGAAATCGCGCCAAAAGACTTCTACAGAGTGAACCCGAAAATCCTTCCTTGGTAAAACCATTTGTTTTCTACTTCTTCTTCTTCTTCTTTTCTTCGTATGCCGTCTTCTGCTTG,GTTTCTTTGATTATAATTCATACATTTTTCTCTAACTGCAAACATAATGTTTTCCCTTGTATTTTACAGATGCAAACAGCTATAATTTTGCAAAAAAGGAAAATAACTCTCCTGAACATCTAAAAGATGAAGTTTCTATCATCCAAAGTATGGGCTACAGAAATCGCGCCAAAAGACTTCTACAGAGTGAACCCGAAAATCCTTCCTTGGTAAAACCATTTGTTTTCTACTTCTTCTTCTTCTTCTTTTCT,syn;syn,,g.23A>T,g.23A>T,0
+oligo_name,species,assembly,gene_id,transcript_id,src_type,ref_chr,ref_strand,ref_start,ref_end,revc,ref_seq,pam_seq,vcf_alias,vcf_var_id,mut_position,ref,new,ref_aa,alt_aa,mut_type,mutator,oligo_length,mseq,mseq_no_adapt,pam_mut_annot,pam_mut_sgrna_id,mave_nt,mave_nt_ref,vcf_var_in_const,background_variants,background_seq
+ENST00000357654.9.ENSG00000012048.23_chr17:43104102_1del_rc,homo sapiens,GRCh38,ENSG00000012048.23,ENST00000357654.9,ref,chr17,-,43104080,43104330,1,AGAAAAGAAGAAGAAGAAGAAGAAGAAAACAAATGGTTTTACCAAGGAAGGATTTTCGGGTTCACTCTGTAGAAGTCTTTTGGCACGGTTTCTGTAGCCCATACTTTGGATGATAGAAACTTCATCTTTTAGATGTTCAGGAGAGTTATTTTCCTTTTTTGCAAAATTATAGCTGTTTGCATCTGTAAAATACAAGGGAAAACATTATGTTTGCAGTTAGAGAAAAATGTATGAATTATAATCAAAGAAAC,AGAAAAGAAGAAGAAGAAGAAGAAGAAAACAAATGGTTTTACCAAGGAAGGATTTTCGGGTTCACTCTGTAGAAGTCTTTTGGCGCGATTTCTGTAGCCCATACTTTGGATGATAGAAACTTCATCTTTTAGATGTTCAGGAGAGTTATTTTCCTTTTTTGCAAAATTATAGCTGTTTGCATCTGTAAAATACAAGGGAAAACATTATGTTTGCAGTTAGAGAAAAATGTATGAATTATAATCAAAGAAAC,,,43104102,A,,,,,1del,291,AATGATACGGCGACCACCGAGTTTCTTTGATTATAATTCATACATTTTTCTCTAACTGCAAACATAATGTTTTCCCTTGTATTTTACAGATGCAAACAGCTATAATTTTGCAAAAAAGGAAAATAACTCTCCTGAACATCTAAAAGATGAAGTTTCTATCATCCAAAGTATGGGCTACAGAAATCGCGCCAAAAGACTTCTACAGAGTGAACCCGAAAATCCTTCCTTGGTAAAACCATTTGTTTTCTCTTCTTCTTCTTCTTCTTTTCTTCGTATGCCGTCTTCTGCTTG,GTTTCTTTGATTATAATTCATACATTTTTCTCTAACTGCAAACATAATGTTTTCCCTTGTATTTTACAGATGCAAACAGCTATAATTTTGCAAAAAAGGAAAATAACTCTCCTGAACATCTAAAAGATGAAGTTTCTATCATCCAAAGTATGGGCTACAGAAATCGCGCCAAAAGACTTCTACAGAGTGAACCCGAAAATCCTTCCTTGGTAAAACCATTTGTTTTCTCTTCTTCTTCTTCTTCTTTTCT,syn;syn,,g.23del,g.23del,0,,AGAAAAGAAGAAGAAGAAGAAGAAGAAAACAAATGGTTTTACCAAGGAAGGATTTTCGGGTTCACTCTGTAGAAGTCTTTTGGCACGGTTTCTGTAGCCCATACTTTGGATGATAGAAACTTCATCTTTTAGATGTTCAGGAGAGTTATTTTCCTTTTTTGCAAAATTATAGCTGTTTGCATCTGTAAAATACAAGGGAAAACATTATGTTTGCAGTTAGAGAAAAATGTATGAATTATAATCAAAGAAAC
 ```
 
 ### Variant file
@@ -851,7 +850,7 @@ pip install -r unit_tests/requirements.txt
 
 ```none
 VaLiAnT
-Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+Copyright (C) 2020, 2021, 2022, 2023, 2024 Genome Research Ltd
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU Affero General Public License as

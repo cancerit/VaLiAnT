@@ -1,2 +1,0 @@
-sgrna_id	ref_chr	ref_strand	ref_start	ref_end	r2_start	r2_end	ext_vector	action_vector
-sgRNA_1	X	+	41334132	41334320	41334253	41334297	25, 15	(1del), (1del), (1del)

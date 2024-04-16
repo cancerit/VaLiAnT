@@ -1,5 +1,23 @@
 # Changelog
 
+## [UNRELEASED]
+
+### Added
+
+- Support for background variants
+- Support for out-of-frame CDS targeton regions whose 5' and 3' extensions span both adjacent and distal bases
+
+### Changed
+
+- Mutator: deletion pattern span and offset can be set to any valid value
+- Metadata table: in cDNA mode, mutations preserving stop codons are now annotated as nonsense (*vs.* synonymous)
+
+### Fixed
+
+- Fix codon tables loaded from files where the codons are not grouped by amino acid
+- Metadata table: fix `ala` mutator not populating the type of mutation (`mut_type`)
+- Metadata table: fix `stop` mutator not populating the type of mutation (`mut_type`)
+
 ## [3.0.1] - 2023-07-18
 
 ### Added

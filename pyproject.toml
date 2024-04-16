@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "valiant"
+description = "Variant Library Annotation Tool"
+dynamic = ["version"]
+authors = [
+    {name = "Luca Barbon", email = "cgphelp@sanger.ac.uk"}
+]
+requires-python = ">=3.11"
+dependencies = [
+    "charset-normalizer",
+    "click",
+    "pydantic",
+    "pysam"
+]
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only"
+]
+
+[project.scripts]
+valiant = "valiant.__main__:main"
