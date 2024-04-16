@@ -543,7 +543,6 @@ The execution parameters depend on the execution mode, and each corresponds to o
 |`max-length`|`maxOligoLength`|
 |`codon-table`|`codonTableFilePath`|
 
-
 #### SGE parameters
 
 |CLI option|JSON property|
@@ -841,9 +840,8 @@ chr3_10146443_10146687_plus,chr3:10146443-10146687,10146443,GGATTACAGGTGTGGGCCAC
 To run the unit tests, install the extra requirements first:
 
 ```sh
-cd tests
-pip install -r unit_tests/requirements.txt
-./run_unit_tests.sh
+pip install -r test-requirements.txt
+./run_tests.sh
 ```
 
 ## LICENSE
