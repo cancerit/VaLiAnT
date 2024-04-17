@@ -566,6 +566,3 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             sys.exit(1)
 
     finalise(config, stats)
-
-    # Write JSON configuration to file
-    config.write(config.get_output_file_path(OUTPUT_CONFIG_FILE_NAME))
