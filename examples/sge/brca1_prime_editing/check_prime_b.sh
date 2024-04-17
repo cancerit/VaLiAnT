@@ -18,7 +18,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-SCRIPT="${PWD}/../compare_exp_results.sh"
+SCRIPT="${PWD}/../../compare_exp_results.sh"
 OUT_DIR="output_b"
 EXP_OUT_DIR="${OUT_DIR}_exp"
 

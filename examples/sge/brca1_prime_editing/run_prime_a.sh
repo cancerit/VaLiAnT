@@ -18,14 +18,14 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-REF=${PWD}/../ref
-INPUT=${PWD}/input
+REF=../ref
+INPUT=input
 TARGETONS=${INPUT}/input_a.txt
 REFERENCE_FILE=${REF}/chr17.fa
 GTF_FILE=${INPUT}/uniform/ENST00000357654.9.txt
 VCF_FILE=${INPUT}/uniform/brca1_vcf_manifest.csv
 PAM_FILE=${INPUT}/brca1_prime_ex2_pam.vcf
-OUTPUT=${PWD}/output_a
+OUTPUT=output_a
 SPECIES=homo_sapiens
 ASSEMBLY=GRCh38
 
