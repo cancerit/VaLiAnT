@@ -18,15 +18,13 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-REF=${PWD}/../ref
-
 # Create output directory
 mkdir -p brca1_pep_output
 
 # Generate library
 valiant sge \
     parameter_input_files/brca1_pep_targeton_input.txt \
-    "${REF}/chr17.fa" \
+    ../ref/chr17.fa \
     brca1_pep_output \
     'homo sapiens' \
     'GRCh38' \

@@ -18,7 +18,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-SCRIPT="${PWD}/../compare_exp_results.sh"
+SCRIPT="${PWD}/../../compare_exp_results.sh"
 OUT_DIR="brca1_nuc_output"
 EXP_OUT_DIR="${OUT_DIR}_exp"
 
