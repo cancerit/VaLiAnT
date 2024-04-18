@@ -83,6 +83,8 @@ SGE input files:
 - custom variant files (VCF, optional)
 - features file (GTF/GFF2, optional)
 - codon table with frequencies (CSV, optional)
+- background variant file (VCF, optional)
+- background variant mask file (BED, optional)
 
 cDNA input files:
 
@@ -108,6 +110,14 @@ If the `codon-table` option is not set, [this table](src/valiant/data/default_co
 Ambiguous nucleotides are not allowed in the reference sequence. Soft-masking is ignored.
 
 Oligonucleotides exceeding a given length (`max-length` option) will not be included in the unique oligonucleotide files and their metadata will be stored in separate files marked as 'excluded'.
+
+Background variants, if provided, are applied before PAM protection variants; when the CDS features of a transcript are provided (via a GTF/GFF2 file), to keep the annotation consistent across targetons, such variants are applied in the minimal range of positions that spans at least the entire CDS, further extended to the boundaries of any targeton overlapping the CDS, and finally to the start and end position of the first and last background variant intersecting the resulting range, respectively.
+
+Background variants may be filtered out by position by providing a set of genomic ranges to be excluded via a BED file (`bg-mask` option). Excluding frame-shifting variants may affect the annotation.
+
+By default, errors are raised when background variants are not synonymous or shift the reading frame; the `force-bg-ns` and `force-bg-indels` flags may be passed to allow them.
+
+Mutations that overlap background variants are discarded; warnings are always raised to identify them, with their positions expressed in absolute genomic coordinates for custom variants, and targeton-relative coordinates for pattern variants.
 
 ### Python package
 
@@ -481,7 +491,7 @@ Please take care to read errors during the dependency installation step carefull
 
 Requirements:
 
-- Python 3.10 or above
+- Python 3.11 or above
 
 To install in a virtual environment:
 
