@@ -1,5 +1,33 @@
 # Changelog
 
+## [4.0.0] - 2024-04-22
+
+### Added
+
+- Support for background variants
+- Support for out-of-frame CDS targeton regions whose 5' and 3' extensions span both adjacent and distal bases
+- CLI: add `--include-no-op-oligo` option to the `sge` subcommand
+- CLI: add `--bg` option to the `sge` subcommand
+- CLI: add `--force-bg-ns` option to the `sge` subcommand
+- CLI: add `--force-bg-indels` option to the `sge` subcommand
+- CLI: add `--bg-mask` option to the `sge` subcommand
+- Configuration: add `includeNoOpOligo` attribute
+- Configuration: add `backgroundVCFFilePath` attribute
+- Configuration: add `forceBackgroundNonSynonymous` attribute
+- Configuration: add `forceBackgroundFrameShifting` attribute
+- Configuration: add `maskBackgroundFilePath` attribute
+
+### Changed
+
+- Minimum Python version: 3.11
+- Mutator: deletion pattern span and offset can be set to any valid value
+- Metadata table: report the type of mutation for the `aa`, `ala`, and `stop` mutators (`mut_type` field)
+- Metadata table: in cDNA mode, mutations preserving stop codons are now annotated as nonsense (*vs.* synonymous)
+
+### Fixed
+
+- Fix codon tables loaded from files where the codons are not grouped by amino acid
+
 ## [3.0.1] - 2023-07-18
 
 ### Added

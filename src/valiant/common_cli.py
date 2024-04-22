@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023, 2024 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,17 +16,17 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from functools import wraps
 import logging
-import os
 import sys
+from functools import wraps
+
 import click
 
+from .config import BaseConfig
 from .constants import DEFAULT_OLIGO_MAX_LENGTH, DEFAULT_OLIGO_MIN_LENGTH, OUTPUT_CONFIG_FILE_NAME
 from .errors import InvalidConfig
-from .models.config import BaseConfig
-from .models.main_config import get_main_config_from_config
-from .models.stats import Stats
+from .main_config import get_main_config_from_config
+from .oligo_generation_info import OligoGenerationInfo
 
 
 existing_file = click.Path(exists=True, file_okay=True, dir_okay=False)
@@ -91,18 +91,19 @@ def log_excluded_oligo_counts(config: BaseConfig, short_oligo_n: int, long_oligo
             (long_oligo_n, config.max_length))
 
 
-def finalise(config: BaseConfig, stats: Stats) -> None:
+def finalise(config: BaseConfig, stats: OligoGenerationInfo) -> None:
     """Common operations to be performed at the end independently of the execution mode"""
 
     # Log the count of oligonucleotides excluded by the length filter
     log_excluded_oligo_counts(config, stats.short_oligo_n, stats.long_oligo_n)
 
-    config_fp: str = os.path.join(config.output_dir, OUTPUT_CONFIG_FILE_NAME)
+    config_fp: str = config.get_output_file_path(OUTPUT_CONFIG_FILE_NAME)
 
     try:
 
         # Generate full configuration
         main_config = get_main_config_from_config(config)
+        assert main_config
 
         # Write configuration to file
         main_config.write(config_fp)

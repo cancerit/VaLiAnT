@@ -1,6 +1,15 @@
 .*/
 __pycache__/
+build/
 test_results/
+examples/cdna/output/
+examples/sge/brca1/brca1_nuc_output/
+examples/sge/brca1/brca1_pep_output/
+examples/sge/brca1_prime_editing/output_a/
+examples/sge/brca1_prime_editing/output_b/
+examples/sge/nxrl/output/
+examples/sge/ref/chr17.fa
+examples/sge/brca1_prime_editing/input/uniform/*.vcf
 *.egg-info
 .DS_Store
 .coverage

@@ -1,6 +1,6 @@
 ########## LICENCE ##########
 # VaLiAnT
-# Copyright (C) 2020, 2021, 2022 Genome Research Ltd
+# Copyright (C) 2020, 2021, 2022, 2023 Genome Research Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
@@ -16,7 +16,26 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-from enum import Enum
+from enum import Enum, IntEnum
+
+
+class MutationType(Enum):
+    SYNONYMOUS = 'syn'
+    MISSENSE = 'mis'
+    NONSENSE = 'non'
+
+
+class VariantType(IntEnum):
+    INSERTION = 0
+    DELETION = 1
+    SUBSTITUTION = 2
+    UNKNOWN = 3
+
+
+class VariantClassification(IntEnum):
+    CLASSIFIED = 0
+    UNCLASSIFIED = 1
+    MONOMORPHIC = 2
 
 
 class ExecMode(str, Enum):
@@ -24,32 +43,6 @@ class ExecMode(str, Enum):
     CDNA = 'cdna'
 
 
-class TargetonMutator(Enum):
-    DEL1 = '1del'
-    DEL2_0 = '2del0'
-    DEL2_1 = '2del1'
-    IN_FRAME = 'inframe'
-    SNV = 'snv'
-    SNV_RE = 'snvre'
-    STOP = 'stop'
-    ALA = 'ala'
-    AA = 'aa'
-
-
-class MutationType(Enum):
-    SYNONYMOUS = 0
-    MISSENSE = 1
-    NONSENSE = 2
-
-
-class VariantType(Enum):
-    INSERTION = 0
-    DELETION = 1
-    SUBSTITUTION = 2
-    UNKNOWN = 3
-
-
-class VariantClassification(Enum):
-    CLASSIFIED = 0
-    UNCLASSIFIED = 1
-    MONOMORPHIC = 2
+class SrcType(str, Enum):
+    REF = 'ref'
+    CDNA = 'cdna'

@@ -29,7 +29,7 @@ Ref.:
 """
 
 from enum import Enum
-from typing import NoReturn, Optional
+from typing import NoReturn
 from .enums import VariantType
 
 
@@ -59,14 +59,15 @@ def _get_snv_mave_nt_suffix(start: int, ref: str, alt: str) -> str:
     return f"{start}{ref}>{alt}"
 
 
-def _get_substitution_mave_nt_suffix(start: int, ref: Optional[str], alt: Optional[str]) -> str:
-    ref_length: int = len(ref) if ref is not None else 0
-    alt_length: int = len(alt) if alt is not None else 0
-
-    if ref_length == 0:
+def _get_substitution_mave_nt_suffix(start: int, ref: str | None, alt: str | None) -> str:
+    if not ref:
         raise ValueError("Invalid substitution: missing reference!")
-    if alt_length == 0:
+
+    if not alt:
         raise ValueError("Invalid substitution: missing alternate!")
+
+    ref_length: int = len(ref)
+    alt_length: int = len(alt)
 
     is_snv: bool = ref_length == 1 and alt_length == 1
 
@@ -77,7 +78,7 @@ def _get_substitution_mave_nt_suffix(start: int, ref: Optional[str], alt: Option
 
 
 # TODO: add special rules for 5' and 3' end insertions
-def _get_insertion_mave_nt_suffix(start: int, alt: Optional[str]) -> str:
+def _get_insertion_mave_nt_suffix(start: int, alt: str | None) -> str:
     """Generate MAVE-HGVS name for an insertion"""
 
     if alt is None or len(alt) == 0:
@@ -90,7 +91,7 @@ def _raise_invalid_deletion() -> NoReturn:
     raise ValueError("Invalid deletion: missing reference!")
 
 
-def _get_deletion_mave_nt_suffix(start: int, ref: Optional[str], alt: Optional[str]) -> str:
+def _get_deletion_mave_nt_suffix(start: int, ref: str | None, alt: str | None) -> str:
     """Generate MAVE-HGVS name for a deletion"""
 
     if ref is None:
@@ -109,12 +110,12 @@ def _get_deletion_mave_nt_suffix(start: int, ref: Optional[str], alt: Optional[s
     )
 
 
-def get_mave_nt(
+def _get_mave_nt(
     prefix: MAVEPrefix,
     var_type: int,
     start: int,
-    ref: Optional[str],
-    alt: Optional[str]
+    ref: str | None,
+    alt: str | None
 ) -> str:
     """
     Generate MAVE-HGVS name
@@ -123,7 +124,7 @@ def get_mave_nt(
     if start < 0:
         raise ValueError(f"Invalid start position: {start}!")
 
-    suffix: Optional[str] = (
+    suffix: str | None = (
         _get_substitution_mave_nt_suffix(start, ref, alt) if var_type == var_type_sub else
         _get_insertion_mave_nt_suffix(start, alt) if var_type == var_type_ins else
         _get_deletion_mave_nt_suffix(start, ref, alt) if var_type == var_type_del else
@@ -134,3 +135,20 @@ def get_mave_nt(
         raise ValueError("Invalid variant type!")
 
     return f"{prefix.value}.{suffix}"
+
+
+def get_mave_nt(
+    start: int,
+    ref_start: int,
+    var_type: VariantType,
+    ref: str | None,
+    alt: str | None
+) -> str:
+    """Generate MAVE-HGVS string with targeton-relative position"""
+
+    return _get_mave_nt(
+        MAVEPrefix.LINEAR_GENOMIC,
+        var_type.value,
+        start - ref_start + 1,
+        ref or None,
+        alt or None)

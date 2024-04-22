@@ -18,11 +18,11 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #############################
 
-INPUT=${PWD}/input
+INPUT=input
 TARGETONS=${INPUT}/cdna_targeton.tsv
 FASTA=${INPUT}/BRCA1_NP_009225_1_pCW57_1.fa
 ANNOT=${INPUT}/cdna_annot.tsv
-OUTPUT=${PWD}/output
+OUTPUT=output
 SPECIES=human
 ASSEMBLY=pCW57.1
 

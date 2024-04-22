@@ -1,0 +1,4 @@
+vcf_alias,vcf_id_tag,vcf_path
+clinvar,,input/clinvar_20230923_NXRL.vcf
+gnomAD_v2.1,,input/gnomAD_v2.1.1_NXRL_hg38.vcf
+gnomAD_v3.1,,input/gnomAD_v3.1_NXRL_hg38.vcf
