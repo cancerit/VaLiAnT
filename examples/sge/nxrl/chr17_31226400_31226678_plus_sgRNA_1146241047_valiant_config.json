@@ -1,0 +1,24 @@
+{
+  "appName": "valiant",
+  "appVersion": "4.0.0",
+  "mode": "sge",
+  "params": {
+    "species": "homo sapiens",
+    "assembly": "GRCh38",
+    "minOligoLength": 1,
+    "maxOligoLength": 300,
+    "adaptor5": null,
+    "adaptor3": null,
+    "codonTableFilePath": null,
+    "oligoInfoFilePath": "input/chr17_31226400_31226678_plus_sgRNA_1146241047_valiant_input.txt",
+    "refFASTAFilePath": "../ref/chr17.fa",
+    "backgroundVCFFilePath": "input/background_GATK_NXRL_variants.vcf",
+    "forceBackgroundNonSynonymous": true,
+    "forceBackgroundFrameShifting": true,
+    "outputDirPath": "output",
+    "reverseComplementOnMinusStrand": false,
+    "GFFFilePath": "input/ENST00000358273.9.gtf",
+    "PAMProtectionVCFFilePath": "input/valiant_indel_libraries_PAM.vcf",
+    "customVCFManifestFilePath": "input/NXRL_custom_variant_sources.csv"
+  }
+}

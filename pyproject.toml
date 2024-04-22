@@ -11,10 +11,10 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "charset-normalizer",
-    "click",
-    "pydantic",
-    "pysam"
+    "charset-normalizer==3.3.2",
+    "click==8.1.7",
+    "pydantic==2.7.0",
+    "pysam==0.22.0"
 ]
 classifiers = [
     "Programming Language :: Python :: 3 :: Only"

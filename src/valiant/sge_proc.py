@@ -172,7 +172,11 @@ def load_custom_variants(conn: Connection, vcf_manifest_fp: str, contig: str, ta
 
     # Load manifest file
     manifest = VcfManifest.load(vcf_manifest_fp)
-    manifest.test_vcf_extance()
+    try:
+        manifest.test_vcf_extance()
+    except FileNotFoundError as ex:
+        logging.critical(ex.args[0])
+        sys.exit(1)
 
     # Set positional filter
     contig_ft = ContigFilter.from_ranges(contig, targeton_ranges)
@@ -562,6 +566,3 @@ def run_sge(config: SGEConfig, sequences_only: bool) -> None:
             sys.exit(1)
 
     finalise(config, stats)
-
-    # Write JSON configuration to file
-    config.write(config.get_output_file_path(OUTPUT_CONFIG_FILE_NAME))

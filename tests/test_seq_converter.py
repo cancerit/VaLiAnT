@@ -40,3 +40,19 @@ def test_apply_variants(variants):
 	alt_length = len(seq) + delta
 	alt_seq = apply_variants(seq, alt_length, variants)
 	assert len(alt_seq) == alt_length
+
+
+def test_apply_variants_2():
+    ref_seq = Seq(94, DnaStr('CGTCGTATACCCAACGTCGTAAAAAA'))
+
+    variants = [
+        Variant.get_ins(100, DnaStr('GGG')),
+        Variant.get_del(101, DnaStr('T')),
+        Variant(104, DnaStr('C'), DnaStr('T')),
+        Variant(105, DnaStr('C'), DnaStr('GG')),
+        Variant(106, DnaStr('AA'), DnaStr('T'))
+    ]
+    alt_length = 30
+
+    alt_seq = apply_variants(ref_seq, alt_length, variants)
+    assert alt_seq.s == DnaStr('CGTCGTGGGAACTGGTCGTCGTAAAAAA')

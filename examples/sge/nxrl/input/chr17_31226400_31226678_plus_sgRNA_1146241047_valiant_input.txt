@@ -1,0 +1,2 @@
+ref_chr	ref_strand	ref_start	ref_end	r2_start	r2_end	ext_vector	action_vector	sgrna_vector
+chr17	+	31226400	31226678	31226435	31226566	10,0	(1del,2del0,snv),(1del,snvre,inframe,stop,aa),()	sgRNA_1146241047
